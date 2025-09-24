@@ -1,3 +1,4 @@
+// ...existing code...
 import { useState, useCallback, useEffect } from "react";
 import { RunOrderPanel } from "./components/RunOrderPanel";
 import { ScriptEditor } from "./components/ScriptEditor";
@@ -16,6 +17,7 @@ interface RunOrderItem {
 }
 
 export default function App() {
+  // ...existing code...
   const [runOrder, setRunOrder] = useState<RunOrderItem[]>([
     {
       id: '1',
@@ -100,17 +102,36 @@ For more information, please visit our website.`,
       isActive: false
     };
     setRunOrder(prev => [...prev, newItem]);
+    setActiveItemId(newId);
   };
 
+  // Robustar handleDeleteItem: calcular nuevo array y gestionar activeItemId de forma segura
   const handleDeleteItem = (id: string) => {
-    setRunOrder(prev => prev.filter(item => item.id !== id));
-    if (activeItemId === id && runOrder.length > 1) {
-      const currentIndex = runOrder.findIndex(item => item.id === id);
-      const nextItem = runOrder[currentIndex + 1] || runOrder[currentIndex - 1];
-      if (nextItem) {
-        setActiveItemId(nextItem.id);
+    setRunOrder(prev => {
+      const indexToRemove = prev.findIndex(item => item.id === id);
+      if (indexToRemove === -1) return prev; // nada que hacer
+
+      const newList = prev.filter(item => item.id !== id);
+
+      // Si el item eliminado era el activo, seleccionar de forma segura un siguiente válido
+      if (activeItemId === id) {
+        if (newList.length > 0) {
+          // intentar mantener posición lo más cercana posible
+          const candidate = newList[indexToRemove] || newList[indexToRemove - 1] || newList[0];
+          if (candidate) {
+            // actualizar active fuera del setRunOrder es seguro
+            setActiveItemId(candidate.id);
+          } else {
+            setActiveItemId('');
+          }
+        } else {
+          // ya no hay items
+          setActiveItemId('');
+        }
       }
-    }
+
+      return newList;
+    });
   };
 
   const handleEditItem = (id: string) => {
@@ -159,11 +180,15 @@ For more information, please visit our website.`,
     setShouldReset(false);
   };
 
-  const handleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-    } else {
-      document.exitFullscreen();
+  const handleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch {
+      // silenciar errores de fullscreen en navegadores que no lo soporten
     }
   };
 
@@ -174,8 +199,20 @@ For more information, please visit our website.`,
     const a = document.createElement('a');
     a.href = url;
     a.download = 'runorder.json';
+    // algunos navegadores requieren que el elemento esté en el DOM
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const isValidRunOrder = (data: any): data is RunOrderItem[] => {
+    return Array.isArray(data) && data.every(it =>
+      it && typeof it.id === 'string' &&
+      typeof it.title === 'string' &&
+      typeof it.duration === 'string' &&
+      typeof it.script === 'string'
+    );
   };
 
   const handleOpen = () => {
@@ -186,14 +223,21 @@ For more information, please visit our website.`,
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = (ev) => {
           try {
-            const data = JSON.parse(e.target?.result as string);
-            setRunOrder(data);
-            if (data.length > 0) {
-              setActiveItemId(data[0].id);
+            const text = ev.target?.result as string;
+            const data = JSON.parse(text);
+            if (isValidRunOrder(data)) {
+              setRunOrder(data);
+              if (data.length > 0) {
+                setActiveItemId(data[0].id);
+              } else {
+                setActiveItemId('');
+              }
+            } else {
+              alert('Formato de archivo inválido: se esperaba un array de items con id/title/duration/script.');
             }
-          } catch (error) {
+          } catch {
             alert('Error loading file');
           }
         };
@@ -232,6 +276,26 @@ For more information, please visit our website.`,
     }));
   };
 
+  // New: handler para reordenar items (onMoveItem)
+  // Firma: (fromIndex: number, toIndex: number) => void
+  const handleMoveItem = (fromIndex: number, toIndex: number) => {
+    setRunOrder(prev => {
+      const length = prev.length;
+      const from = Math.max(0, Math.min(fromIndex, length - 1));
+      let to = Math.max(0, Math.min(toIndex, length - 1));
+      if (from === to) return prev;
+
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      // if moving forward and removing earlier index, insertion index shifts by -1
+      if (from < to) {
+        to = to; // splice already removed element; to is correct because we clamped to length-1
+      }
+      next.splice(to, 0, moved);
+      return next;
+    });
+  };
+
   // Setup keyboard macros
   useMacros(macroSettings, {
     onPlayStop: isPlaying ? handleStop : handlePlay,
@@ -242,7 +306,7 @@ For more information, please visit our website.`,
     onDecreaseSpeed: handleDecreaseSpeed
   });
 
-  // Prevent page scroll when teleprompter is playing
+  // Evitar scroll de página mientras se reproduce el teleprompter
   useEffect(() => {
     if (isPlaying) {
       document.body.style.overflow = 'hidden';
@@ -254,6 +318,18 @@ For more information, please visit our website.`,
       document.body.style.overflow = '';
     };
   }, [isPlaying]);
+
+  // Mantener activeItemId válido si cambian los items externamente (p. ej. al abrir archivo)
+  useEffect(() => {
+    if (runOrder.length === 0) {
+      setActiveItemId('');
+      return;
+    }
+    const exists = runOrder.some(item => item.id === activeItemId);
+    if (!exists) {
+      setActiveItemId(runOrder[0].id);
+    }
+  }, [runOrder, activeItemId]);
 
   return (
     <div className={`h-screen bg-background flex flex-col ${isPlaying ? 'overflow-hidden' : ''}`}>
@@ -284,6 +360,7 @@ For more information, please visit our website.`,
             onAddItem={handleAddItem}
             onDeleteItem={handleDeleteItem}
             onEditItem={handleEditItem}
+            onMoveItem={handleMoveItem} // <-- agregado
           />
         </div>
 
@@ -351,3 +428,4 @@ For more information, please visit our website.`,
     </div>
   );
 }
+// ...existing code...
