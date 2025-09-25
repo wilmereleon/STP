@@ -1,7 +1,7 @@
 
-  # Sistema de Teleprompter
+  # Teleprompter estilo Winplus
 
-  This is a code bundle for Sistema de Teleprompter. The original project is available at https://www.figma.com/design/jYhBRp6hwL3YYJJ9OzzfXv/Sistema-de-Teleprompter.
+  This is a code bundle for Teleprompter estilo Winplus. The original project is available at https://www.figma.com/design/gHWcL5pOEAzOQXOdRes302/Teleprompter-estilo-Winplus.
 
   ## Running the code
 
