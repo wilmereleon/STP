@@ -26,8 +26,10 @@ export function TeleprompterScreen({
 }: TeleprompterScreenProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | undefined>(undefined);
+  const inertiaRef = useRef<number>(0);
+  const inertiaDecay = 0.92; // Suavidad del scroll manual
 
-  // Auto-scroll efecto corregido para pantalla completa
+  // Auto-scroll efecto más fluido
   useEffect(() => {
     let animationFrame: number | null = null;
     let lastTimestamp: number | null = null;
@@ -39,8 +41,8 @@ export function TeleprompterScreen({
       }
       if (lastTimestamp === null) lastTimestamp = timestamp;
       const elapsed = timestamp - lastTimestamp;
-      // Ajusta la velocidad: menor valor = más lento
-      const pixelsPerSecond = speed * 20; // 20 es lento y legible
+      // Más fluido y lento
+      const pixelsPerSecond = speed * 14; // 14 es más lento y suave
       const increment = (pixelsPerSecond * elapsed) / 1000;
       const newPos = scrollPosition + increment;
 
@@ -72,18 +74,50 @@ export function TeleprompterScreen({
     };
   }, [isPlaying, speed, onEnd, setScrollPosition, isManualScrolling, scrollPosition]);
 
+  // Scroll manual con inercia suave
+  useEffect(() => {
+    let animationFrame: number | null = null;
+    let localScroll = scrollPosition;
+    function animateInertia() {
+      if (Math.abs(inertiaRef.current) > 0.5) {
+        localScroll = localScroll + inertiaRef.current;
+        setScrollPosition(localScroll);
+        inertiaRef.current *= inertiaDecay;
+        animationFrame = window.requestAnimationFrame(animateInertia);
+      }
+    }
+    if (Math.abs(inertiaRef.current) > 0.5) {
+      animationFrame = window.requestAnimationFrame(animateInertia);
+    }
+    return () => {
+      if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrollPosition, setScrollPosition]);
+
+  // Sincronizar scroll visual
   useEffect(() => {
     if (containerRef.current) {
-      console.log('🎬 TeleprompterScreen: Setting scroll position:', scrollPosition, 'isManualScrolling:', isManualScrolling);
       containerRef.current.scrollTop = scrollPosition;
     }
   }, [scrollPosition, isManualScrolling]);
+
+  // Handler para scroll del mouse con suavidad
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const delta = e.deltaY;
+    inertiaRef.current += delta * 0.18; // Factor para hacerlo lento y fluido
+    // Limitar inercia máxima
+    if (inertiaRef.current > 40) inertiaRef.current = 40;
+    if (inertiaRef.current < -40) inertiaRef.current = -40;
+  };
 
   return (
     <div 
       ref={containerRef}
       className="h-full w-full bg-black text-white overflow-hidden relative"
       style={{ fontSize: `${fontSize}px` }}
+      onWheel={handleWheel}
     >
       <div className="p-8 pb-96">
         {text ? (

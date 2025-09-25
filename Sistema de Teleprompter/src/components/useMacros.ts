@@ -7,6 +7,10 @@ export interface MacroSettings {
   nextScript: string;
   increaseSpeed: string;
   decreaseSpeed: string;
+  increaseFontSize?: string;
+  decreaseFontSize?: string;
+  nextCue?: string;
+  previousCue?: string;
 }
 
 export const defaultMacroSettings: MacroSettings = {
@@ -15,7 +19,11 @@ export const defaultMacroSettings: MacroSettings = {
   previousScript: 'F11',
   nextScript: 'F12',
   increaseSpeed: 'F1',
-  decreaseSpeed: 'F2'
+  decreaseSpeed: 'F2',
+  increaseFontSize: 'F3',
+  decreaseFontSize: 'F4',
+  nextCue: 'PageDown',
+  previousCue: 'PageUp',
 };
 
 interface MacroActions {
@@ -25,6 +33,10 @@ interface MacroActions {
   onNext: () => void;
   onIncreaseSpeed: () => void;
   onDecreaseSpeed: () => void;
+  onIncreaseFontSize?: () => void;
+  onDecreaseFontSize?: () => void;
+  onNextCue?: () => void;
+  onPreviousCue?: () => void;
 }
 
 export function useMacros(macroSettings: MacroSettings, actions: MacroActions, enabled: boolean = true) {
@@ -64,6 +76,30 @@ export function useMacros(macroSettings: MacroSettings, actions: MacroActions, e
         case macroSettings.decreaseSpeed:
           event.preventDefault();
           actions.onDecreaseSpeed();
+          break;
+        case macroSettings.increaseFontSize:
+          if (actions.onIncreaseFontSize) {
+            event.preventDefault();
+            actions.onIncreaseFontSize();
+          }
+          break;
+        case macroSettings.decreaseFontSize:
+          if (actions.onDecreaseFontSize) {
+            event.preventDefault();
+            actions.onDecreaseFontSize();
+          }
+          break;
+        case macroSettings.nextCue:
+          if (actions.onNextCue) {
+            event.preventDefault();
+            actions.onNextCue();
+          }
+          break;
+        case macroSettings.previousCue:
+          if (actions.onPreviousCue) {
+            event.preventDefault();
+            actions.onPreviousCue();
+          }
           break;
       }
     };

@@ -237,6 +237,39 @@ export default function App() {
 
 
   // Macro actions for useMacros
+  // Helper: get all cue/guion marker positions in the text
+  function getCuePositions(text: string): number[] {
+    const lines = text.split('\n');
+    let positions: number[] = [];
+    let currentPos = 0;
+    for (const line of lines) {
+      // Match [1], [2], ... or lines with all caps and colon, or markdown headings
+      if (/^(\[\d+\])/.test(line) || /^(#{1,3}\s+.+|[A-Z][A-Z\s]+:|^\*\*.+\*\*)/.test(line)) {
+        positions.push(currentPos);
+      }
+      currentPos += line.length + 1;
+    }
+    return positions;
+  }
+
+  const handleNextCue = useCallback(() => {
+    const positions = getCuePositions(text);
+    const current = scrollPosition;
+    const next = positions.find(pos => pos > current + 10);
+    if (typeof next === 'number') {
+      setScrollPosition(next);
+    }
+  }, [text, scrollPosition]);
+
+  const handlePreviousCue = useCallback(() => {
+    const positions = getCuePositions(text);
+    const current = scrollPosition;
+    const prev = [...positions].reverse().find(pos => pos < current - 10);
+    if (typeof prev === 'number') {
+      setScrollPosition(prev);
+    }
+  }, [text, scrollPosition]);
+
   const macroActions = {
     onPlayStop: useCallback(() => handlePlayPause(), [isPlaying]),
     onPause: useCallback(() => { if (isPlaying) setIsPlaying(false); }, [isPlaying]),
@@ -244,6 +277,10 @@ export default function App() {
     onNext: useCallback(() => handleForward(), [currentItem, runOrderItems]),
     onIncreaseSpeed: useCallback(() => handleSpeedChange(Math.min(5, speed + 0.1)), [speed]),
     onDecreaseSpeed: useCallback(() => handleSpeedChange(Math.max(0.1, speed - 0.1)), [speed]),
+    onIncreaseFontSize: useCallback(() => handleSetFontSize(fontSize + 2), [fontSize]),
+    onDecreaseFontSize: useCallback(() => handleSetFontSize(fontSize - 2), [fontSize]),
+    onNextCue: handleNextCue,
+    onPreviousCue: handlePreviousCue,
   };
 
   useMacros(macroSettings, macroActions, !(showMacroConfig || showMacroMenu || isTeleprompterModalOpen));
@@ -581,7 +618,7 @@ export default function App() {
             <MacroMenu 
               isOpen={showMacroMenu}
               onClose={() => setShowMacroMenu(false)}
-              macros={Object.keys(defaultMacroSettings).filter((k): k is MacroKey => true) as MacroKey[]}
+              macros={macroSettings}
               onOpenFullConfig={() => setShowMacroConfig(true)}
             />
           </div>

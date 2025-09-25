@@ -25,6 +25,10 @@ export function ConfigurationPanel({ isOpen, onClose, macros, onMacrosChange }: 
     { key: 'nextScript', label: 'Siguiente Script', description: 'Ir al siguiente script' },
     { key: 'increaseSpeed', label: 'Aumentar Velocidad', description: 'Aumentar velocidad de scroll' },
     { key: 'decreaseSpeed', label: 'Disminuir Velocidad', description: 'Disminuir velocidad de scroll' },
+    { key: 'increaseFontSize', label: 'Aumentar Tamaño', description: 'Aumentar tamaño de fuente' },
+    { key: 'decreaseFontSize', label: 'Disminuir Tamaño', description: 'Disminuir tamaño de fuente' },
+    { key: 'nextCue', label: 'Avanzar Guion', description: 'Avanzar al siguiente guion/cue' },
+    { key: 'previousCue', label: 'Retroceder Guion', description: 'Retroceder al guion/cue anterior' },
   ];
 
   const [tempMacros, setTempMacros] = useState<MacroSettings>(macros);
@@ -78,13 +82,13 @@ export function ConfigurationPanel({ isOpen, onClose, macros, onMacrosChange }: 
               </div>
               {macroFields.map(({ key, label, description }) => (
                 <div key={key} className="grid grid-cols-3 gap-2 items-center">
-                  <span className="text-gray-200 text-sm">{label}</span>
+                  <span className="text-white text-sm">{label}</span>
                   <Select
-                    value={tempMacros[key]}
+                    value={tempMacros[key] || ''}
                     onValueChange={(value: string) => handleMacroChange(key, value)}
                   >
                     <SelectTrigger className="bg-gray-600 border-gray-500 text-white text-sm">
-                      <SelectValue>{getKeyDisplayName(tempMacros[key])}</SelectValue>
+                      <SelectValue>{getKeyDisplayName(tempMacros[key] || '')}</SelectValue>
                     </SelectTrigger>
                     <SelectContent className="bg-gray-600 border-gray-500">
                       {availableKeys.map((k) => (
