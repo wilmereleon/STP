@@ -1,3 +1,4 @@
+import React from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Slider } from "./ui/slider";
@@ -7,7 +8,7 @@ import { Card, CardContent } from "./ui/card";
 import { Switch } from "./ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { MacroSettings } from "./MacroSettings";
-import { MacroSettings as MacroSettingsType } from "./useMacros";
+import type { MacroSettings as MacroSettingsType } from "./useMacros";
 
 interface SettingsDialogProps {
   isOpen: boolean;
@@ -65,7 +66,7 @@ export function SettingsDialog({
                     <Label>Brightness</Label>
                     <Slider
                       value={[settings.brightness]}
-                      onValueChange={(value) => updateSetting('brightness', value[0])}
+                      onValueChange={(value: number[]) => updateSetting('brightness', value[0])}
                       max={100}
                       min={0}
                       step={1}
@@ -77,7 +78,7 @@ export function SettingsDialog({
                     <Label>Font Size</Label>
                     <Slider
                       value={[settings.fontSize]}
-                      onValueChange={(value) => updateSetting('fontSize', value[0])}
+                      onValueChange={(value: number[]) => updateSetting('fontSize', value[0])}
                       max={72}
                       min={12}
                       step={2}
@@ -89,7 +90,7 @@ export function SettingsDialog({
                     <Label>Scroll Speed</Label>
                     <Slider
                       value={[settings.scrollSpeed]}
-                      onValueChange={(value) => updateSetting('scrollSpeed', value[0])}
+                      onValueChange={(value: number[]) => updateSetting('scrollSpeed', value[0])}
                       max={20}
                       min={1}
                       step={0.5}
@@ -101,7 +102,7 @@ export function SettingsDialog({
                     <Label>Margins</Label>
                     <Slider
                       value={[settings.margins]}
-                      onValueChange={(value) => updateSetting('margins', value[0])}
+                      onValueChange={(value: number[]) => updateSetting('margins', value[0])}
                       max={100}
                       min={0}
                       step={5}
@@ -120,18 +121,23 @@ export function SettingsDialog({
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Enable Remote Control</Label>
-                    <Switch />
+                    <Switch
+                      checked={false}
+                      onCheckedChange={(checked: boolean) => {
+                        updateSetting('enableRemote', checked);
+                      }}
+                    />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Mirror Mode</Label>
                     <Switch 
                       checked={settings.enableMirror}
-                      onCheckedChange={(checked) => updateSetting('enableMirror', checked)}
+                      onCheckedChange={(checked: boolean) => updateSetting('enableMirror', checked)}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Network Port</Label>
-                    <Select defaultValue="8080">
+                    <Select defaultValue="8080" onValueChange={(value: string) => updateSetting('networkPort', value)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -153,7 +159,7 @@ export function SettingsDialog({
                     <Label>Font Family</Label>
                     <Select 
                       value={settings.fontFamily}
-                      onValueChange={(value) => updateSetting('fontFamily', value)}
+                      onValueChange={(value: string) => updateSetting('fontFamily', value)}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -201,7 +207,7 @@ export function SettingsDialog({
                     <Label>Text Outline</Label>
                     <Switch 
                       checked={settings.enableOutline}
-                      onCheckedChange={(checked) => updateSetting('enableOutline', checked)}
+                      onCheckedChange={(checked: boolean) => updateSetting('enableOutline', checked)}
                     />
                   </div>
                 </CardContent>
@@ -223,15 +229,21 @@ export function SettingsDialog({
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Enable Dock Module</Label>
-                    <Switch />
+                    <Switch
+                      checked={false}
+                      onCheckedChange={(checked: boolean) => updateSetting('enableDock', checked)}
+                    />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Auto-hide Dock</Label>
-                    <Switch />
+                    <Switch
+                      checked={false}
+                      onCheckedChange={(checked: boolean) => updateSetting('autoHideDock', checked)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Dock Position</Label>
-                    <Select defaultValue="bottom">
+                    <Select defaultValue="bottom" onValueChange={(value: string) => updateSetting('dockPosition', value)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -253,7 +265,7 @@ export function SettingsDialog({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={onClose}>
+          <Button onClick={() => { onSettingsChange(settings); onClose(); }}>
             Apply Settings
           </Button>
         </div>

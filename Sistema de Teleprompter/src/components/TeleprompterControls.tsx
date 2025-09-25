@@ -1,3 +1,4 @@
+// ...existing code...
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Slider } from "./ui/slider";
@@ -84,8 +85,11 @@ export function TeleprompterControls({
             </Label>
             <Slider
               id="speed-slider"
+              // support sliders that emit either a number or a number[] (range)
               value={[speed]}
-              onValueChange={(value) => onSpeedChange(value[0])}
+              onValueChange={(value: number | number[]) =>
+                onSpeedChange(Array.isArray(value) ? value[0] : value)
+              }
               max={10}
               min={1}
               step={0.5}
@@ -101,3 +105,4 @@ export function TeleprompterControls({
     </Card>
   );
 }
+// ...existing code...

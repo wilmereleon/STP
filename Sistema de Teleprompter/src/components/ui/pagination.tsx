@@ -3,7 +3,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   MoreHorizontalIcon,
-} from "lucide-react@0.487.0";
+} from "lucide-react";
 
 import { cn } from "./utils";
 import { Button, buttonVariants } from "./button";
@@ -40,7 +40,7 @@ function PaginationItem({ ...props }: React.ComponentProps<"li">) {
 type PaginationLinkProps = {
   isActive?: boolean;
 } & Pick<React.ComponentProps<typeof Button>, "size"> &
-  React.ComponentProps<"a">;
+  Omit<React.ComponentProps<"a">, "size">;
 
 function PaginationLink({
   className,
@@ -65,10 +65,12 @@ function PaginationLink({
   );
 }
 
+type PaginationNavProps = Omit<PaginationLinkProps, "isActive">;
+
 function PaginationPrevious({
   className,
   ...props
-}: React.ComponentProps<typeof PaginationLink>) {
+}: PaginationNavProps) {
   return (
     <PaginationLink
       aria-label="Go to previous page"
@@ -85,7 +87,7 @@ function PaginationPrevious({
 function PaginationNext({
   className,
   ...props
-}: React.ComponentProps<typeof PaginationLink>) {
+}: PaginationNavProps) {
   return (
     <PaginationLink
       aria-label="Go to next page"
@@ -102,17 +104,17 @@ function PaginationNext({
 function PaginationEllipsis({
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<"li">) {
   return (
-    <span
-      aria-hidden
+    <li
+      aria-hidden="true"
       data-slot="pagination-ellipsis"
       className={cn("flex size-9 items-center justify-center", className)}
       {...props}
     >
       <MoreHorizontalIcon className="size-4" />
       <span className="sr-only">More pages</span>
-    </span>
+    </li>
   );
 }
 

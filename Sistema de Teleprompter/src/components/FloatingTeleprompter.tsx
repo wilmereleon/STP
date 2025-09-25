@@ -42,120 +42,118 @@ export function FloatingTeleprompter({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [localFontSize, setLocalFontSize] = useState(fontSize);
-  
-  const windowRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const animationRef = useRef<number>();
-  const headerRef = useRef<HTMLDivElement>(null);
+
+  const windowRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const animationRef = useRef<number | null>(null);
+  const headerRef = useRef<HTMLDivElement | null>(null);
 
   // Update local font size when prop changes
   useEffect(() => {
     setLocalFontSize(fontSize);
   }, [fontSize]);
 
-  // Auto-scroll functionality - starts from the bottom and scrolls up
+  // Forzar scroll al inicio cuando se activa play o cambia el script
   useEffect(() => {
+    if (scrollContainerRef.current && (isPlaying || shouldReset)) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [isPlaying, script, shouldReset]);
+
+  // Auto-scroll functionality (de arriba hacia abajo)
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    console.log("isPlaying:", isPlaying, "shouldReset:", shouldReset);
+
     if (shouldReset) {
-      if (scrollContainerRef.current) {
-        // Reset to bottom for upward scrolling
-        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
-      }
+      container.scrollTop = 0;
       onResetComplete();
       return;
     }
 
-    if (!isPlaying || !scrollContainerRef.current) {
-      if (animationRef.current) {
+    if (!isPlaying) {
+      if (animationRef.current !== null) {
         cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
       }
       return;
     }
 
-    const container = scrollContainerRef.current;
-    let lastTime = 0;
+    let lastTime = performance.now();
 
     const scroll = (currentTime: number) => {
-      if (currentTime - lastTime >= 16) { // ~60fps
-        // Negative scroll speed for upward movement (speed 2x = -1 pixel per frame at 60fps)
-        const scrollSpeed = -(speed * 1.0);
-        container.scrollTop += scrollSpeed;
-        lastTime = currentTime;
-        
-        // Stop if we've reached the top
-        if (container.scrollTop <= 0) {
-          return;
-        }
+      const dt = currentTime - lastTime;
+      lastTime = currentTime;
+
+      const pxPerSecond = Math.max(20, speed * 40);
+      const delta = (pxPerSecond * dt) / 1000;
+      container.scrollTop += delta;
+
+      // Debug: muestra el scroll actual
+      // console.log("scrollTop:", container.scrollTop, "max:", container.scrollHeight - container.clientHeight);
+
+      const maxScroll = container.scrollHeight - container.clientHeight;
+      if (container.scrollTop >= maxScroll) {
+        container.scrollTop = maxScroll;
+        animationRef.current = null;
+        return;
       }
-      
-      if (isPlaying && container.scrollTop > 0) {
-        animationRef.current = requestAnimationFrame(scroll);
-      }
+
+      animationRef.current = requestAnimationFrame(scroll);
     };
 
-    // Start from bottom if we're just starting
-    if (container.scrollTop === 0) {
-      container.scrollTop = container.scrollHeight;
-    }
-    
     animationRef.current = requestAnimationFrame(scroll);
 
     return () => {
-      if (animationRef.current) {
+      if (animationRef.current !== null) {
         cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
       }
     };
-  }, [isPlaying, speed, shouldReset, onResetComplete]);
+  }, [isPlaying, speed, shouldReset, onResetComplete, script]);
 
-  // Mouse wheel scroll handler for floating teleprompter
+  // Mouse wheel scroll handler (natural)
   useEffect(() => {
+    const listenerOptions: AddEventListenerOptions = { passive: false, capture: true };
+
     const handleWheel = (e: WheelEvent) => {
       if (scrollContainerRef.current && windowRef.current) {
-        // Check if wheel event is over the floating teleprompter window
         const windowRect = windowRef.current.getBoundingClientRect();
         const isOverWindow = e.clientX >= windowRect.left && e.clientX <= windowRect.right && 
                             e.clientY >= windowRect.top && e.clientY <= windowRect.bottom;
-        
         if (isOverWindow) {
           e.preventDefault();
           e.stopPropagation();
-          
           if (isPlaying && e.ctrlKey) {
-            // Control playback speed when playing (Ctrl + scroll)
             const speedDelta = e.deltaY > 0 ? -0.5 : 0.5;
             const newSpeed = Math.max(0.5, Math.min(speed + speedDelta, 10));
-            if (onSpeedChange) {
-              onSpeedChange(newSpeed);
-            }
+            onSpeedChange?.(newSpeed);
           } else {
-            // Manual scroll control
-            const scrollAmount = e.deltaY * 0.8;
-            scrollContainerRef.current.scrollTop += scrollAmount;
+            // Scroll natural: deltaY positivo sube el texto (scrollTop aumenta)
+            scrollContainerRef.current.scrollTop += e.deltaY;
           }
         } else if (isPlaying) {
-          // When playing, prevent scrolling outside the teleprompter window
           e.preventDefault();
           e.stopPropagation();
         }
       }
     };
 
-    // Always listen at document level for floating teleprompter
-    document.addEventListener('wheel', handleWheel, { passive: false, capture: true });
-    
+    document.addEventListener('wheel', handleWheel as EventListener, listenerOptions);
     return () => {
-      document.removeEventListener('wheel', handleWheel, { capture: true });
+      document.removeEventListener('wheel', handleWheel as EventListener, listenerOptions);
     };
   }, [isPlaying, speed, onSpeedChange]);
 
-  // Drag functionality
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (headerRef.current && headerRef.current.contains(e.target as Node)) {
-      setIsDragging(true);
-      setDragOffset({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y
-      });
-    }
+  // Drag functionality (solo header)
+  const handleHeaderMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragOffset({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
   };
 
   useEffect(() => {
@@ -175,7 +173,6 @@ export function FloatingTeleprompter({
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
-      
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
@@ -202,7 +199,7 @@ export function FloatingTeleprompter({
     </p>
   ));
 
-  const textStyle = {
+  const textStyle: React.CSSProperties = {
     fontSize: `${localFontSize}px`,
     lineHeight: '1.4',
     fontFamily: settings.fontFamily,
@@ -224,12 +221,12 @@ export function FloatingTeleprompter({
         height: size.height,
         cursor: isDragging ? 'grabbing' : 'default'
       }}
-      onMouseDown={handleMouseDown}
     >
       <Card className="h-full flex flex-col">
-        <CardHeader 
+        <CardHeader
           ref={headerRef}
           className="pb-2 cursor-grab active:cursor-grabbing select-none"
+          onMouseDown={handleHeaderMouseDown}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

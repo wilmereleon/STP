@@ -1,3 +1,4 @@
+import React from "react";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
@@ -15,7 +16,6 @@ import {
   FileText,
   Type,
   Palette,
-  CaseSensitive,
   CaseUpper,
   CaseLower
 } from "lucide-react";
@@ -69,9 +69,9 @@ export function EditorToolbar({ onAction, currentFont, currentSize }: EditorTool
       <Separator orientation="vertical" className="h-6" />
 
       {/* Font Family */}
-      <Select value={currentFont} onValueChange={(value) => onAction('fontFamily', value)}>
+      <Select value={currentFont} onValueChange={(value: string) => onAction('fontFamily', value)}>
         <SelectTrigger className="w-24 h-7 text-xs">
-          <SelectValue />
+          <SelectValue>{String(currentFont)}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {fontFamilies.map((font) => (
@@ -83,9 +83,9 @@ export function EditorToolbar({ onAction, currentFont, currentSize }: EditorTool
       </Select>
 
       {/* Font Size */}
-      <Select value={currentSize.toString()} onValueChange={(value) => onAction('fontSize', parseInt(value))}>
+      <Select value={currentSize.toString()} onValueChange={(value: string) => onAction('fontSize', parseInt(value, 10))}>
         <SelectTrigger className="w-16 h-7 text-xs">
-          <SelectValue />
+          <SelectValue>{String(currentSize)}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {fontSizes.map((size) => (
