@@ -2,7 +2,7 @@
 ## Pruebas de Caja Negra (Black Box Testing)
 
 **Versión:** 1.0.0  
-**Fecha:** Enero 2025  
+**Fecha:** Octubre de 2025  
 **Tipo de Prueba:** Funcional / End-to-End  
 **Objetivo:** Validar todas las funcionalidades del sistema desde la perspectiva del usuario final
 

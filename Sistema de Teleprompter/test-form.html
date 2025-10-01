@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Pruebas - Sistema de Teleprompter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.2);
+            height: 8px;
+            border-radius: 4px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: white;
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .session-info {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+
+        .session-info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .session-info input, .session-info textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .session-info input:focus, .session-info textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .test-category {
+            margin-bottom: 30px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: border-color 0.3s;
+        }
+
+        .test-category.expanded {
+            border-color: #667eea;
+        }
+
+        .category-header {
+            background: #f8f9fa;
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        .category-header:hover {
+            background: #e9ecef;
+        }
+
+        .category-header h2 {
+            color: #333;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-icon {
+            font-size: 1.5em;
+        }
+
+        .category-toggle {
+            font-size: 1.5em;
+            color: #667eea;
+            transition: transform 0.3s;
+        }
+
+        .category-toggle.expanded {
+            transform: rotate(180deg);
+        }
+
+        .test-items {
+            display: none;
+            padding: 20px;
+        }
+
+        .test-items.show {
+            display: block;
+        }
+
+        .test-item {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ddd;
+            transition: all 0.3s;
+        }
+
+        .test-item.pass {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+
+        .test-item.fail {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .test-item.na {
+            border-left-color: #6c757d;
+            background: #e2e3e5;
+        }
+
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            gap: 20px;
+        }
+
+        .test-title {
+            flex: 1;
+        }
+
+        .test-title h4 {
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .test-title p {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .test-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .status-btn {
+            padding: 8px 16px;
+            border: 2px solid;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85em;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .status-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-pass {
+            background: white;
+            border-color: #28a745;
+            color: #28a745;
+        }
+
+        .btn-pass.active {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-fail {
+            background: white;
+            border-color: #dc3545;
+            color: #dc3545;
+        }
+
+        .btn-fail.active {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-na {
+            background: white;
+            border-color: #6c757d;
+            color: #6c757d;
+        }
+
+        .btn-na.active {
+            background: #6c757d;
+            color: white;
+        }
+
+        .observations {
+            margin-top: 15px;
+        }
+
+        .observations textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.9em;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        .observations textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .actions {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            padding: 20px 30px;
+            border-top: 2px solid #e0e0e0;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1em;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary-item h3 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .summary-item p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .summary-item.pass h3 {
+            color: #28a745;
+        }
+
+        .summary-item.fail h3 {
+            color: #dc3545;
+        }
+
+        .summary-item.na h3 {
+            color: #6c757d;
+        }
+
+        .summary-item.pending h3 {
+            color: #ffc107;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .history-item:hover {
+            background: #e9ecef;
+        }
+
+        .history-item h4 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .history-item p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+            }
+
+            .actions, .btn, .status-btn {
+                display: none !important;
+            }
+
+            .test-items {
+                display: block !important;
+            }
+
+            .category-toggle {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 15px;
+            }
+
+            .test-header {
+                flex-direction: column;
+            }
+
+            .test-controls {
+                width: 100%;
+            }
+
+            .status-btn {
+                flex: 1;
+            }
+
+            .summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Formulario de Pruebas Funcionales</h1>
+            <p>Sistema de Teleprompter - Control de Calidad</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar"></div>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Información de la sesión -->
+            <div class="session-info">
+                <h3>📝 Información de la Sesión de Pruebas</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px;">
+                    <div>
+                        <label><strong>Nombre del Tester:</strong></label>
+                        <input type="text" id="testerName" placeholder="Ingrese su nombre">
+                    </div>
+                    <div>
+                        <label><strong>Fecha:</strong></label>
+                        <input type="date" id="testDate">
+                    </div>
+                    <div>
+                        <label><strong>Versión de la App:</strong></label>
+                        <input type="text" id="appVersion" placeholder="ej: 1.0.0">
+                    </div>
+                    <div>
+                        <label><strong>Navegador:</strong></label>
+                        <input type="text" id="browser" placeholder="ej: Chrome 118">
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <label><strong>Notas Generales:</strong></label>
+                    <textarea id="generalNotes" placeholder="Observaciones generales sobre la sesión de pruebas..." rows="3"></textarea>
+                </div>
+            </div>
+
+            <!-- Resumen de Resultados -->
+            <div class="summary">
+                <div class="summary-item pass">
+                    <h3 id="passCount">0</h3>
+                    <p>✅ Aprobadas</p>
+                </div>
+                <div class="summary-item fail">
+                    <h3 id="failCount">0</h3>
+                    <p>❌ Fallidas</p>
+                </div>
+                <div class="summary-item na">
+                    <h3 id="naCount">0</h3>
+                    <p>➖ N/A</p>
+                </div>
+                <div class="summary-item pending">
+                    <h3 id="pendingCount">48</h3>
+                    <p>⏳ Pendientes</p>
+                </div>
+            </div>
+
+            <!-- Categorías de Pruebas -->
+            <div id="testCategories"></div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary" onclick="saveProgress()">
+                💾 Guardar Progreso
+            </button>
+            <button class="btn btn-success" onclick="exportResults()">
+                📄 Exportar Resultados
+            </button>
+            <button class="btn btn-info" onclick="showHistory()">
+                📚 Ver Historial
+            </button>
+            <button class="btn btn-warning" onclick="printResults()">
+                🖨️ Imprimir
+            </button>
+            <button class="btn btn-danger" onclick="resetForm()">
+                🔄 Reiniciar Formulario
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal de Historial -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📚 Historial de Pruebas</h2>
+                <p>Seleccione una sesión para cargar sus resultados</p>
+            </div>
+            <div class="modal-body" id="historyList"></div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="clearHistory()">🗑️ Limpiar Historial</button>
+                <button class="btn" style="background: #6c757d; color: white;" onclick="closeHistory()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Datos de pruebas desde PRUEBAS_FUNCIONALES.md
+        const testData = {
+            "Interfaz de Usuario": [
+                {
+                    id: "ui-1",
+                    title: "Visualización del panel de Run Order",
+                    description: "Verificar que el panel de Run Order se muestra correctamente con todos los scripts listados"
+                },
+                {
+                    id: "ui-2",
+                    title: "Visualización del editor de scripts",
+                    description: "Verificar que el editor de texto se muestra y permite escribir"
+                },
+                {
+                    id: "ui-3",
+                    title: "Visualización del Prompter Preview",
+                    description: "Verificar que el panel de vista previa del teleprompter se muestra correctamente"
+                },
+                {
+                    id: "ui-4",
+                    title: "Botones de control visibles",
+                    description: "Verificar que todos los botones de control (Play, Pause, Reset, etc.) son visibles"
+                }
+            ],
+            "Funcionalidad del Teleprompter": [
+                {
+                    id: "tp-1",
+                    title: "Inicio del desplazamiento (Play)",
+                    description: "Al presionar Play, el texto debe comenzar a desplazarse automáticamente"
+                },
+                {
+                    id: "tp-2",
+                    title: "Pausa del desplazamiento",
+                    description: "Al presionar Pause, el desplazamiento debe detenerse inmediatamente"
+                },
+                {
+                    id: "tp-3",
+                    title: "Reinicio de la posición (Reset)",
+                    description: "Al presionar Reset, el texto debe volver al inicio"
+                },
+                {
+                    id: "tp-4",
+                    title: "Control de velocidad",
+                    description: "La velocidad de desplazamiento debe cambiar según el ajuste del slider"
+                },
+                {
+                    id: "tp-5",
+                    title: "Control de tamaño de fuente",
+                    description: "El tamaño de la fuente debe cambiar correctamente en el preview"
+                },
+                {
+                    id: "tp-6",
+                    title: "Auto-avance al final del script",
+                    description: "Al llegar al final de un script, debe avanzar automáticamente al siguiente"
+                }
+            ],
+            "Ventana Flotante del Teleprompter": [
+                {
+                    id: "vf-1",
+                    title: "Apertura de ventana flotante",
+                    description: "Al hacer clic en 'Nueva Ventana', debe abrirse una ventana emergente"
+                },
+                {
+                    id: "vf-2",
+                    title: "Sincronización de texto",
+                    description: "El texto en la ventana flotante debe coincidir con el texto actual"
+                },
+                {
+                    id: "vf-3",
+                    title: "Sincronización de desplazamiento",
+                    description: "El desplazamiento en ambas ventanas debe estar sincronizado"
+                },
+                {
+                    id: "vf-4",
+                    title: "Sincronización de velocidad",
+                    description: "Los cambios de velocidad deben reflejarse en ambas ventanas"
+                },
+                {
+                    id: "vf-5",
+                    title: "Sincronización de tamaño de fuente",
+                    description: "Los cambios de tamaño deben reflejarse en ambas ventanas"
+                },
+                {
+                    id: "vf-6",
+                    title: "Controles independientes en ventana flotante",
+                    description: "Los controles en la ventana flotante deben funcionar correctamente"
+                }
+            ],
+            "Modo Pantalla Completa": [
+                {
+                    id: "pc-1",
+                    title: "Activación de pantalla completa",
+                    description: "Al hacer clic en 'Pantalla Completa', debe entrar en modo fullscreen"
+                },
+                {
+                    id: "pc-2",
+                    title: "Visualización en pantalla completa",
+                    description: "El texto debe mostrarse correctamente ocupando toda la pantalla"
+                },
+                {
+                    id: "pc-3",
+                    title: "Controles en pantalla completa",
+                    description: "Los controles deben permanecer accesibles en modo fullscreen"
+                },
+                {
+                    id: "pc-4",
+                    title: "Salida de pantalla completa",
+                    description: "Debe poder salir del modo fullscreen con ESC o el botón correspondiente"
+                }
+            ],
+            "Editor de Scripts": [
+                {
+                    id: "ed-1",
+                    title: "Edición de texto",
+                    description: "Debe poder escribir y editar texto en el editor"
+                },
+                {
+                    id: "ed-2",
+                    title: "Formato de texto (negritas)",
+                    description: "Debe poder aplicar formato de negritas al texto seleccionado"
+                },
+                {
+                    id: "ed-3",
+                    title: "Formato de texto (cursivas)",
+                    description: "Debe poder aplicar formato de cursivas al texto seleccionado"
+                },
+                {
+                    id: "ed-4",
+                    title: "Inserción de marcadores de salto",
+                    description: "Debe poder insertar marcadores [1], [2], etc. para navegación"
+                },
+                {
+                    id: "ed-5",
+                    title: "Actualización en tiempo real",
+                    description: "Los cambios en el editor deben reflejarse inmediatamente en el preview"
+                }
+            ],
+            "Run Order (Lista de Scripts)": [
+                {
+                    id: "ro-1",
+                    title: "Selección de script",
+                    description: "Al hacer clic en un script, debe cargarse en el editor"
+                },
+                {
+                    id: "ro-2",
+                    title: "Agregar nuevo script",
+                    description: "Debe poder agregar un nuevo script vacío a la lista"
+                },
+                {
+                    id: "ro-3",
+                    title: "Eliminar script",
+                    description: "Debe poder eliminar un script de la lista"
+                },
+                {
+                    id: "ro-4",
+                    title: "Reordenar scripts (drag & drop)",
+                    description: "Debe poder arrastrar y soltar scripts para reordenarlos"
+                },
+                {
+                    id: "ro-5",
+                    title: "Indicador de script activo",
+                    description: "El script actualmente reproduciendo debe estar visualmente marcado"
+                },
+                {
+                    id: "ro-6",
+                    title: "Estado de scripts (ready/on-air/completed)",
+                    description: "Los estados de los scripts deben cambiar correctamente"
+                }
+            ],
+            "Atajos de Teclado (Macros)": [
+                {
+                    id: "mk-1",
+                    title: "Configuración de macros",
+                    description: "Debe poder abrir el panel de configuración de atajos de teclado"
+                },
+                {
+                    id: "mk-2",
+                    title: "Asignación de teclas",
+                    description: "Debe poder asignar teclas personalizadas a cada acción"
+                },
+                {
+                    id: "mk-3",
+                    title: "Play/Pause con atajo",
+                    description: "El atajo de Play/Pause debe funcionar correctamente"
+                },
+                {
+                    id: "mk-4",
+                    title: "Velocidad con atajos",
+                    description: "Los atajos de aumentar/disminuir velocidad deben funcionar"
+                },
+                {
+                    id: "mk-5",
+                    title: "Tamaño de fuente con atajos",
+                    description: "Los atajos de aumentar/disminuir fuente deben funcionar"
+                },
+                {
+                    id: "mk-6",
+                    title: "Navegación entre scripts con atajos",
+                    description: "Los atajos de anterior/siguiente script deben funcionar"
+                },
+                {
+                    id: "mk-7",
+                    title: "Persistencia de macros",
+                    description: "Las configuraciones de macros deben guardarse al recargar"
+                }
+            ],
+            "Control con Rueda del Ratón": [
+                {
+                    id: "rm-1",
+                    title: "Desplazamiento manual con rueda",
+                    description: "La rueda del ratón debe permitir desplazamiento manual"
+                },
+                {
+                    id: "rm-2",
+                    title: "Control de velocidad (Ctrl + rueda)",
+                    description: "Ctrl + rueda debe ajustar la velocidad"
+                },
+                {
+                    id: "rm-3",
+                    title: "Control de tamaño (Shift + rueda)",
+                    description: "Shift + rueda debe ajustar el tamaño de fuente"
+                },
+                {
+                    id: "rm-4",
+                    title: "Desplazamiento fino (Alt + rueda)",
+                    description: "Alt + rueda debe permitir desplazamiento fino"
+                }
+            ],
+            "Línea Guía de Lectura": [
+                {
+                    id: "lg-1",
+                    title: "Visualización de línea guía",
+                    description: "La línea guía roja debe ser visible durante la reproducción"
+                },
+                {
+                    id: "lg-2",
+                    title: "Configuración de posición",
+                    description: "Debe poder ajustar la posición vertical de la línea guía"
+                },
+                {
+                    id: "lg-3",
+                    title: "Persistencia de configuración",
+                    description: "La posición de la línea guía debe guardarse"
+                }
+            ],
+            "Persistencia de Datos": [
+                {
+                    id: "pd-1",
+                    title: "Guardado de scripts",
+                    description: "Los scripts editados deben persistir al recargar la página"
+                },
+                {
+                    id: "pd-2",
+                    title: "Guardado de configuración",
+                    description: "Las configuraciones (velocidad, fuente, etc.) deben persistir"
+                },
+                {
+                    id: "pd-3",
+                    title: "Guardado de orden de scripts",
+                    description: "El orden de los scripts debe persistir al recargar"
+                }
+            ],
+            "Rendimiento": [
+                {
+                    id: "rn-1",
+                    title: "Fluidez del desplazamiento",
+                    description: "El desplazamiento debe ser suave sin saltos o tirones"
+                },
+                {
+                    id: "rn-2",
+                    title: "Tiempo de respuesta",
+                    description: "Los controles deben responder inmediatamente al interactuar"
+                },
+                {
+                    id: "rn-3",
+                    title: "Uso de recursos",
+                    description: "La aplicación no debe consumir excesiva CPU/memoria"
+                }
+            ],
+            "Compatibilidad": [
+                {
+                    id: "cp-1",
+                    title: "Funcionamiento en Chrome",
+                    description: "Todas las funcionalidades deben trabajar en Chrome"
+                },
+                {
+                    id: "cp-2",
+                    title: "Funcionamiento en Firefox",
+                    description: "Todas las funcionalidades deben trabajar en Firefox"
+                },
+                {
+                    id: "cp-3",
+                    title: "Funcionamiento en Edge",
+                    description: "Todas las funcionalidades deben trabajar en Edge"
+                },
+                {
+                    id: "cp-4",
+                    title: "Responsividad",
+                    description: "La interfaz debe adaptarse a diferentes tamaños de pantalla"
+                }
+            ]
+        };
+
+        // Estado del formulario
+        let testResults = {};
+        let sessionInfo = {};
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeForm();
+            loadProgress();
+            detectBrowser();
+        });
+
+        function initializeForm() {
+            const container = document.getElementById('testCategories');
+            container.innerHTML = '';
+
+            Object.keys(testData).forEach((category, catIndex) => {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'test-category';
+                categoryDiv.innerHTML = `
+                    <div class="category-header" onclick="toggleCategory(${catIndex})">
+                        <h2>
+                            <span class="category-icon">${getCategoryIcon(category)}</span>
+                            ${category}
+                            <span style="font-size: 0.7em; color: #666;">(${testData[category].length} pruebas)</span>
+                        </h2>
+                        <span class="category-toggle" id="toggle-${catIndex}">▼</span>
+                    </div>
+                    <div class="test-items" id="items-${catIndex}">
+                        ${testData[category].map(test => `
+                            <div class="test-item" id="test-${test.id}">
+                                <div class="test-header">
+                                    <div class="test-title">
+                                        <h4>${test.title}</h4>
+                                        <p>${test.description}</p>
+                                    </div>
+                                    <div class="test-controls">
+                                        <button class="status-btn btn-pass" onclick="setStatus('${test.id}', 'pass')">
+                                            ✅ Pass
+                                        </button>
+                                        <button class="status-btn btn-fail" onclick="setStatus('${test.id}', 'fail')">
+                                            ❌ Fail
+                                        </button>
+                                        <button class="status-btn btn-na" onclick="setStatus('${test.id}', 'na')">
+                                            ➖ N/A
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="observations">
+                                    <textarea 
+                                        placeholder="Observaciones (opcional)..." 
+                                        onchange="saveObservation('${test.id}', this.value)"
+                                        id="obs-${test.id}"
+                                    ></textarea>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(categoryDiv);
+            });
+
+            // Fecha actual por defecto
+            document.getElementById('testDate').valueAsDate = new Date();
+        }
+
+        function getCategoryIcon(category) {
+            const icons = {
+                "Interfaz de Usuario": "🎨",
+                "Funcionalidad del Teleprompter": "📜",
+                "Ventana Flotante del Teleprompter": "🪟",
+                "Modo Pantalla Completa": "⛶",
+                "Editor de Scripts": "✍️",
+                "Run Order (Lista de Scripts)": "📋",
+                "Atajos de Teclado (Macros)": "⌨️",
+                "Control con Rueda del Ratón": "🖱️",
+                "Línea Guía de Lectura": "📏",
+                "Persistencia de Datos": "💾",
+                "Rendimiento": "⚡",
+                "Compatibilidad": "🌐"
+            };
+            return icons[category] || "📝";
+        }
+
+        function toggleCategory(index) {
+            const items = document.getElementById(`items-${index}`);
+            const toggle = document.getElementById(`toggle-${index}`);
+            const category = items.closest('.test-category');
+            
+            items.classList.toggle('show');
+            toggle.classList.toggle('expanded');
+            category.classList.toggle('expanded');
+        }
+
+        function setStatus(testId, status) {
+            testResults[testId] = testResults[testId] || {};
+            testResults[testId].status = status;
+
+            const testItem = document.getElementById(`test-${testId}`);
+            testItem.classList.remove('pass', 'fail', 'na');
+            testItem.classList.add(status);
+
+            // Actualizar botones
+            const buttons = testItem.querySelectorAll('.status-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            testItem.querySelector(`.btn-${status}`).classList.add('active');
+
+            updateSummary();
+            autoSave();
+        }
+
+        function saveObservation(testId, observation) {
+            testResults[testId] = testResults[testId] || {};
+            testResults[testId].observation = observation;
+            autoSave();
+        }
+
+        function updateSummary() {
+            let pass = 0, fail = 0, na = 0, pending = 0;
+            const total = Object.keys(testData).reduce((sum, cat) => sum + testData[cat].length, 0);
+
+            Object.values(testResults).forEach(result => {
+                if (result.status === 'pass') pass++;
+                else if (result.status === 'fail') fail++;
+                else if (result.status === 'na') na++;
+            });
+
+            pending = total - pass - fail - na;
+
+            document.getElementById('passCount').textContent = pass;
+            document.getElementById('failCount').textContent = fail;
+            document.getElementById('naCount').textContent = na;
+            document.getElementById('pendingCount').textContent = pending;
+
+            // Actualizar barra de progreso
+            const progress = ((pass + fail + na) / total) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        function getSessionInfo() {
+            return {
+                testerName: document.getElementById('testerName').value,
+                testDate: document.getElementById('testDate').value,
+                appVersion: document.getElementById('appVersion').value,
+                browser: document.getElementById('browser').value,
+                generalNotes: document.getElementById('generalNotes').value,
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        function setSessionInfo(info) {
+            document.getElementById('testerName').value = info.testerName || '';
+            document.getElementById('testDate').value = info.testDate || '';
+            document.getElementById('appVersion').value = info.appVersion || '';
+            document.getElementById('browser').value = info.browser || '';
+            document.getElementById('generalNotes').value = info.generalNotes || '';
+        }
+
+        function autoSave() {
+            const data = {
+                sessionInfo: getSessionInfo(),
+                results: testResults
+            };
+            localStorage.setItem('teleprompter_test_current', JSON.stringify(data));
+        }
+
+        function saveProgress() {
+            const info = getSessionInfo();
+            
+            if (!info.testerName) {
+                alert('⚠️ Por favor ingrese el nombre del tester antes de guardar.');
+                document.getElementById('testerName').focus();
+                return;
+            }
+
+            const data = {
+                sessionInfo: info,
+                results: testResults
+            };
+
+            // Guardar en historial
+            const history = JSON.parse(localStorage.getItem('teleprompter_test_history') || '[]');
+            history.push(data);
+            localStorage.setItem('teleprompter_test_history', JSON.stringify(history));
+
+            // Guardar progreso actual
+            localStorage.setItem('teleprompter_test_current', JSON.stringify(data));
+
+            alert('✅ Progreso guardado exitosamente!');
+        }
+
+        function loadProgress() {
+            const saved = localStorage.getItem('teleprompter_test_current');
+            if (saved) {
+                const data = JSON.parse(saved);
+                testResults = data.results || {};
+                setSessionInfo(data.sessionInfo || {});
+
+                // Aplicar estados guardados
+                Object.keys(testResults).forEach(testId => {
+                    const result = testResults[testId];
+                    if (result.status) {
+                        const testItem = document.getElementById(`test-${testId}`);
+                        if (testItem) {
+                            testItem.classList.add(result.status);
+                            testItem.querySelector(`.btn-${result.status}`).classList.add('active');
+                        }
+                    }
+                    if (result.observation) {
+                        const obsTextarea = document.getElementById(`obs-${testId}`);
+                        if (obsTextarea) obsTextarea.value = result.observation;
+                    }
+                });
+
+                updateSummary();
+            }
+        }
+
+        function exportResults() {
+            const info = getSessionInfo();
+            
+            if (!info.testerName) {
+                alert('⚠️ Por favor ingrese el nombre del tester antes de exportar.');
+                return;
+            }
+
+            // Generar reporte en formato HTML
+            let html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Pruebas - ${info.testerName}</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .header { background: #667eea; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .info { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .summary-item { text-align: center; padding: 15px; border-radius: 8px; }
+        .pass { background: #d4edda; color: #155724; }
+        .fail { background: #f8d7da; color: #721c24; }
+        .na { background: #e2e3e5; color: #383d41; }
+        .pending { background: #fff3cd; color: #856404; }
+        .category { margin-bottom: 30px; }
+        .category h2 { background: #f8f9fa; padding: 10px; border-left: 4px solid #667eea; }
+        .test-item { padding: 15px; margin-bottom: 10px; border-radius: 6px; border-left: 4px solid; }
+        .test-item.pass { background: #d4edda; border-left-color: #28a745; }
+        .test-item.fail { background: #f8d7da; border-left-color: #dc3545; }
+        .test-item.na { background: #e2e3e5; border-left-color: #6c757d; }
+        .test-item h4 { margin: 0 0 5px 0; }
+        .test-item p { margin: 5px 0; color: #666; }
+        .observation { background: white; padding: 10px; margin-top: 10px; border-radius: 4px; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 Reporte de Pruebas Funcionales</h1>
+        <p>Sistema de Teleprompter</p>
+    </div>
+
+    <div class="info">
+        <h3>Información de la Sesión</h3>
+        <p><strong>Tester:</strong> ${info.testerName}</p>
+        <p><strong>Fecha:</strong> ${info.testDate}</p>
+        <p><strong>Versión:</strong> ${info.appVersion}</p>
+        <p><strong>Navegador:</strong> ${info.browser}</p>
+        <p><strong>Notas Generales:</strong> ${info.generalNotes || 'N/A'}</p>
+    </div>
+
+    <div class="summary">
+        <div class="summary-item pass">
+            <h2>${document.getElementById('passCount').textContent}</h2>
+            <p>✅ Aprobadas</p>
+        </div>
+        <div class="summary-item fail">
+            <h2>${document.getElementById('failCount').textContent}</h2>
+            <p>❌ Fallidas</p>
+        </div>
+        <div class="summary-item na">
+            <h2>${document.getElementById('naCount').textContent}</h2>
+            <p>➖ N/A</p>
+        </div>
+        <div class="summary-item pending">
+            <h2>${document.getElementById('pendingCount').textContent}</h2>
+            <p>⏳ Pendientes</p>
+        </div>
+    </div>
+`;
+
+            // Agregar resultados por categoría
+            Object.keys(testData).forEach(category => {
+                html += `<div class="category"><h2>${getCategoryIcon(category)} ${category}</h2>`;
+                
+                testData[category].forEach(test => {
+                    const result = testResults[test.id] || {};
+                    const status = result.status || 'pending';
+                    const statusText = {
+                        pass: '✅ PASS',
+                        fail: '❌ FAIL',
+                        na: '➖ N/A',
+                        pending: '⏳ PENDIENTE'
+                    };
+
+                    html += `
+                        <div class="test-item ${status}">
+                            <h4>${test.title} - ${statusText[status]}</h4>
+                            <p>${test.description}</p>
+                            ${result.observation ? `<div class="observation"><strong>Observación:</strong> ${result.observation}</div>` : ''}
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+            });
+
+            html += `
+    <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+        <p>Reporte generado el ${new Date().toLocaleString('es')}</p>
+    </div>
+</body>
+</html>
+`;
+
+            // Descargar archivo
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Reporte_Pruebas_${info.testerName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.html`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            alert('✅ Reporte exportado exitosamente!');
+        }
+
+        function printResults() {
+            // Expandir todas las categorías antes de imprimir
+            document.querySelectorAll('.test-items').forEach(items => {
+                items.classList.add('show');
+            });
+
+            window.print();
+        }
+
+        function resetForm() {
+            if (confirm('⚠️ ¿Está seguro de que desea reiniciar el formulario? Se perderá el progreso actual.')) {
+                testResults = {};
+                localStorage.removeItem('teleprompter_test_current');
+                location.reload();
+            }
+        }
+
+        function showHistory() {
+            const history = JSON.parse(localStorage.getItem('teleprompter_test_history') || '[]');
+            const listDiv = document.getElementById('historyList');
+
+            if (history.length === 0) {
+                listDiv.innerHTML = '<p style="text-align: center; color: #666;">No hay sesiones guardadas en el historial.</p>';
+            } else {
+                listDiv.innerHTML = history.map((session, index) => {
+                    const info = session.sessionInfo;
+                    return `
+                        <div class="history-item" onclick="loadSession(${index})">
+                            <h4>${info.testerName} - ${info.testDate}</h4>
+                            <p>Versión: ${info.appVersion} | Navegador: ${info.browser}</p>
+                            <p style="font-size: 0.85em; color: #999;">Guardado: ${new Date(info.timestamp).toLocaleString('es')}</p>
+                        </div>
+                    `;
+                }).reverse().join('');
+            }
+
+            document.getElementById('historyModal').classList.add('show');
+        }
+
+        function closeHistory() {
+            document.getElementById('historyModal').classList.remove('show');
+        }
+
+        function loadSession(index) {
+            const history = JSON.parse(localStorage.getItem('teleprompter_test_history') || '[]');
+            const session = history[history.length - 1 - index]; // Reversed display
+
+            if (session) {
+                testResults = session.results;
+                setSessionInfo(session.sessionInfo);
+
+                // Aplicar estados
+                Object.keys(testResults).forEach(testId => {
+                    const result = testResults[testId];
+                    if (result.status) {
+                        const testItem = document.getElementById(`test-${testId}`);
+                        if (testItem) {
+                            testItem.classList.remove('pass', 'fail', 'na');
+                            testItem.classList.add(result.status);
+                            testItem.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+                            testItem.querySelector(`.btn-${result.status}`).classList.add('active');
+                        }
+                    }
+                    if (result.observation) {
+                        const obsTextarea = document.getElementById(`obs-${testId}`);
+                        if (obsTextarea) obsTextarea.value = result.observation;
+                    }
+                });
+
+                updateSummary();
+                closeHistory();
+                alert('✅ Sesión cargada exitosamente!');
+            }
+        }
+
+        function clearHistory() {
+            if (confirm('⚠️ ¿Está seguro de que desea eliminar todo el historial?')) {
+                localStorage.removeItem('teleprompter_test_history');
+                closeHistory();
+                alert('✅ Historial eliminado.');
+            }
+        }
+
+        function detectBrowser() {
+            const ua = navigator.userAgent;
+            let browserName = 'Unknown';
+            
+            if (ua.indexOf('Chrome') > -1 && ua.indexOf('Edg') === -1) {
+                browserName = 'Chrome';
+            } else if (ua.indexOf('Safari') > -1 && ua.indexOf('Chrome') === -1) {
+                browserName = 'Safari';
+            } else if (ua.indexOf('Firefox') > -1) {
+                browserName = 'Firefox';
+            } else if (ua.indexOf('Edg') > -1) {
+                browserName = 'Edge';
+            }
+
+            document.getElementById('browser').value = browserName;
+        }
+
+        // Auto-guardar cada 30 segundos
+        setInterval(autoSave, 30000);
+    </script>
+</body>
+</html>
