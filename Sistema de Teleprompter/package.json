@@ -54,10 +54,13 @@
       },
       "devDependencies": {
             "@types/node": "^20.10.0",
+            "@types/react": "^19.1.17",
+            "@types/react-dom": "^19.1.10",
             "@vitejs/plugin-react-swc": "^3.10.2",
             "electron": "^38.2.0",
             "electron-builder": "^26.0.12",
             "png-to-ico": "^3.0.1",
+            "typescript": "^5.9.3",
             "vite": "6.3.5"
       },
       "scripts": {
@@ -86,7 +89,9 @@
                   "target": [
                         {
                               "target": "nsis",
-                              "arch": ["x64"]
+                              "arch": [
+                                    "x64"
+                              ]
                         }
                   ],
                   "icon": "build/icon.ico",

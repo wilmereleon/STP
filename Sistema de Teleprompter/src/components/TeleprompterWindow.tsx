@@ -96,7 +96,13 @@ export function TeleprompterWindow() {
     // Listen for messages from parent window
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === 'TELEPROMPTER_UPDATE') {
-        setData(event.data.data);
+        console.log('🔵 POPUP received TELEPROMPTER_UPDATE:', event.data.data);
+        // Merge con el estado actual para no sobrescribir cambios locales
+        setData(prevData => {
+          const newData = { ...prevData, ...event.data.data };
+          console.log('🔵 POPUP merging data. Prev fontSize:', prevData.fontSize, 'New fontSize:', newData.fontSize);
+          return newData;
+        });
         setIsConnected(true);
       }
     };
@@ -164,15 +170,35 @@ export function TeleprompterWindow() {
   const handleSpeedChange = useCallback((speed: number) => {
     // Limitar el rango y actualizar correctamente
     const newSpeed = Math.max(0.1, Math.min(5, Math.round(speed * 100) / 100));
-    sendUpdate({ speed: newSpeed });
-  }, [sendUpdate]);
+    console.log('🟢 TeleprompterWindow handleSpeedChange:', speed, '→', newSpeed);
+    setData(prev => ({ ...prev, speed: newSpeed }));
+    // También notificar al parent
+    if (window.opener) {
+      window.opener.postMessage({
+        type: 'TELEPROMPTER_CONTROL',
+        data: { speed: newSpeed }
+      }, '*');
+    }
+  }, []);
 
 
   const handleFontSizeChange = useCallback((fontSize: number) => {
     // Limitar el rango y actualizar correctamente
-    const newFontSize = Math.max(12, Math.min(200, Math.round(fontSize)));
-    sendUpdate({ fontSize: newFontSize });
-  }, [sendUpdate]);
+    const newFontSize = Math.max(12, Math.min(500, Math.round(fontSize)));
+    console.log('🟢 TeleprompterWindow handleFontSizeChange:', fontSize, '→', newFontSize);
+    setData(prev => {
+      const updated = { ...prev, fontSize: newFontSize };
+      console.log('🟢 TeleprompterWindow setData fontSize:', updated.fontSize);
+      return updated;
+    });
+    // También notificar al parent
+    if (window.opener) {
+      window.opener.postMessage({
+        type: 'TELEPROMPTER_CONTROL',
+        data: { fontSize: newFontSize }
+      }, '*');
+    }
+  }, []);
 
   const handleScrollPositionChange = useCallback((scrollPosition: number) => {
     sendUpdate({ scrollPosition });
@@ -224,8 +250,14 @@ export function TeleprompterWindow() {
       onNext: handleForward,
       onIncreaseSpeed: () => handleSpeedChange(Math.min(5, data.speed + 0.1)),
       onDecreaseSpeed: () => handleSpeedChange(Math.max(0.1, data.speed - 0.1)),
-      onIncreaseFontSize: () => handleFontSizeChange(data.fontSize + 2),
-      onDecreaseFontSize: () => handleFontSizeChange(data.fontSize - 2),
+      onIncreaseFontSize: () => {
+        const newSize = Math.min(500, data.fontSize + 2);
+        handleFontSizeChange(newSize);
+      },
+      onDecreaseFontSize: () => {
+        const newSize = Math.max(12, data.fontSize - 2);
+        handleFontSizeChange(newSize);
+      },
       onNextCue: handleNextCue,
       onPreviousCue: handlePreviousCue,
     },
@@ -265,7 +297,7 @@ export function TeleprompterWindow() {
         <div className="fixed top-0 left-0 right-0 z-20 bg-black/80 backdrop-blur border-b border-gray-800 flex flex-col">
           <div className="flex justify-between items-center px-4 py-2">
             <div className="text-white text-sm">
-              Teleprompter - {data.isPlaying ? 'REPRODUCIENDO' : 'PAUSADO'}
+              pT Torneos portátil - {data.isPlaying ? 'REPRODUCIENDO' : 'PAUSADO'}
             </div>
             <div className="flex items-center gap-2">
               <TeleprompterControls

@@ -5,6 +5,7 @@
 
   export default defineConfig({
     plugins: [react()],
+    base: './', // Importante para Electron: usar rutas relativas
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
@@ -51,10 +52,10 @@
     },
     build: {
       target: 'esnext',
-      outDir: 'build',
+      outDir: 'dist',
+      emptyOutDir: true,
     },
     server: {
-      port: 3000,
-      open: true,
+      port: 5173,
     },
   });

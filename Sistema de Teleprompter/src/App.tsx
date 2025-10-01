@@ -223,17 +223,30 @@ export default function App() {
         sendToTeleprompter();
       } else if (event.data.type === 'TELEPROMPTER_CONTROL') {
         // Update local state from teleprompter controls
+        console.log('📩 Received TELEPROMPTER_CONTROL from popup:', event.data.data);
         const updates = event.data.data;
-        if (updates.hasOwnProperty('isPlaying')) setIsPlaying(updates.isPlaying);
-        if (updates.hasOwnProperty('speed')) setSpeed(updates.speed);
-        if (updates.hasOwnProperty('fontSize')) setFontSize(updates.fontSize);
-        if (updates.hasOwnProperty('scrollPosition')) setScrollPosition(updates.scrollPosition);
+        if (updates.hasOwnProperty('isPlaying')) {
+          console.log('📩 Updating isPlaying to:', updates.isPlaying);
+          setIsPlaying(updates.isPlaying);
+        }
+        if (updates.hasOwnProperty('speed')) {
+          console.log('📩 Updating speed to:', updates.speed);
+          setSpeed(updates.speed);
+        }
+        if (updates.hasOwnProperty('fontSize')) {
+          console.log('📩 Updating fontSize to:', updates.fontSize);
+          setFontSize(updates.fontSize);
+        }
+        if (updates.hasOwnProperty('scrollPosition')) {
+          console.log('📩 Updating scrollPosition to:', updates.scrollPosition);
+          setScrollPosition(updates.scrollPosition);
+        }
       }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [text, isPlaying, speed, fontSize, scrollPosition]);
+  }, []); // Remover dependencias para evitar re-crear el listener
 
 
   // Macro actions for useMacros
@@ -289,6 +302,7 @@ export default function App() {
   const sendToTeleprompter = () => {
     if (teleprompterWindowRef.current && !teleprompterWindowRef.current.closed) {
       const dataToSend = { text, isPlaying, speed, fontSize, scrollPosition };
+      console.log('📤 Sending to teleprompter:', dataToSend);
       teleprompterWindowRef.current.postMessage({
         type: 'TELEPROMPTER_UPDATE',
         data: dataToSend
@@ -296,10 +310,26 @@ export default function App() {
     }
   };
 
-  // Update teleprompter window when state changes
+  // Update teleprompter window when TEXT changes (not for other state changes)
   useEffect(() => {
-    sendToTeleprompter();
-  }, [text, isPlaying, speed, fontSize, scrollPosition]);
+    // Solo enviar cuando cambia el texto, no cuando cambian otros estados
+    // que pueden venir de la ventana desplegable
+    if (teleprompterWindowRef.current && !teleprompterWindowRef.current.closed) {
+      console.log('📤 Text changed, sending update');
+      sendToTeleprompter();
+    }
+  }, [text]); // Solo cuando cambia el texto
+  
+  // Para isPlaying, usar un pequeño debounce para evitar loops
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (teleprompterWindowRef.current && !teleprompterWindowRef.current.closed) {
+        console.log('📤 isPlaying changed, sending update');
+        sendToTeleprompter();
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [isPlaying]);
 
   const handleOpenTeleprompter = () => {
     const features = 'width=1200,height=800,scrollbars=no,resizable=yes,status=no,toolbar=no,menubar=no';
