@@ -44,6 +44,9 @@ export default function App() {
   const [showMacroMenu, setShowMacroMenu] = useState(false);
   const [jumpMarkers, setJumpMarkers] = useState<{[key: string]: number}>({});
   const teleprompterWindowRef = useRef<Window | null>(null);
+  
+  // Flag to prevent postMessage loops between windows
+  const isUpdatingFromPopup = useRef(false);
 
   const [runOrderItems, setRunOrderItems] = useState<RunOrderItem[]>([
     { id: '1', title: 'INTRO/TECH SCRIPTS ROLLING', duration: '00:01:15', status: 'ready', text: '[1] KEEPING THOSE SCRIPTS ROLLING:\n\nTeleprompter - the unsung hero in the broadcast chain - a critical element, to be sure, but one too often taken for granted as just another tool - a critical essential, to be work.\n\nWhile the teleprompter has been around for decades, helping anchors and reporters deliver news with confidence and eye contact, its role in modern broadcasting has evolved significantly.' },
@@ -224,6 +227,10 @@ export default function App() {
       } else if (event.data.type === 'TELEPROMPTER_CONTROL') {
         // Update local state from teleprompter controls
         console.log('📩 Received TELEPROMPTER_CONTROL from popup:', event.data.data);
+        
+        // Set flag to prevent sending updates back to popup
+        isUpdatingFromPopup.current = true;
+        
         const updates = event.data.data;
         if (updates.hasOwnProperty('isPlaying')) {
           console.log('📩 Updating isPlaying to:', updates.isPlaying);
@@ -241,6 +248,11 @@ export default function App() {
           console.log('📩 Updating scrollPosition to:', updates.scrollPosition);
           setScrollPosition(updates.scrollPosition);
         }
+        
+        // Reset flag after a short delay
+        setTimeout(() => {
+          isUpdatingFromPopup.current = false;
+        }, 100);
       }
     };
 
@@ -283,21 +295,6 @@ export default function App() {
     }
   }, [text, scrollPosition]);
 
-  const macroActions = {
-    onPlayStop: useCallback(() => handlePlayPause(), [isPlaying]),
-    onPause: useCallback(() => { if (isPlaying) setIsPlaying(false); }, [isPlaying]),
-    onPrevious: useCallback(() => handleBackward(), [currentItem, runOrderItems]),
-    onNext: useCallback(() => handleForward(), [currentItem, runOrderItems]),
-    onIncreaseSpeed: useCallback(() => handleSpeedChange(Math.min(5, speed + 0.1)), [speed]),
-    onDecreaseSpeed: useCallback(() => handleSpeedChange(Math.max(0.1, speed - 0.1)), [speed]),
-    onIncreaseFontSize: useCallback(() => handleSetFontSize(fontSize + 2), [fontSize]),
-    onDecreaseFontSize: useCallback(() => handleSetFontSize(fontSize - 2), [fontSize]),
-    onNextCue: handleNextCue,
-    onPreviousCue: handlePreviousCue,
-  };
-
-  useMacros(macroSettings, macroActions, !(showMacroConfig || showMacroMenu || isTeleprompterModalOpen));
-
   // Send data to teleprompter window
   const sendToTeleprompter = () => {
     if (teleprompterWindowRef.current && !teleprompterWindowRef.current.closed) {
@@ -314,7 +311,7 @@ export default function App() {
   useEffect(() => {
     // Solo enviar cuando cambia el texto, no cuando cambian otros estados
     // que pueden venir de la ventana desplegable
-    if (teleprompterWindowRef.current && !teleprompterWindowRef.current.closed) {
+    if (teleprompterWindowRef.current && !teleprompterWindowRef.current.closed && !isUpdatingFromPopup.current) {
       console.log('📤 Text changed, sending update');
       sendToTeleprompter();
     }
@@ -323,7 +320,7 @@ export default function App() {
   // Para isPlaying, usar un pequeño debounce para evitar loops
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (teleprompterWindowRef.current && !teleprompterWindowRef.current.closed) {
+      if (teleprompterWindowRef.current && !teleprompterWindowRef.current.closed && !isUpdatingFromPopup.current) {
         console.log('📤 isPlaying changed, sending update');
         sendToTeleprompter();
       }
@@ -348,6 +345,16 @@ export default function App() {
     setIsTeleprompterModalOpen(false);
   };
 
+  // Define handlePlayPause BEFORE using it in macroActions
+  const handlePlayPause = () => {
+    console.log('🟢 App.handlePlayPause called - current isPlaying:', isPlaying);
+    setIsPlaying(prev => {
+      const newState = !prev;
+      console.log('🟢 App.handlePlayPause - setting isPlaying to:', newState);
+      return newState;
+    });
+  };
+
   const handleTeleprompterStateChange = (isPlaying: boolean, speed: number, fontSize: number, scrollPosition: number) => {
     setIsPlaying(isPlaying);
     setSpeed(speed);
@@ -355,14 +362,21 @@ export default function App() {
     setScrollPosition(scrollPosition);
   };
 
-  const handlePlayPause = () => {
-    console.log('🟢 App.handlePlayPause called - current isPlaying:', isPlaying);
-    const newState = !isPlaying;
-    console.log('🟢 App.handlePlayPause - setting isPlaying to:', newState);
-    setIsPlaying(newState);
-    // Immediate verification
-    console.log('🟢 App.handlePlayPause - setIsPlaying called with:', newState);
+  // macroActions defined AFTER handlePlayPause
+  const macroActions = {
+    onPlayStop: useCallback(() => handlePlayPause(), []),
+    onPause: useCallback(() => setIsPlaying(false), []),
+    onPrevious: useCallback(() => handleBackward(), [currentItem, runOrderItems]),
+    onNext: useCallback(() => handleForward(), [currentItem, runOrderItems]),
+    onIncreaseSpeed: useCallback(() => handleSpeedChange(Math.min(5, speed + 0.1)), [speed]),
+    onDecreaseSpeed: useCallback(() => handleSpeedChange(Math.max(0.1, speed - 0.1)), [speed]),
+    onIncreaseFontSize: useCallback(() => handleSetFontSize(fontSize + 2), [fontSize]),
+    onDecreaseFontSize: useCallback(() => handleSetFontSize(fontSize - 2), [fontSize]),
+    onNextCue: handleNextCue,
+    onPreviousCue: handlePreviousCue,
   };
+
+  useMacros(macroSettings, macroActions, !(showMacroConfig || showMacroMenu || isTeleprompterModalOpen));
 
   const handleReset = () => {
     console.log('🟢 App.handleReset called - Resetting teleprompter to initial state');
