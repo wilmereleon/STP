@@ -1,0 +1,566 @@
+═══════════════════════════════════════════════════════════════
+     REPORTE DE PRUEBAS FUNCIONALES - SISTEMA DE TELEPROMPTER
+═══════════════════════════════════════════════════════════════
+
+📝 INFORMACIÓN DE LA SESIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Tester:           María González
+Fecha:            2025-10-01
+Versión App:      1.0.0
+Navegador:        Chrome 118
+Generado:         01/10/2025 14:30:25
+Notas Generales:  Pruebas realizadas en Windows 11 con dos monitores
+
+📊 RESUMEN DE RESULTADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Aprobadas:      52 / 68 (76.5%)
+❌ Fallidas:        3 / 68 (4.4%)
+➖ N/A:             8 / 68 (11.8%)
+⏳ Pendientes:      5 / 68 (7.4%)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TOTAL:         68 pruebas
+
+
+📋 RESULTADOS DETALLADOS POR CATEGORÍA
+═══════════════════════════════════════════════════════════════
+
+🎨 INTERFAZ DE USUARIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[UI-1] Visualización del panel de Run Order
+Estado: ✅ PASS
+Descripción: Verificar que el panel de Run Order se muestra correctamente con todos los scripts listados
+
+[UI-2] Visualización del editor de scripts
+Estado: ✅ PASS
+Descripción: Verificar que el editor de texto se muestra y permite escribir
+
+[UI-3] Visualización del Prompter Preview
+Estado: ✅ PASS
+Descripción: Verificar que el panel de vista previa del teleprompter se muestra correctamente
+
+[UI-4] Botones de control visibles
+Estado: ✅ PASS
+Descripción: Verificar que todos los botones de control (Play, Pause, Reset, etc.) son visibles
+
+
+📜 FUNCIONALIDAD DEL TELEPROMPTER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[TP-1] Inicio del desplazamiento (Play)
+Estado: ✅ PASS
+Descripción: Al presionar Play, el texto debe comenzar a desplazarse automáticamente
+Observaciones:
+  Funciona correctamente. El desplazamiento inicia suavemente.
+
+[TP-2] Pausa del desplazamiento
+Estado: ❌ FAIL
+Descripción: Al presionar Pause, el desplazamiento debe detenerse inmediatamente
+Observaciones:
+  BUG CRÍTICO: El botón Pause no responde al primer clic.
+  Se requiere hacer clic dos veces para que funcione.
+  
+  Pasos para reproducir:
+  1. Iniciar reproducción con Play
+  2. Hacer clic en Pause una vez
+  3. El texto continúa desplazándose
+  4. Hacer segundo clic en Pause
+  5. Ahora sí se detiene
+  
+  Navegador: Chrome 118
+  Sistema: Windows 11
+  Frecuencia: 100% reproducible
+
+[TP-3] Reinicio de la posición (Reset)
+Estado: ✅ PASS
+Descripción: Al presionar Reset, el texto debe volver al inicio
+
+[TP-4] Control de velocidad
+Estado: ✅ PASS
+Descripción: La velocidad de desplazamiento debe cambiar según el ajuste del slider
+
+[TP-5] Control de tamaño de fuente
+Estado: ✅ PASS
+Descripción: El tamaño de la fuente debe cambiar correctamente en el preview
+
+[TP-6] Auto-avance al final del script
+Estado: ✅ PASS
+Descripción: Al llegar al final de un script, debe avanzar automáticamente al siguiente
+
+
+🪟 VENTANA FLOTANTE DEL TELEPROMPTER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[VF-1] Apertura de ventana flotante
+Estado: ✅ PASS
+Descripción: Al hacer clic en 'Nueva Ventana', debe abrirse una ventana emergente
+
+[VF-2] Sincronización de texto
+Estado: ✅ PASS
+Descripción: El texto en la ventana flotante debe coincidir con el texto actual
+
+[VF-3] Sincronización de desplazamiento
+Estado: ❌ FAIL
+Descripción: El desplazamiento en ambas ventanas debe estar sincronizado
+Observaciones:
+  La sincronización tiene un retraso de aproximadamente 500ms.
+  La ventana flotante va ligeramente detrás de la ventana principal.
+  No es un bug crítico pero es perceptible.
+
+[VF-4] Sincronización de velocidad
+Estado: ✅ PASS
+Descripción: Los cambios de velocidad deben reflejarse en ambas ventanas
+
+[VF-5] Sincronización de tamaño de fuente
+Estado: ✅ PASS
+Descripción: Los cambios de tamaño deben reflejarse en ambas ventanas
+
+[VF-6] Controles independientes en ventana flotante
+Estado: ✅ PASS
+Descripción: Los controles en la ventana flotante deben funcionar correctamente
+
+
+⛶ MODO PANTALLA COMPLETA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[PC-1] Activación de pantalla completa
+Estado: ✅ PASS
+Descripción: Al hacer clic en 'Pantalla Completa', debe entrar en modo fullscreen
+
+[PC-2] Visualización en pantalla completa
+Estado: ✅ PASS
+Descripción: El texto debe mostrarse correctamente ocupando toda la pantalla
+
+[PC-3] Controles en pantalla completa
+Estado: ✅ PASS
+Descripción: Los controles deben permanecer accesibles en modo fullscreen
+
+[PC-4] Salida de pantalla completa
+Estado: ✅ PASS
+Descripción: Debe poder salir del modo fullscreen con ESC o el botón correspondiente
+
+
+✍️ EDITOR DE SCRIPTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ED-1] Edición de texto
+Estado: ✅ PASS
+Descripción: Debe poder escribir y editar texto en el editor
+
+[ED-2] Formato de texto (negritas)
+Estado: ✅ PASS
+Descripción: Debe poder aplicar formato de negritas al texto seleccionado
+
+[ED-3] Formato de texto (cursivas)
+Estado: ✅ PASS
+Descripción: Debe poder aplicar formato de cursivas al texto seleccionado
+
+[ED-4] Inserción de marcadores de salto
+Estado: ✅ PASS
+Descripción: Debe poder insertar marcadores [1], [2], etc. para navegación
+
+[ED-5] Actualización en tiempo real
+Estado: ✅ PASS
+Descripción: Los cambios en el editor deben reflejarse inmediatamente en el preview
+
+
+📋 RUN ORDER (LISTA DE SCRIPTS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[RO-1] Selección de script
+Estado: ✅ PASS
+Descripción: Al hacer clic en un script, debe cargarse en el editor
+
+[RO-2] Agregar nuevo script
+Estado: ✅ PASS
+Descripción: Debe poder agregar un nuevo script vacío a la lista
+
+[RO-3] Eliminar script
+Estado: ✅ PASS
+Descripción: Debe poder eliminar un script de la lista
+
+[RO-4] Reordenar scripts (drag & drop)
+Estado: ✅ PASS
+Descripción: Debe poder arrastrar y soltar scripts para reordenarlos
+
+[RO-5] Indicador de script activo
+Estado: ✅ PASS
+Descripción: El script actualmente reproduciendo debe estar visualmente marcado
+
+[RO-6] Estado de scripts (ready/on-air/completed)
+Estado: ✅ PASS
+Descripción: Los estados de los scripts deben cambiar correctamente
+
+
+⌨️ ATAJOS DE TECLADO (MACROS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[MK-1] Configuración de macros
+Estado: ✅ PASS
+Descripción: Debe poder abrir el panel de configuración de atajos de teclado
+
+[MK-2] Asignación de teclas
+Estado: ✅ PASS
+Descripción: Debe poder asignar teclas personalizadas a cada acción
+
+[MK-3] Play/Pause con atajo
+Estado: ❌ FAIL
+Descripción: El atajo de Play/Pause debe funcionar correctamente
+Observaciones:
+  El atajo de teclado Space no funciona consistentemente.
+  A veces funciona, a veces no.
+  Parece haber conflicto cuando el foco está en el editor.
+
+[MK-4] Velocidad con atajos
+Estado: ✅ PASS
+Descripción: Los atajos de aumentar/disminuir velocidad deben funcionar
+
+[MK-5] Tamaño de fuente con atajos
+Estado: ✅ PASS
+Descripción: Los atajos de aumentar/disminuir fuente deben funcionar
+
+[MK-6] Navegación entre scripts con atajos
+Estado: ✅ PASS
+Descripción: Los atajos de anterior/siguiente script deben funcionar
+
+[MK-7] Persistencia de macros
+Estado: ✅ PASS
+Descripción: Las configuraciones de macros deben guardarse al recargar
+
+
+🖱️ CONTROL CON RUEDA DEL RATÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[RM-1] Desplazamiento manual con rueda
+Estado: ✅ PASS
+Descripción: La rueda del ratón debe permitir desplazamiento manual
+
+[RM-2] Control de velocidad (Ctrl + rueda)
+Estado: ✅ PASS
+Descripción: Ctrl + rueda debe ajustar la velocidad
+
+[RM-3] Control de tamaño (Shift + rueda)
+Estado: ✅ PASS
+Descripción: Shift + rueda debe ajustar el tamaño de fuente
+
+[RM-4] Desplazamiento fino (Alt + rueda)
+Estado: ✅ PASS
+Descripción: Alt + rueda debe permitir desplazamiento fino
+
+
+📏 LÍNEA GUÍA DE LECTURA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[LG-1] Visualización de línea guía
+Estado: ✅ PASS
+Descripción: La línea guía roja debe ser visible durante la reproducción
+
+[LG-2] Configuración de posición
+Estado: ✅ PASS
+Descripción: Debe poder ajustar la posición vertical de la línea guía
+
+[LG-3] Persistencia de configuración
+Estado: ✅ PASS
+Descripción: La posición de la línea guía debe guardarse
+
+
+💾 PERSISTENCIA DE DATOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[PD-1] Guardado de scripts
+Estado: ✅ PASS
+Descripción: Los scripts editados deben persistir al recargar la página
+
+[PD-2] Guardado de configuración
+Estado: ✅ PASS
+Descripción: Las configuraciones (velocidad, fuente, etc.) deben persistir
+
+[PD-3] Guardado de orden de scripts
+Estado: ✅ PASS
+Descripción: El orden de los scripts debe persistir al recargar
+
+
+⚡ RENDIMIENTO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[RN-1] Fluidez del desplazamiento
+Estado: ✅ PASS
+Descripción: El desplazamiento debe ser suave sin saltos o tirones
+
+[RN-2] Tiempo de respuesta
+Estado: ✅ PASS
+Descripción: Los controles deben responder inmediatamente al interactuar
+
+[RN-3] Uso de recursos
+Estado: ✅ PASS
+Descripción: La aplicación no debe consumir excesiva CPU/memoria
+
+
+🌐 COMPATIBILIDAD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[CP-1] Funcionamiento en Chrome
+Estado: ✅ PASS
+Descripción: Todas las funcionalidades deben trabajar en Chrome
+
+[CP-2] Funcionamiento en Firefox
+Estado: ➖ N/A
+Descripción: Todas las funcionalidades deben trabajar en Firefox
+Observaciones:
+  No se probó en Firefox en esta sesión.
+  Solo se validó en Chrome.
+
+[CP-3] Funcionamiento en Edge
+Estado: ➖ N/A
+Descripción: Todas las funcionalidades deben trabajar en Edge
+
+[CP-4] Responsividad
+Estado: ✅ PASS
+Descripción: La interfaz debe adaptarse a diferentes tamaños de pantalla
+
+
+📦 INSTALACIÓN Y DESPLIEGUE (ELECTRON)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[IN-1] Generación del instalador
+Estado: ✅ PASS
+Descripción: Ejecutar 'npm run electron:build:win' debe generar el instalador sin errores
+
+[IN-2] Tamaño del instalador
+Estado: ✅ PASS
+Descripción: El instalador debe tener un tamaño razonable (aproximadamente 140-160 MB)
+
+[IN-3] Descarga del instalador
+Estado: ✅ PASS
+Descripción: El archivo .exe del instalador debe descargarse correctamente desde la carpeta release/
+
+[IN-4] Ejecución del instalador
+Estado: ✅ PASS
+Descripción: El instalador debe iniciarse al hacer doble clic en el archivo .exe
+
+[IN-5] Interfaz del instalador (NSIS)
+Estado: ✅ PASS
+Descripción: El wizard de instalación debe mostrarse correctamente con el nombre y el icono de la aplicación
+
+[IN-6] Selección de directorio de instalación
+Estado: ✅ PASS
+Descripción: Debe permitir seleccionar la carpeta de instalación (por defecto: Program Files)
+
+[IN-7] Creación de acceso directo en escritorio
+Estado: ✅ PASS
+Descripción: Debe ofrecer la opción de crear un acceso directo en el escritorio
+
+[IN-8] Creación de acceso directo en menú inicio
+Estado: ✅ PASS
+Descripción: Debe crear un acceso directo en el menú de inicio de Windows
+
+[IN-9] Progreso de instalación
+Estado: ✅ PASS
+Descripción: La barra de progreso debe mostrarse durante la instalación
+
+[IN-10] Finalización de instalación
+Estado: ✅ PASS
+Descripción: El instalador debe completarse exitosamente y mostrar mensaje de confirmación
+
+[IN-11] Inicio automático post-instalación
+Estado: ✅ PASS
+Descripción: Debe ofrecer la opción de iniciar la aplicación inmediatamente después de instalar
+
+[IN-12] Icono de la aplicación instalada
+Estado: ✅ PASS
+Descripción: El icono del acceso directo debe mostrarse correctamente
+
+[IN-13] Apertura de la aplicación instalada
+Estado: ✅ PASS
+Descripción: Al hacer doble clic en el acceso directo, la aplicación debe abrirse
+
+[IN-14] Ventana de Electron
+Estado: ✅ PASS
+Descripción: La aplicación debe abrirse en una ventana de Electron (no navegador)
+
+[IN-15] Funcionalidad completa en versión instalada
+Estado: ✅ PASS
+Descripción: Todas las funcionalidades deben trabajar igual que en la versión web
+
+[IN-16] Cierre de la aplicación
+Estado: ✅ PASS
+Descripción: La aplicación debe cerrarse correctamente sin dejar procesos residuales
+
+[IN-17] Reinstalación sobre versión existente
+Estado: ➖ N/A
+Descripción: Debe permitir reinstalar sobre una instalación existente sin errores
+
+[IN-18] Desinstalación desde Panel de Control
+Estado: ⏳ PENDIENTE
+Descripción: La aplicación debe aparecer en 'Programas y características' y permitir desinstalar
+
+[IN-19] Proceso de desinstalación
+Estado: ⏳ PENDIENTE
+Descripción: El desinstalador debe ejecutarse correctamente y eliminar todos los archivos
+
+[IN-20] Limpieza post-desinstalación
+Estado: ⏳ PENDIENTE
+Descripción: Los accesos directos y carpetas deben eliminarse completamente tras desinstalar
+
+
+📈 ESTADÍSTICAS POR CATEGORÍA
+═══════════════════════════════════════════════════════════════
+
+🎨 Interfaz de Usuario
+  Total:      4 pruebas
+  Progreso:   100% (4/4)
+  ✅ Pass:    4
+  ❌ Fail:    0
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+📜 Funcionalidad del Teleprompter
+  Total:      6 pruebas
+  Progreso:   100% (6/6)
+  ✅ Pass:    5
+  ❌ Fail:    1
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+🪟 Ventana Flotante del Teleprompter
+  Total:      6 pruebas
+  Progreso:   100% (6/6)
+  ✅ Pass:    5
+  ❌ Fail:    1
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+⛶ Modo Pantalla Completa
+  Total:      4 pruebas
+  Progreso:   100% (4/4)
+  ✅ Pass:    4
+  ❌ Fail:    0
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+✍️ Editor de Scripts
+  Total:      5 pruebas
+  Progreso:   100% (5/5)
+  ✅ Pass:    5
+  ❌ Fail:    0
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+📋 Run Order (Lista de Scripts)
+  Total:      6 pruebas
+  Progreso:   100% (6/6)
+  ✅ Pass:    6
+  ❌ Fail:    0
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+⌨️ Atajos de Teclado (Macros)
+  Total:      7 pruebas
+  Progreso:   100% (7/7)
+  ✅ Pass:    6
+  ❌ Fail:    1
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+🖱️ Control con Rueda del Ratón
+  Total:      4 pruebas
+  Progreso:   100% (4/4)
+  ✅ Pass:    4
+  ❌ Fail:    0
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+📏 Línea Guía de Lectura
+  Total:      3 pruebas
+  Progreso:   100% (3/3)
+  ✅ Pass:    3
+  ❌ Fail:    0
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+💾 Persistencia de Datos
+  Total:      3 pruebas
+  Progreso:   100% (3/3)
+  ✅ Pass:    3
+  ❌ Fail:    0
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+⚡ Rendimiento
+  Total:      3 pruebas
+  Progreso:   100% (3/3)
+  ✅ Pass:    3
+  ❌ Fail:    0
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+🌐 Compatibilidad
+  Total:      4 pruebas
+  Progreso:   50% (2/4)
+  ✅ Pass:    1
+  ❌ Fail:    0
+  ➖ N/A:     2
+  ⏳ Pendiente: 1
+
+📦 Instalación y Despliegue (Electron)
+  Total:      20 pruebas
+  Progreso:   85% (17/20)
+  ✅ Pass:    14
+  ❌ Fail:    0
+  ➖ N/A:     3
+  ⏳ Pendiente: 3
+
+
+🐛 BUGS ENCONTRADOS (SOLO FALLIDAS)
+═══════════════════════════════════════════════════════════════
+
+BUG #1
+────────────────────────────────────────────────────────────
+ID:          TP-2
+Categoría:   Funcionalidad del Teleprompter
+Prueba:      Pausa del desplazamiento
+Descripción: Al presionar Pause, el desplazamiento debe detenerse inmediatamente
+Observaciones:
+  BUG CRÍTICO: El botón Pause no responde al primer clic.
+  Se requiere hacer clic dos veces para que funcione.
+  
+  Pasos para reproducir:
+  1. Iniciar reproducción con Play
+  2. Hacer clic en Pause una vez
+  3. El texto continúa desplazándose
+  4. Hacer segundo clic en Pause
+  5. Ahora sí se detiene
+  
+  Navegador: Chrome 118
+  Sistema: Windows 11
+  Frecuencia: 100% reproducible
+
+BUG #2
+────────────────────────────────────────────────────────────
+ID:          VF-3
+Categoría:   Ventana Flotante del Teleprompter
+Prueba:      Sincronización de desplazamiento
+Descripción: El desplazamiento en ambas ventanas debe estar sincronizado
+Observaciones:
+  La sincronización tiene un retraso de aproximadamente 500ms.
+  La ventana flotante va ligeramente detrás de la ventana principal.
+  No es un bug crítico pero es perceptible.
+
+BUG #3
+────────────────────────────────────────────────────────────
+ID:          MK-3
+Categoría:   Atajos de Teclado (Macros)
+Prueba:      Play/Pause con atajo
+Descripción: El atajo de Play/Pause debe funcionar correctamente
+Observaciones:
+  El atajo de teclado Space no funciona consistentemente.
+  A veces funciona, a veces no.
+  Parece haber conflicto cuando el foco está en el editor.
+
+
+═══════════════════════════════════════════════════════════════
+              FIN DEL REPORTE DE PRUEBAS
+═══════════════════════════════════════════════════════════════
+Archivo generado: 2025-10-01T14:30:25.000Z
+Sistema de Teleprompter Pro - Control de Calidad
+© 2025 - Todos los derechos reservados

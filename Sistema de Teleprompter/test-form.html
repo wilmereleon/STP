@@ -539,7 +539,7 @@
                     <p>➖ N/A</p>
                 </div>
                 <div class="summary-item pending">
-                    <h3 id="pendingCount">48</h3>
+                    <h3 id="pendingCount">68</h3>
                     <p>⏳ Pendientes</p>
                 </div>
             </div>
@@ -553,7 +553,10 @@
                 💾 Guardar Progreso
             </button>
             <button class="btn btn-success" onclick="exportResults()">
-                📄 Exportar Resultados
+                📄 Exportar HTML
+            </button>
+            <button class="btn btn-success" onclick="exportResultsTXT()" style="background: #28a745;">
+                📝 Exportar TXT
             </button>
             <button class="btn btn-info" onclick="showHistory()">
                 📚 Ver Historial
@@ -883,6 +886,108 @@
                     title: "Responsividad",
                     description: "La interfaz debe adaptarse a diferentes tamaños de pantalla"
                 }
+            ],
+            "Instalación y Despliegue (Electron)": [
+                {
+                    id: "in-1",
+                    title: "Generación del instalador",
+                    description: "Ejecutar 'npm run electron:build:win' debe generar el instalador sin errores"
+                },
+                {
+                    id: "in-2",
+                    title: "Tamaño del instalador",
+                    description: "El instalador debe tener un tamaño razonable (aproximadamente 140-160 MB)"
+                },
+                {
+                    id: "in-3",
+                    title: "Descarga del instalador",
+                    description: "El archivo .exe del instalador debe descargarse correctamente desde la carpeta release/"
+                },
+                {
+                    id: "in-4",
+                    title: "Ejecución del instalador",
+                    description: "El instalador debe iniciarse al hacer doble clic en el archivo .exe"
+                },
+                {
+                    id: "in-5",
+                    title: "Interfaz del instalador (NSIS)",
+                    description: "El wizard de instalación debe mostrarse correctamente con el nombre y el icono de la aplicación"
+                },
+                {
+                    id: "in-6",
+                    title: "Selección de directorio de instalación",
+                    description: "Debe permitir seleccionar la carpeta de instalación (por defecto: Program Files)"
+                },
+                {
+                    id: "in-7",
+                    title: "Creación de acceso directo en escritorio",
+                    description: "Debe ofrecer la opción de crear un acceso directo en el escritorio"
+                },
+                {
+                    id: "in-8",
+                    title: "Creación de acceso directo en menú inicio",
+                    description: "Debe crear un acceso directo en el menú de inicio de Windows"
+                },
+                {
+                    id: "in-9",
+                    title: "Progreso de instalación",
+                    description: "La barra de progreso debe mostrarse durante la instalación"
+                },
+                {
+                    id: "in-10",
+                    title: "Finalización de instalación",
+                    description: "El instalador debe completarse exitosamente y mostrar mensaje de confirmación"
+                },
+                {
+                    id: "in-11",
+                    title: "Inicio automático post-instalación",
+                    description: "Debe ofrecer la opción de iniciar la aplicación inmediatamente después de instalar"
+                },
+                {
+                    id: "in-12",
+                    title: "Icono de la aplicación instalada",
+                    description: "El icono del acceso directo debe mostrarse correctamente"
+                },
+                {
+                    id: "in-13",
+                    title: "Apertura de la aplicación instalada",
+                    description: "Al hacer doble clic en el acceso directo, la aplicación debe abrirse"
+                },
+                {
+                    id: "in-14",
+                    title: "Ventana de Electron",
+                    description: "La aplicación debe abrirse en una ventana de Electron (no navegador)"
+                },
+                {
+                    id: "in-15",
+                    title: "Funcionalidad completa en versión instalada",
+                    description: "Todas las funcionalidades deben trabajar igual que en la versión web"
+                },
+                {
+                    id: "in-16",
+                    title: "Cierre de la aplicación",
+                    description: "La aplicación debe cerrarse correctamente sin dejar procesos residuales"
+                },
+                {
+                    id: "in-17",
+                    title: "Reinstalación sobre versión existente",
+                    description: "Debe permitir reinstalar sobre una instalación existente sin errores"
+                },
+                {
+                    id: "in-18",
+                    title: "Desinstalación desde Panel de Control",
+                    description: "La aplicación debe aparecer en 'Programas y características' y permitir desinstalar"
+                },
+                {
+                    id: "in-19",
+                    title: "Proceso de desinstalación",
+                    description: "El desinstalador debe ejecutarse correctamente y eliminar todos los archivos"
+                },
+                {
+                    id: "in-20",
+                    title: "Limpieza post-desinstalación",
+                    description: "Los accesos directos y carpetas deben eliminarse completamente tras desinstalar"
+                }
             ]
         };
 
@@ -964,7 +1069,8 @@
                 "Línea Guía de Lectura": "📏",
                 "Persistencia de Datos": "💾",
                 "Rendimiento": "⚡",
-                "Compatibilidad": "🌐"
+                "Compatibilidad": "🌐",
+                "Instalación y Despliegue (Electron)": "📦"
             };
             return icons[category] || "📝";
         }
@@ -1218,6 +1324,168 @@
             URL.revokeObjectURL(url);
 
             alert('✅ Reporte exportado exitosamente!');
+        }
+
+        function exportResultsTXT() {
+            const info = getSessionInfo();
+            
+            if (!info.testerName) {
+                alert('⚠️ Por favor ingrese el nombre del tester antes de exportar.');
+                return;
+            }
+
+            // Generar reporte en formato texto plano
+            let txt = '';
+            txt += '═══════════════════════════════════════════════════════════════\n';
+            txt += '     REPORTE DE PRUEBAS FUNCIONALES - SISTEMA DE TELEPROMPTER\n';
+            txt += '═══════════════════════════════════════════════════════════════\n\n';
+
+            // Información de la sesión
+            txt += '📝 INFORMACIÓN DE LA SESIÓN\n';
+            txt += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+            txt += `Tester:           ${info.testerName}\n`;
+            txt += `Fecha:            ${info.testDate}\n`;
+            txt += `Versión App:      ${info.appVersion}\n`;
+            txt += `Navegador:        ${info.browser}\n`;
+            txt += `Generado:         ${new Date().toLocaleString('es')}\n`;
+            if (info.generalNotes) {
+                txt += `Notas Generales:  ${info.generalNotes}\n`;
+            }
+            txt += '\n';
+
+            // Resumen de resultados
+            const passCount = parseInt(document.getElementById('passCount').textContent);
+            const failCount = parseInt(document.getElementById('failCount').textContent);
+            const naCount = parseInt(document.getElementById('naCount').textContent);
+            const pendingCount = parseInt(document.getElementById('pendingCount').textContent);
+            const total = passCount + failCount + naCount + pendingCount;
+
+            txt += '📊 RESUMEN DE RESULTADOS\n';
+            txt += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+            txt += `✅ Aprobadas:     ${passCount.toString().padStart(3)} / ${total} (${((passCount/total)*100).toFixed(1)}%)\n`;
+            txt += `❌ Fallidas:      ${failCount.toString().padStart(3)} / ${total} (${((failCount/total)*100).toFixed(1)}%)\n`;
+            txt += `➖ N/A:           ${naCount.toString().padStart(3)} / ${total} (${((naCount/total)*100).toFixed(1)}%)\n`;
+            txt += `⏳ Pendientes:    ${pendingCount.toString().padStart(3)} / ${total} (${((pendingCount/total)*100).toFixed(1)}%)\n`;
+            txt += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            txt += `   TOTAL:         ${total} pruebas\n`;
+            txt += '\n\n';
+
+            // Resultados detallados por categoría
+            txt += '📋 RESULTADOS DETALLADOS POR CATEGORÍA\n';
+            txt += '═══════════════════════════════════════════════════════════════\n\n';
+
+            Object.keys(testData).forEach((category, catIndex) => {
+                txt += `${getCategoryIcon(category)} ${category.toUpperCase()}\n`;
+                txt += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+                
+                testData[category].forEach((test, testIndex) => {
+                    const result = testResults[test.id] || {};
+                    const status = result.status || 'pending';
+                    const statusText = {
+                        pass: '✅ PASS',
+                        fail: '❌ FAIL',
+                        na: '➖ N/A',
+                        pending: '⏳ PENDIENTE'
+                    };
+
+                    txt += `[${test.id.toUpperCase()}] ${test.title}\n`;
+                    txt += `Estado: ${statusText[status]}\n`;
+                    txt += `Descripción: ${test.description}\n`;
+                    
+                    if (result.observation && result.observation.trim()) {
+                        txt += `Observaciones:\n`;
+                        // Indentar las observaciones
+                        const lines = result.observation.split('\n');
+                        lines.forEach(line => {
+                            txt += `  ${line}\n`;
+                        });
+                    }
+                    txt += '\n';
+                });
+
+                txt += '\n';
+            });
+
+            // Estadísticas por categoría
+            txt += '📈 ESTADÍSTICAS POR CATEGORÍA\n';
+            txt += '═══════════════════════════════════════════════════════════════\n\n';
+            
+            Object.keys(testData).forEach(category => {
+                let catPass = 0, catFail = 0, catNA = 0, catPending = 0;
+                
+                testData[category].forEach(test => {
+                    const result = testResults[test.id] || {};
+                    const status = result.status || 'pending';
+                    if (status === 'pass') catPass++;
+                    else if (status === 'fail') catFail++;
+                    else if (status === 'na') catNA++;
+                    else catPending++;
+                });
+
+                const catTotal = testData[category].length;
+                const catCompleted = catPass + catFail + catNA;
+                const catProgress = ((catCompleted / catTotal) * 100).toFixed(0);
+
+                txt += `${getCategoryIcon(category)} ${category}\n`;
+                txt += `  Total:      ${catTotal} pruebas\n`;
+                txt += `  Progreso:   ${catProgress}% (${catCompleted}/${catTotal})\n`;
+                txt += `  ✅ Pass:    ${catPass}\n`;
+                txt += `  ❌ Fail:    ${catFail}\n`;
+                txt += `  ➖ N/A:     ${catNA}\n`;
+                txt += `  ⏳ Pendiente: ${catPending}\n`;
+                txt += '\n';
+            });
+
+            // Resumen de bugs críticos (si hay fallos)
+            if (failCount > 0) {
+                txt += '\n';
+                txt += '🐛 BUGS ENCONTRADOS (SOLO FALLIDAS)\n';
+                txt += '═══════════════════════════════════════════════════════════════\n\n';
+                
+                let bugNumber = 1;
+                Object.keys(testData).forEach(category => {
+                    testData[category].forEach(test => {
+                        const result = testResults[test.id] || {};
+                        if (result.status === 'fail') {
+                            txt += `BUG #${bugNumber}\n`;
+                            txt += `────────────────────────────────────────────────────────────\n`;
+                            txt += `ID:          ${test.id.toUpperCase()}\n`;
+                            txt += `Categoría:   ${category}\n`;
+                            txt += `Prueba:      ${test.title}\n`;
+                            txt += `Descripción: ${test.description}\n`;
+                            if (result.observation) {
+                                txt += `Observaciones:\n`;
+                                const lines = result.observation.split('\n');
+                                lines.forEach(line => {
+                                    txt += `  ${line}\n`;
+                                });
+                            }
+                            txt += '\n';
+                            bugNumber++;
+                        }
+                    });
+                });
+            }
+
+            // Footer
+            txt += '\n';
+            txt += '═══════════════════════════════════════════════════════════════\n';
+            txt += '              FIN DEL REPORTE DE PRUEBAS\n';
+            txt += '═══════════════════════════════════════════════════════════════\n';
+            txt += `Archivo generado: ${new Date().toISOString()}\n`;
+            txt += 'Sistema de Teleprompter Pro - Control de Calidad\n';
+            txt += '© 2025 - Todos los derechos reservados\n';
+
+            // Descargar archivo TXT
+            const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Reporte_Pruebas_${info.testerName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            alert('✅ Reporte TXT exportado exitosamente!');
         }
 
         function printResults() {

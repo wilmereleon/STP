@@ -1,0 +1,35 @@
+[1] {PRUEBA DE SCRIPT - NOTICIAS MATUTINAS}
+
+Buenos días a todos los televidentes. Bienvenidos a nuestro noticiero matutino. Hoy tenemos una agenda llena de acontecimientos importantes que analizaremos a fondo.
+
+[2] {TITULAR PRINCIPAL}
+
+En primer lugar, hablaremos sobre los últimos desarrollos en tecnología. Las empresas de software están revolucionando la forma en que trabajamos y nos comunicamos.
+
+**SECCIÓN DE ECONOMÍA**
+
+Los mercados financieros muestran una tendencia positiva esta semana. Los analistas predicen un crecimiento sostenido para el próximo trimestre.
+
+[3] {SEGMENTO INTERNACIONAL}
+
+En el ámbito internacional, líderes mundiales se reunieron ayer para discutir temas críticos de cooperación global. Las conversaciones fueron *productivas* y *prometedoras*.
+
+**DEPORTES**
+
+Pasando al mundo deportivo, el campeonato nacional continúa con encuentros emocionantes. Los equipos están dando lo mejor de sí en cada partido.
+
+[4] {CLIMA Y PRONÓSTICO}
+
+El servicio meteorológico nacional reporta condiciones climáticas favorables para los próximos días. Se esperan temperaturas agradables y cielos mayormente despejados.
+
+**CULTURA Y ENTRETENIMIENTO**
+
+En el mundo del entretenimiento, nuevas producciones están capturando la atención del público. El cine y la televisión siguen siendo pilares fundamentales de nuestra cultura.
+
+[5] {CIERRE Y DESPEDIDA}
+
+Esto ha sido todo por ahora. Agradecemos su sintonía y los invitamos a mantenerse informados con nosotros. Hasta la próxima emisión.
+
+**Recuerden seguirnos en nuestras redes sociales para actualizaciones en tiempo real.**
+
+¡Que tengan un excelente día!

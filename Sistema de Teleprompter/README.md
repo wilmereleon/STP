@@ -31,7 +31,7 @@ El instalador se generará en la carpeta `release/`.
 
 Para facilitar las pruebas y control de calidad, incluimos un **formulario HTML interactivo** que permite:
 
-- ✅ Registrar resultados de 48 casos de prueba organizados por categorías
+- ✅ Registrar resultados de 68 casos de prueba organizados por categorías
 - 📝 Agregar observaciones detalladas para cada prueba
 - 💾 Guardar progreso automáticamente en el navegador
 - 📊 Ver estadísticas en tiempo real (aprobadas/fallidas/pendientes)

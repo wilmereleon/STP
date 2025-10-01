@@ -27,6 +27,9 @@ Este documento cubre todas las funcionalidades del sistema de teleprompter, desd
 | **CP-07** | Macros de Teclado | 10 | ⬜ |
 | **CP-08** | Marcadores de Señales | 3 | ⬜ |
 | **CP-09** | Configuración | 4 | ⬜ |
+| **CP-10** | Instalación y Despliegue (Electron) | 20 | ⬜ |
+
+**Total:** 68 casos de prueba individuales
 
 ---
 
@@ -971,6 +974,413 @@ Este documento cubre todas las funcionalidades del sistema de teleprompter, desd
 
 ---
 
+### CP-10: Instalación y Despliegue (Electron)
+
+#### **CP-10-01: Generación del instalador**
+**Precondiciones:**
+- Node.js y npm instalados en el sistema
+- Proyecto clonado y dependencias instaladas (`npm install`)
+
+**Pasos:**
+1. Abrir terminal en la carpeta del proyecto
+2. Ejecutar comando: `npm run electron:build:win`
+3. Esperar que finalice el proceso de build
+
+**Resultado Esperado:**
+- ✅ El build se completa sin errores
+- ✅ Se genera la carpeta `release/`
+- ✅ Dentro de `release/` aparece el archivo `.exe` instalador
+- ✅ El proceso muestra mensajes de progreso claros
+
+**Prioridad:** 🔴 Alta  
+**Severidad:** 🔴 Crítica
+
+---
+
+#### **CP-10-02: Tamaño del instalador**
+**Precondiciones:**
+- Instalador generado exitosamente
+
+**Pasos:**
+1. Navegar a la carpeta `release/`
+2. Ver las propiedades del archivo `.exe`
+3. Verificar el tamaño del archivo
+
+**Resultado Esperado:**
+- ✅ El tamaño del instalador está entre 140-160 MB
+- ✅ El archivo no está corrupto (se puede abrir)
+
+**Prioridad:** 🟡 Media  
+**Severidad:** 🟢 Baja
+
+---
+
+#### **CP-10-03: Ejecución del instalador**
+**Precondiciones:**
+- Instalador descargado/copiado
+- Windows 10 o superior
+- Permisos de administrador disponibles
+
+**Pasos:**
+1. Hacer doble clic en el archivo `.exe` del instalador
+2. Aceptar el UAC (Control de Cuentas de Usuario) si aparece
+
+**Resultado Esperado:**
+- ✅ El instalador se inicia correctamente
+- ✅ Aparece la ventana del wizard de instalación (NSIS)
+- ✅ Se muestra el nombre "Sistema de Teleprompter" o similar
+- ✅ Se muestra el icono de la aplicación
+
+**Prioridad:** 🔴 Alta  
+**Severidad:** 🔴 Crítica
+
+---
+
+#### **CP-10-04: Interfaz del instalador NSIS**
+**Precondiciones:**
+- Instalador ejecutándose
+
+**Pasos:**
+1. Observar la ventana de instalación
+2. Verificar textos, botones e imágenes
+
+**Resultado Esperado:**
+- ✅ El título muestra el nombre de la aplicación
+- ✅ El icono se visualiza correctamente
+- ✅ Los botones "Next", "Cancel" están visibles
+- ✅ El texto de bienvenida es claro
+- ✅ La licencia o términos se muestran (si aplica)
+
+**Prioridad:** 🟡 Media  
+**Severidad:** 🟢 Baja
+
+---
+
+#### **CP-10-05: Selección de directorio de instalación**
+**Precondiciones:**
+- En el paso "Choose Install Location" del wizard
+
+**Pasos:**
+1. Ver la ruta de instalación por defecto
+2. Opcionalmente, hacer clic en "Browse" para cambiar la ruta
+3. Seleccionar una carpeta diferente
+4. Confirmar la selección
+
+**Resultado Esperado:**
+- ✅ La ruta por defecto es `C:\Program Files\[Nombre App]`
+- ✅ El botón "Browse" permite cambiar la ruta
+- ✅ Se puede navegar por el sistema de archivos
+- ✅ La nueva ruta se refleja en el campo de texto
+
+**Prioridad:** 🟡 Media  
+**Severidad:** 🟡 Media
+
+---
+
+#### **CP-10-06: Opciones de accesos directos**
+**Precondiciones:**
+- En el paso de configuración de instalación
+
+**Pasos:**
+1. Verificar las opciones de checkboxes
+2. Seleccionar/deseleccionar opciones disponibles
+
+**Resultado Esperado:**
+- ✅ Opción "Create a desktop shortcut" está disponible
+- ✅ Opción "Create a Start Menu shortcut" está disponible
+- ✅ Las opciones se pueden marcar/desmarcar
+- ✅ Por defecto, ambas opciones están marcadas
+
+**Prioridad:** 🟡 Media  
+**Severidad:** 🟢 Baja
+
+---
+
+#### **CP-10-07: Progreso de instalación**
+**Precondiciones:**
+- Hacer clic en "Install" o "Next" para iniciar instalación
+
+**Pasos:**
+1. Observar la barra de progreso
+2. Esperar que complete
+
+**Resultado Esperado:**
+- ✅ Aparece una barra de progreso visual
+- ✅ Muestra porcentaje o archivos copiados
+- ✅ El proceso toma entre 10-30 segundos
+- ✅ No hay errores durante la instalación
+
+**Prioridad:** 🔴 Alta  
+**Severidad:** 🔴 Crítica
+
+---
+
+#### **CP-10-08: Finalización de instalación**
+**Precondiciones:**
+- Instalación completada
+
+**Pasos:**
+1. Esperar a que aparezca la pantalla final
+2. Verificar mensajes y opciones
+
+**Resultado Esperado:**
+- ✅ Aparece mensaje "Installation Complete" o similar
+- ✅ Opción "Run [App Name]" está disponible
+- ✅ Botón "Finish" está disponible
+- ✅ No hay mensajes de error
+
+**Prioridad:** 🔴 Alta  
+**Severidad:** 🟡 Media
+
+---
+
+#### **CP-10-09: Verificación de archivos instalados**
+**Precondiciones:**
+- Instalación finalizada
+
+**Pasos:**
+1. Navegar a la carpeta de instalación (ej: `C:\Program Files\[App]`)
+2. Revisar contenido de la carpeta
+
+**Resultado Esperado:**
+- ✅ Existe el archivo ejecutable principal (`.exe`)
+- ✅ Existen carpetas `resources/`, `locales/`, etc.
+- ✅ El tamaño total de archivos es coherente
+- ✅ Existe archivo `Uninstall.exe`
+
+**Prioridad:** 🟡 Media  
+**Severidad:** 🟡 Media
+
+---
+
+#### **CP-10-10: Acceso directo en escritorio**
+**Precondiciones:**
+- Instalación finalizada con opción "Desktop shortcut" marcada
+
+**Pasos:**
+1. Ir al escritorio de Windows
+2. Buscar el icono de la aplicación
+
+**Resultado Esperado:**
+- ✅ Aparece el icono en el escritorio
+- ✅ El icono muestra la imagen correcta
+- ✅ El nombre del acceso directo es correcto
+- ✅ Al hacer clic derecho, muestra opciones estándar
+
+**Prioridad:** 🟡 Media  
+**Severidad:** 🟢 Baja
+
+---
+
+#### **CP-10-11: Acceso directo en Menú Inicio**
+**Precondiciones:**
+- Instalación finalizada
+
+**Pasos:**
+1. Abrir el Menú Inicio de Windows
+2. Buscar la aplicación en la lista alfabética o en la barra de búsqueda
+
+**Resultado Esperado:**
+- ✅ La aplicación aparece en el menú inicio
+- ✅ El icono se visualiza correctamente
+- ✅ Al buscar por nombre, aparece en resultados
+- ✅ Puede fijarse a la barra de tareas
+
+**Prioridad:** 🟡 Media  
+**Severidad:** 🟢 Baja
+
+---
+
+#### **CP-10-12: Primera ejecución de la aplicación**
+**Precondiciones:**
+- Instalación completada
+- Hacer doble clic en acceso directo del escritorio o menú inicio
+
+**Pasos:**
+1. Ejecutar la aplicación instalada
+2. Esperar que cargue
+
+**Resultado Esperado:**
+- ✅ La aplicación se abre en una ventana de Electron (no navegador)
+- ✅ La ventana tiene bordes nativos de Windows
+- ✅ El icono en la barra de tareas es correcto
+- ✅ La interfaz se carga completamente
+- ✅ No hay errores en consola (verificar con DevTools si es necesario)
+
+**Prioridad:** 🔴 Alta  
+**Severidad:** 🔴 Crítica
+
+---
+
+#### **CP-10-13: Funcionalidad completa en versión instalada**
+**Precondiciones:**
+- Aplicación Electron ejecutándose
+
+**Pasos:**
+1. Realizar pruebas de funcionalidades básicas:
+   - Cargar scripts
+   - Reproducir teleprompter
+   - Abrir ventana flotante
+   - Usar atajos de teclado
+   - Guardar configuración
+
+**Resultado Esperado:**
+- ✅ Todas las funcionalidades trabajan igual que en versión web
+- ✅ No hay errores de rutas o recursos faltantes
+- ✅ Los datos se persisten correctamente
+- ✅ La sincronización entre ventanas funciona
+
+**Prioridad:** 🔴 Alta  
+**Severidad:** 🔴 Crítica
+
+---
+
+#### **CP-10-14: Cierre de la aplicación**
+**Precondiciones:**
+- Aplicación ejecutándose
+
+**Pasos:**
+1. Hacer clic en el botón "X" de la ventana
+2. Alternativamente, usar Alt+F4
+3. Abrir el Administrador de Tareas y verificar procesos
+
+**Resultado Esperado:**
+- ✅ La aplicación se cierra inmediatamente
+- ✅ La ventana desaparece de la pantalla
+- ✅ No quedan procesos residuales en Task Manager
+- ✅ No hay mensajes de "no responde"
+
+**Prioridad:** 🟡 Media  
+**Severidad:** 🟡 Media
+
+---
+
+#### **CP-10-15: Reinstalación sobre versión existente**
+**Precondiciones:**
+- Aplicación ya instalada previamente
+- Tener el instalador `.exe`
+
+**Pasos:**
+1. Ejecutar el instalador nuevamente
+2. Seguir el wizard de instalación
+3. Instalar en la misma ubicación
+
+**Resultado Esperado:**
+- ✅ El instalador detecta la instalación existente
+- ✅ Ofrece opciones (actualizar, reinstalar, etc.)
+- ✅ La reinstalación se completa sin errores
+- ✅ Los datos de usuario se preservan (si aplica)
+
+**Prioridad:** 🟡 Media  
+**Severidad:** 🟡 Media
+
+---
+
+#### **CP-10-16: Aparición en Panel de Control**
+**Precondiciones:**
+- Aplicación instalada
+
+**Pasos:**
+1. Abrir "Configuración" de Windows
+2. Ir a "Aplicaciones" > "Aplicaciones y características"
+3. Buscar la aplicación en la lista
+
+**Resultado Esperado:**
+- ✅ La aplicación aparece en la lista
+- ✅ El nombre es correcto
+- ✅ Se muestra el tamaño de instalación
+- ✅ Se muestra la versión
+- ✅ Botón "Desinstalar" está disponible
+
+**Prioridad:** 🟡 Media  
+**Severidad:** 🟡 Media
+
+---
+
+#### **CP-10-17: Proceso de desinstalación**
+**Precondiciones:**
+- Aplicación instalada
+
+**Pasos:**
+1. Desde Panel de Control, hacer clic en "Desinstalar"
+2. Confirmar la desinstalación si pide confirmación
+3. Esperar que complete
+
+**Resultado Esperado:**
+- ✅ Aparece wizard de desinstalación
+- ✅ Pide confirmación antes de proceder
+- ✅ Muestra progreso de desinstalación
+- ✅ La desinstalación se completa sin errores
+- ✅ Mensaje de confirmación al finalizar
+
+**Prioridad:** 🔴 Alta  
+**Severidad:** 🟡 Media
+
+---
+
+#### **CP-10-18: Limpieza post-desinstalación**
+**Precondiciones:**
+- Desinstalación completada
+
+**Pasos:**
+1. Verificar carpeta de instalación
+2. Verificar acceso directo en escritorio
+3. Verificar entrada en menú inicio
+4. Verificar en Panel de Control
+
+**Resultado Esperado:**
+- ✅ La carpeta de instalación ha sido eliminada
+- ✅ El acceso directo del escritorio fue eliminado
+- ✅ La entrada del menú inicio fue eliminada
+- ✅ La aplicación ya no aparece en Panel de Control
+- ✅ No quedan archivos huérfanos en el sistema
+
+**Prioridad:** 🟡 Media  
+**Severidad:** 🟡 Media
+
+---
+
+#### **CP-10-19: Múltiples instalaciones (usuarios diferentes)**
+**Precondiciones:**
+- Windows con múltiples cuentas de usuario
+
+**Pasos:**
+1. Instalar la aplicación con Usuario A
+2. Cambiar a Usuario B
+3. Verificar acceso a la aplicación
+
+**Resultado Esperado:**
+- ✅ Si es instalación "All Users", todos pueden acceder
+- ✅ Si es instalación "Current User", solo el usuario instalador puede acceder
+- ✅ Cada usuario tiene sus propios datos/configuración
+
+**Prioridad:** 🟢 Baja  
+**Severidad:** 🟢 Baja
+
+---
+
+#### **CP-10-20: Actualizaciones sobre versión anterior**
+**Precondiciones:**
+- Versión 1.0.0 instalada
+- Instalador de versión 1.1.0 disponible
+
+**Pasos:**
+1. Ejecutar instalador de nueva versión
+2. Seguir wizard de instalación
+3. Verificar que se actualice correctamente
+
+**Resultado Esperado:**
+- ✅ El instalador detecta la versión anterior
+- ✅ Ofrece actualizar (no crear duplicado)
+- ✅ La actualización preserva datos de usuario
+- ✅ La nueva versión funciona correctamente
+- ✅ Panel de Control muestra la nueva versión
+
+**Prioridad:** 🟡 Media  
+**Severidad:** 🟡 Media
+
+---
+
 ## 🐛 REGISTRO DE DEFECTOS
 
 | ID | Severidad | Caso | Descripción | Estado |
@@ -1049,7 +1459,7 @@ Este documento cubre todas las funcionalidades del sistema de teleprompter, desd
 
 ## 🎯 CONCLUSIÓN
 
-Este documento de pruebas cubre **48 casos de prueba** individuales más **2 escenarios end-to-end** que validan todas las funcionalidades del sistema de teleprompter desde la perspectiva del usuario final.
+Este documento de pruebas cubre **68 casos de prueba** individuales más **2 escenarios end-to-end** que validan todas las funcionalidades del sistema de teleprompter desde la perspectiva del usuario final, incluyendo el proceso completo de instalación y despliegue.
 
 **Fecha de Revisión:** ___________  
 **Tester:** ___________  

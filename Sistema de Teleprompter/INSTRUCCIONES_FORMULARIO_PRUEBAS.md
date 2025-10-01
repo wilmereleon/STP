@@ -6,7 +6,7 @@ Este documento explica cómo utilizar el formulario interactivo de pruebas (`tes
 
 El formulario de pruebas es una herramienta HTML standalone que permite:
 
-- ✅ Ejecutar 48 casos de prueba organizados en 12 categorías
+- ✅ Ejecutar 68 casos de prueba organizados en 13 categorías
 - 📝 Documentar resultados y observaciones
 - 💾 Guardar progreso automáticamente
 - 📊 Visualizar estadísticas en tiempo real
@@ -48,7 +48,7 @@ La **barra de progreso** muestra visualmente el porcentaje de pruebas completada
 
 ## 🗂️ Categorías de Pruebas
 
-El formulario está organizado en 12 categorías:
+El formulario está organizado en 13 categorías:
 
 1. 🎨 **Interfaz de Usuario** (4 pruebas)
 2. 📜 **Funcionalidad del Teleprompter** (6 pruebas)
@@ -62,6 +62,7 @@ El formulario está organizado en 12 categorías:
 10. 💾 **Persistencia de Datos** (3 pruebas)
 11. ⚡ **Rendimiento** (3 pruebas)
 12. 🌐 **Compatibilidad** (4 pruebas)
+13. 📦 **Instalación y Despliegue (Electron)** (20 pruebas)
 
 ### Expandir/Contraer Categorías
 
