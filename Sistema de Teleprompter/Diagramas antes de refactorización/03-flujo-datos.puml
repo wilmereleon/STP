@@ -1,0 +1,176 @@
+@startuml Flujo de Datos - Estado Actual
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title Sistema de Teleprompter - Flujo de Datos y Sincronización\n(Estado antes de refactorización - PROBLEMÁTICO)
+
+actor Usuario
+participant "App.tsx\n(Estado Principal)" as App
+participant "TeleprompterPreview\n(Panel Derecho)" as Preview
+participant "TeleprompterWindow\n(Ventana Emergente)" as Window
+database "localStorage" as Storage
+participant "ScriptEditor" as Editor
+participant "RunOrderList" as RunOrder
+
+== Inicialización ==
+Usuario -> App : Abre aplicación
+activate App
+App -> Storage : Carga macroSettings
+Storage --> App : MacroSettings guardadas
+App -> App : Inicializa 15+ estados
+App -> RunOrder : Renderiza 13 scripts
+App -> Editor : Muestra script actual
+App -> Preview : Renderiza preview
+deactivate App
+
+== Apertura Ventana Emergente (PROBLEMA) ==
+Usuario -> App : Click "Nueva Ventana"
+activate App
+App -> Window : window.open(?popup=true)
+activate Window
+Window -> Window : Inicializa estado local\n(DUPLICADO)
+Window -> App : postMessage(TELEPROMPTER_READY)
+App -> Window : postMessage(TELEPROMPTER_UPDATE)\n{text, isPlaying, speed, fontSize, scrollPosition}
+Window -> Window : Actualiza estado local
+deactivate Window
+deactivate App
+
+== BUG TP-1: Play No Funciona ==
+Usuario -> App : Click Play
+activate App
+App -> App : setIsPlaying(true)
+App -> App : useEffect detecta cambio
+
+group Auto-scroll en App.tsx
+  App -> App : setInterval cada 100ms
+  App -> App : increment = speed × 0.5
+  App -> App : setScrollPosition(prev + increment)
+  App -> Preview : scrollPosition actualizado
+  Preview -> Preview : Renderiza pero NO se mueve\n**PROBLEMA: Falta aplicar scroll**
+end
+
+group Envío a Ventana (con delay)
+  App -> App : setTimeout 50ms (debounce)
+  App -> Window : postMessage(TELEPROMPTER_UPDATE)\n{isPlaying: true}
+end
+
+activate Window
+Window -> Window : Recibe isPlaying: true
+Window -> Window : useEffect detecta cambio
+
+group Auto-scroll en TeleprompterWindow.tsx (INDEPENDIENTE)
+  Window -> Window : setInterval cada 100ms
+  Window -> Window : increment = speed × 14\n**DIFERENTE VELOCIDAD**
+  Window -> Window : setScrollPosition(prev + increment)
+  Window -> Window : SÍ aplica scroll\n(ref.current.scrollTop = scrollPosition)
+end
+
+Window -> App : postMessage(TELEPROMPTER_CONTROL)\n{isPlaying, scrollPosition}
+deactivate Window
+
+App -> App : isUpdatingFromPopup = true
+App -> App : Actualiza estados
+App -> App : **CONFLICTO: Detiene auto-scroll local**
+deactivate App
+
+note over App, Window
+  **BUG IDENTIFICADO:**
+  1. Preview no aplica scrollPosition al DOM
+  2. Window tiene auto-scroll diferente (×14 vs ×0.5)
+  3. Comunicación bidireccional causa loops
+  4. isUpdatingFromPopup no previene efectivamente
+  5. Dos fuentes de verdad en conflicto
+end note
+
+== BUG VF-3: Sincronización de Scroll ==
+Usuario -> Window : Mouse wheel
+activate Window
+Window -> Window : handleWheel(event)
+Window -> Window : Ajusta speed ±0.1
+Window -> Window : setScrollPosition (manual)
+Window -> Window : Auto-inicia play si no está
+Window -> App : postMessage(TELEPROMPTER_CONTROL)\n{speed, scrollPosition, isPlaying}
+deactivate Window
+
+activate App
+App -> App : isUpdatingFromPopup = true
+App -> App : setSpeed(newSpeed)
+App -> App : setScrollPosition(newScrollPosition)
+App -> Preview : Actualiza pero no se refleja\n**PROBLEMA: Preview no sincroniza**
+App -> App : setTimeout 100ms → reset flag
+deactivate App
+
+note over Preview
+  **BUG VF-3:**
+  Preview no muestra scroll
+  actualizado de Window
+end note
+
+== BUG VF-4: Sincronización de Velocidad ==
+Usuario -> App : Slider de velocidad
+activate App
+App -> App : handleSpeedChange(newSpeed)
+App -> App : setSpeed(newSpeed)
+App -> Window : postMessage(TELEPROMPTER_UPDATE)\n{speed: newSpeed}
+deactivate App
+
+activate Window
+Window -> Window : Recibe speed
+Window -> Window : **PROBLEMA: Merge logic**\n"if (updates.speed !== undefined)"
+Window -> Window : setTeleprompterData(prev => ({...prev, ...updates}))\n**Combina pero no coordina auto-scroll**
+deactivate Window
+
+note over App, Window
+  **BUG VF-4:**
+  Speed se actualiza en ambos lados
+  pero auto-scroll usa valores diferentes
+  (×0.5 vs ×14) → velocidades desincronizadas
+end note
+
+== BUG VF-5: Sincronización de Tamaño de Fuente ==
+Usuario -> Window : Macro F3 (Increase Font)
+activate Window
+Window -> Window : macroActions.onIncreaseFontSize()
+Window -> Window : setFontSize(prev + 2)
+Window -> App : postMessage(TELEPROMPTER_CONTROL)\n{fontSize: newSize}
+deactivate Window
+
+activate App
+App -> App : isUpdatingFromPopup = true
+App -> App : setFontSize(newSize)
+App -> App : **NO envía a Preview inmediatamente**
+App -> Preview : Actualiza pero con delay
+Preview -> Preview : **Funciona parcialmente**
+deactivate App
+
+note over App, Preview
+  **BUG VF-5:**
+  Funciona en Window pero no en Preview
+  porque Preview no tiene listener directo
+  y depende del re-render de App
+end note
+
+== Edición de Texto ==
+Usuario -> Editor : Escribe texto
+activate Editor
+Editor -> App : handleTextChange(newText)
+deactivate Editor
+
+activate App
+App -> App : setText(newText)
+App -> App : Actualiza runOrderItems
+App -> App : generateJumpMarkers(newText)
+App -> Preview : Actualiza inmediatamente\n**Esto SÍ funciona (ED-5 PASS)**
+App -> Window : postMessage(TELEPROMPTER_UPDATE)\n{text: newText}
+deactivate App
+
+activate Window
+Window -> Window : Merge text
+Window -> Window : Actualiza render
+deactivate Window
+
+== Guardado (FALTA BACKEND - PD-1/2/3 FAIL) ==
+App -> Storage : localStorage.setItem('macroSettings', ...)
+note right : Solo guarda macros,\nno guarda scripts ni configuración
+
+@enduml

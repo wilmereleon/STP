@@ -1,0 +1,336 @@
+@startuml Diagrama de Clases Refactorizado
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam backgroundColor #FEFEFE
+
+title Sistema de Teleprompter - Modelo Refactorizado con Stores\n**Patrón Flux/Observer**
+
+package "Estado Centralizado (Stores)" {
+  
+  class TeleprompterStore {
+    - state: TeleprompterState
+    - listeners: Set<Listener>
+    - autoScrollService: AutoScrollService
+    - syncService: SyncService
+    --
+    + getState(): TeleprompterState
+    + subscribe(listener: Listener): Unsubscribe
+    + dispatch(action: TeleprompterAction): void
+    --
+    **Actions:**
+    + play(): void
+    + pause(): void
+    + reset(): void
+    + setSpeed(speed: number): void
+    + setFontSize(size: number): void
+    + setScrollPosition(position: number): void
+    + setText(text: string): void
+    + nextCue(): void
+    + previousCue(): void
+    --
+    - notifyListeners(): void
+    - validateSpeed(speed: number): number
+    - validateFontSize(size: number): number
+  }
+  
+  class TeleprompterState {
+    + text: string
+    + isPlaying: boolean
+    + speed: number
+    + fontSize: number
+    + scrollPosition: number
+    + currentScript: string
+    + jumpMarkers: Map<string, number>
+    + guideLinePosition: number
+    + theme: 'dark' | 'light'
+    + timestamp: number
+  }
+  
+  class RunOrderStore {
+    - items: RunOrderItem[]
+    - currentItemId: string | null
+    - listeners: Set<Listener>
+    --
+    + getItems(): RunOrderItem[]
+    + getCurrentItem(): RunOrderItem | null
+    + subscribe(listener: Listener): Unsubscribe
+    + dispatch(action: RunOrderAction): void
+    --
+    **Actions:**
+    + addItem(item: RunOrderItem): void
+    + removeItem(id: string): void
+    + updateItem(id: string, changes: Partial<RunOrderItem>): void
+    + reorderItems(dragIndex: number, hoverIndex: number): void
+    + selectItem(id: string): void
+    + setItemStatus(id: string, status: ItemStatus): void
+    + importFromExcel(data: ExcelData): void
+    + exportToAWN(): string
+  }
+  
+  class ConfigurationStore {
+    - macros: MacroSettings
+    - guideLineSettings: GuideLineSettings
+    - editorSettings: EditorSettings
+    - listeners: Set<Listener>
+    --
+    + getConfig(): Configuration
+    + subscribe(listener: Listener): Unsubscribe
+    + updateMacros(macros: MacroSettings): void
+    + updateGuideLine(settings: GuideLineSettings): void
+    + updateEditor(settings: EditorSettings): void
+    + reset(): void
+  }
+}
+
+package "Servicios (Services)" {
+  
+  class SyncService {
+    - store: TeleprompterStore
+    - slaves: Map<string, Window>
+    - commandQueue: Command[]
+    - lastSyncTimestamp: number
+    --
+    + registerSlave(id: string, window: Window): void
+    + unregisterSlave(id: string): void
+    + broadcastState(state: TeleprompterState): void
+    + sendCommand(command: Command): Promise<void>
+    + handleSlaveMessage(message: SlaveMessage): void
+    --
+    - processCommandQueue(): void
+    - resolveConflict(local: State, remote: State): State
+    - validateMessage(message: Message): boolean
+  }
+  
+  class Command {
+    + id: string
+    + type: CommandType
+    + payload: any
+    + timestamp: number
+    + sourceId: string
+    + requiresAck: boolean
+    --
+    + execute(): void
+    + undo(): void
+  }
+  
+  enum CommandType {
+    PLAY
+    PAUSE
+    RESET
+    SET_SPEED
+    SET_FONT_SIZE
+    SET_SCROLL_POSITION
+    SET_TEXT
+    SYNC_STATE
+  }
+  
+  class AutoScrollService {
+    - store: TeleprompterStore
+    - intervalId: number | null
+    - lastUpdateTime: number
+    - targetFPS: number = 60
+    --
+    + start(): void
+    + stop(): void
+    + pause(): void
+    + resume(): void
+    + setSpeed(speed: number): void
+    --
+    - tick(): void
+    - calculateIncrement(deltaTime: number, speed: number): number
+    - detectEndOfText(): boolean
+    - handleAutoAdvance(): void
+  }
+  
+  class PersistenceService {
+    - db: IDBDatabase
+    - autoSaveInterval: number = 30000
+    - lastSaveTime: number
+    --
+    + initialize(): Promise<void>
+    + saveScripts(items: RunOrderItem[]): Promise<void>
+    + loadScripts(): Promise<RunOrderItem[]>
+    + saveConfig(config: Configuration): Promise<void>
+    + loadConfig(): Promise<Configuration>
+    + exportSession(): Promise<SessionData>
+    + importSession(data: SessionData): Promise<void>
+    + enableAutoSave(): void
+    + disableAutoSave(): void
+    --
+    - compressData(data: any): Blob
+    - decompressData(blob: Blob): any
+  }
+  
+  class ExcelImportService {
+    + importFromFile(file: File): Promise<RunOrderItem[]>
+    + validateExcelData(data: any[][]): ValidationResult
+    + mapExcelToRunOrder(data: any[][]): RunOrderItem[]
+    + previewImport(file: File): Promise<PreviewData>
+    --
+    - detectColumns(headers: string[]): ColumnMapping
+    - parseRowToItem(row: any[], mapping: ColumnMapping): RunOrderItem
+  }
+}
+
+package "Interfaces de Datos" {
+  
+  class RunOrderItem {
+    + id: string
+    + title: string
+    + text: string
+    + duration: string
+    + status: ItemStatus
+    + notes?: string
+    + createdAt: Date
+    + updatedAt: Date
+  }
+  
+  enum ItemStatus {
+    READY
+    PLAYING
+    COMPLETED
+  }
+  
+  class MacroSettings {
+    + playStop: string
+    + pause: string
+    + previous: string
+    + next: string
+    + increaseSpeed: string
+    + decreaseSpeed: string
+    + increaseFontSize: string
+    + decreaseFontSize: string
+    + nextCue?: string
+    + previousCue?: string
+  }
+  
+  class EditorSettings {
+    + enableRichText: boolean
+    + showLineNumbers: boolean
+    + fontSize: number
+    + theme: 'light' | 'dark'
+    + spellCheck: boolean
+  }
+}
+
+package "Hooks Personalizados" {
+  
+  class useTeleprompterStore <<hook>> {
+    + store: TeleprompterStore
+    + state: TeleprompterState
+    --
+    + play(): void
+    + pause(): void
+    + reset(): void
+    + setSpeed(speed: number): void
+    + setFontSize(size: number): void
+    --
+    Usa subscribe() y causa re-render
+    automático cuando cambia el estado
+  }
+  
+  class useAutoScroll <<hook>> {
+    + isScrolling: boolean
+    + scrollPosition: number
+    --
+    + start(): void
+    + stop(): void
+    --
+    Hook que conecta con AutoScrollService
+    y sincroniza el scroll del DOM
+  }
+  
+  class usePersistence <<hook>> {
+    + isSaving: boolean
+    + lastSaved: Date | null
+    --
+    + save(): Promise<void>
+    + load(): Promise<void>
+    + enableAutoSave(): void
+    --
+    Hook que maneja persistencia automática
+  }
+}
+
+' Relaciones
+
+TeleprompterStore "1" *-- "1" TeleprompterState : mantiene >
+TeleprompterStore "1" o-- "1" AutoScrollService : usa >
+TeleprompterStore "1" o-- "1" SyncService : usa >
+
+RunOrderStore "1" *-- "*" RunOrderItem : gestiona >
+
+SyncService "1" *-- "*" Command : encola >
+SyncService ..> CommandType : usa >
+
+AutoScrollService ..> TeleprompterStore : actualiza >
+
+PersistenceService ..> RunOrderStore : persiste >
+PersistenceService ..> ConfigurationStore : persiste >
+
+ExcelImportService ..> RunOrderItem : crea >
+
+ConfigurationStore "1" *-- "1" MacroSettings : almacena >
+ConfigurationStore "1" *-- "1" EditorSettings : almacena >
+
+useTeleprompterStore ..> TeleprompterStore : suscribe >
+useAutoScroll ..> AutoScrollService : usa >
+usePersistence ..> PersistenceService : usa >
+
+note right of TeleprompterStore
+  **PATRÓN OBSERVER:**
+  
+  Los componentes se suscriben al store
+  y reciben notificaciones automáticas
+  cuando cambia el estado.
+  
+  Ventajas:
+  ✓ Un solo estado centralizado
+  ✓ Cambios predecibles
+  ✓ Fácil debugging
+  ✓ Time-travel debugging posible
+  ✓ Sin props drilling
+end note
+
+note right of SyncService
+  **ARQUITECTURA MAESTRO-ESCLAVO:**
+  
+  Main window = MAESTRO
+  - Única fuente de verdad
+  - Ejecuta todos los comandos
+  - Broadcast a esclavos
+  
+  Popup/Modal = ESCLAVOS
+  - Solo reciben comandos
+  - No modifican estado directamente
+  - Envían requests al maestro
+  
+  Soluciona BUG TP-1, VF-3/4/5
+end note
+
+note right of AutoScrollService
+  **AUTO-SCROLL UNIFICADO:**
+  
+  Un solo servicio de scroll
+  para todas las vistas.
+  
+  Beneficios:
+  ✓ Velocidad consistente
+  ✓ Sin conflictos
+  ✓ Fácil pausar/reanudar
+  ✓ Detección de fin unificada
+  ✓ Auto-advance coordinado
+end note
+
+note bottom of PersistenceService
+  **PERSISTENCIA AUTOMÁTICA:**
+  
+  Soluciona BUG PD-1/2/3:
+  - IndexedDB para datos grandes
+  - Auto-save cada 30 segundos
+  - Versionado de sesiones
+  - Backup antes de cambios
+  - Restauración automática
+end note
+
+@enduml

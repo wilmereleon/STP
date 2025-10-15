@@ -1,0 +1,180 @@
+@startuml Patrón de Implementación
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title Guía de Implementación - Patrón Store con Hooks\n**Migración Paso a Paso**
+
+package "PASO 1: Crear Store Base" {
+  class TeleprompterStore {
+    <b>Archivo:</b> src/stores/TeleprompterStore.ts
+    --
+    <i>Implementación:</i>
+    - private state: TeleprompterState
+    - private listeners: Set<Listener>
+    --
+    + getState(): TeleprompterState
+    + subscribe(listener): Unsubscribe
+    + play(), pause(), reset()
+    + setSpeed(), setFontSize()
+    - notify()
+  }
+}
+
+package "PASO 2: Crear Hook" {
+  class useTeleprompterStore {
+    <b>Archivo:</b> src/hooks/useTeleprompterStore.ts
+    --
+    <i>Hook personalizado:</i>
+    - useState con store.getState()
+    - useEffect con store.subscribe()
+    - Retorna { state, métodos }
+    --
+    Re-renderiza automáticamente
+    cuando cambia el estado
+  }
+}
+
+package "PASO 3: Usar en Componentes" {
+  class ComponentExample {
+    <b>Archivo:</b> src/components/TransportControls.tsx
+    --
+    <i>Uso del hook:</i>
+    const { state, play, pause } = useTeleprompterStore()
+    --
+    Componente se re-renderiza
+    automáticamente cuando
+    cambia el estado del store
+    --
+    Sin props drilling
+    Estado compartido fácil
+  }
+}
+
+package "PASO 4: Crear Servicios" {
+  class AutoScrollService {
+    <b>Archivo:</b> src/services/AutoScrollService.ts
+    --
+    <i>Auto-scroll unificado:</i>
+    - intervalId: number | null
+    - store: TeleprompterStore
+    --
+    + start(): setInterval 16ms (60 FPS)
+    + stop(): clearInterval
+    - tick(): calcula increment
+    --
+    increment = speed / 60
+    store.setScrollPosition(prev + increment)
+  }
+}
+
+package "PASO 5: Implementar Sync Service" {
+  class SyncService {
+    <b>Archivo:</b> src/services/SyncService.ts
+    --
+    <i>Patrón Maestro-Esclavo:</i>
+    - slaves: Map<string, Window>
+    - store: TeleprompterStore
+    --
+    + registerSlave(id, window)
+    + broadcastState(state)
+    + handleSlaveRequest(message)
+    --
+    Main = MAESTRO (única fuente)
+    Popup/Modal = ESCLAVOS (solo reciben)
+    --
+    Mensajes con timestamp
+    ACK para confirmación
+  }
+}
+
+package "PASO 6: Refactorizar App.tsx" {
+  class AppRefactored {
+    <b>Archivo:</b> src/App.tsx (REFACTORIZADO)
+    --
+    <i>ANTES:</i> 15+ estados locales
+    text, isPlaying, speed, fontSize...
+    --
+    <i>DESPUÉS:</i> 3 hooks simples
+    useTeleprompterStore()
+    useRunOrderStore()
+    useConfigStore()
+    --
+    Componentes hijos usan mismos hooks
+    Estado compartido automáticamente
+    Sin props drilling
+  }
+}
+
+package "PASO 7: Persistencia con IndexedDB" {
+  class PersistenceService {
+    <b>Archivo:</b> src/services/PersistenceService.ts
+    --
+    <i>Persistencia automática:</i>
+    - db: IDBDatabase
+    --
+    + initialize(): Promise<void>
+    + saveScripts(items): Promise<void>
+    + loadScripts(): Promise<RunOrderItem[]>
+    + saveConfig(config): Promise<void>
+    + enableAutoSave()
+    --
+    Auto-save cada 30 segundos
+    Object stores: scripts, config
+    Versionado de datos
+  }
+}
+
+package "PASO 8: Importar Excel" {
+  class ExcelImportService {
+    <b>Archivo:</b> src/services/ExcelImportService.ts
+    --
+    <i>Importación desde Excel:</i>
+    Biblioteca: xlsx (SheetJS)
+    --
+    + importFromFile(file): Promise<RunOrderItem[]>
+    + validateStructure(data): boolean
+    + mapExcelToRunOrder(data)
+    + previewImport(file)
+    --
+    Columnas esperadas:
+    - Número de Guion
+    - Título
+    - Texto/Contenido
+    - Duración
+    - Notas
+  }
+}
+
+note right of TeleprompterStore
+  **BENEFICIOS:**
+  
+  ✓ Estado centralizado
+  ✓ Un solo lugar para lógica
+  ✓ Fácil testing
+  ✓ No props drilling
+  ✓ Subscripción automática
+  ✓ Re-renders optimizados
+end note
+
+note right of SyncService
+  **SOLUCIONA BUGS:**
+  
+  ✓ TP-1: Play funciona
+  ✓ VF-3: Scroll sincronizado
+  ✓ VF-4: Velocidad consistente
+  ✓ VF-5: Font size sincronizado
+  ✓ Sin loops infinitos
+  ✓ Estado predecible
+end note
+
+note bottom of PersistenceService
+  **SOLUCIONA BUGS:**
+  
+  ✓ PD-1: Scripts persisten
+  ✓ PD-2: Config persiste
+  ✓ PD-3: Orden persiste
+  ✓ Auto-save cada 30s
+  ✓ Restauración de sesión
+end note
+
+@enduml

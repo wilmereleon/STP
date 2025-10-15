@@ -1,0 +1,205 @@
+@startuml Secuencia Play - Arquitectura Refactorizada
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam backgroundColor #FEFEFE
+
+title Sistema Refactorizado - Flujo Play con Sincronización Maestro-Esclavo\n**SOLUCIÓN a BUG TP-1**
+
+actor Usuario
+participant "TransportControls\n(UI)" as Controls
+participant "TeleprompterStore\n(MAESTRO)" as Store
+participant "AutoScrollService" as Scroll
+participant "SyncService" as Sync
+participant "PreviewPanel\n(ESCLAVO)" as Preview
+participant "TeleprompterWindow\n(ESCLAVO)" as Window
+
+== Usuario Presiona Play ==
+
+Usuario -> Controls : Click Play
+activate Controls
+Controls -> Store : dispatch(play())
+deactivate Controls
+
+activate Store
+Store -> Store : state.isPlaying = true
+Store -> Store : state.timestamp = Date.now()
+Store -> Store : notifyListeners()
+
+' Notificación a componentes suscritos
+Store --> Preview : notify(newState)
+activate Preview
+Preview -> Preview : Re-render con isPlaying=true
+deactivate Preview
+
+' Iniciar auto-scroll
+Store -> Scroll : start()
+activate Scroll
+Scroll -> Scroll : intervalId = setInterval(tick, 16ms)\n**60 FPS**
+
+' Broadcast a esclavos
+Store -> Sync : broadcastState(state)
+activate Sync
+
+Sync -> Sync : command = {\n  type: 'PLAY',\n  timestamp: now,\n  sourceId: 'master',\n  payload: state\n}
+
+Sync -> Window : postMessage(command, '*')
+activate Window
+Window -> Window : if (message.sourceId === 'master')\n  applyState(message.payload)
+Window -> Window : setState({isPlaying: true})
+Window -> Window : **NO inicia auto-scroll local**\n(solo escucha a maestro)
+deactivate Window
+
+Sync --> Store : ACK received
+deactivate Sync
+deactivate Store
+
+== Auto-Scroll Loop (60 FPS) ==
+
+loop Cada 16ms (60 FPS)
+  Scroll -> Scroll : deltaTime = now - lastUpdate
+  Scroll -> Scroll : increment = calculateIncrement(\n  deltaTime,\n  state.speed\n)
+  
+  note right of Scroll
+    **CÁLCULO UNIFICADO:**
+    increment = (speed / 60) * deltaTime
+    
+    Ejemplo con speed=1.0:
+    - 60 FPS → ~0.0167 por frame
+    - Scroll suave y predecible
+    - Mismo cálculo para todos
+  end note
+  
+  Scroll -> Store : setScrollPosition(\n  prev + increment\n)
+  
+  activate Store
+  Store -> Store : state.scrollPosition += increment
+  Store -> Store : state.timestamp = Date.now()
+  Store -> Store : notifyListeners()
+  
+  ' Actualización local
+  Store --> Preview : notify(newState)
+  activate Preview
+  Preview -> Preview : Apply scroll to DOM:\nref.scrollTop = scrollPosition
+  Preview -> Preview : **FUNCIONA ✓**
+  deactivate Preview
+  
+  ' Broadcast a esclavos (throttled cada 50ms)
+  alt cada 50ms (throttle)
+    Store -> Sync : broadcastState(state)
+    activate Sync
+    Sync -> Window : postMessage({\n  type: 'SET_SCROLL_POSITION',\n  payload: {scrollPosition}\n})
+    activate Window
+    Window -> Window : setState({scrollPosition})
+    Window -> Window : ref.scrollTop = scrollPosition
+    Window -> Window : **Sincronizado ✓**
+    deactivate Window
+    deactivate Sync
+  end
+  
+  deactivate Store
+end
+
+== Detección de Fin de Texto ==
+
+Scroll -> Scroll : if (detectEndOfText())
+activate Scroll
+Scroll -> Scroll : **Calcula fin:**\nestimatedHeight = lines.length × lineHeight\nmaxScroll = estimatedHeight - viewportHeight
+
+Scroll -> Store : dispatch(pause())
+activate Store
+Store -> Store : state.isPlaying = false
+Store -> Store : notifyListeners()
+
+Store --> Preview : notify(newState)
+activate Preview
+Preview -> Preview : Actualiza UI (botón Play)
+deactivate Preview
+
+Store -> Sync : broadcastState(state)
+activate Sync
+Sync -> Window : postMessage({type: 'PAUSE'})
+activate Window
+Window -> Window : setState({isPlaying: false})
+deactivate Window
+deactivate Sync
+
+' Auto-advance
+Store -> Store : handleAutoAdvance()
+Store -> Store : Busca siguiente script
+Store -> Store : if (nextScript exists)\n  loadNextScript()\n  play()
+
+deactivate Store
+deactivate Scroll
+
+== Cambio de Velocidad desde Popup (ESCLAVO → MAESTRO) ==
+
+Window <- Usuario : Mouse wheel
+activate Window
+Window -> Window : newSpeed = speed ± 0.1
+Window -> Sync : sendRequest({\n  type: 'REQUEST_SPEED_CHANGE',\n  payload: {speed: newSpeed},\n  sourceId: 'popup-123'\n})
+deactivate Window
+
+activate Sync
+Sync -> Store : dispatch(setSpeed(newSpeed))
+activate Store
+Store -> Store : state.speed = validateSpeed(newSpeed)
+Store -> Store : notifyListeners()
+
+Store --> Preview : notify(newState)
+activate Preview
+Preview -> Preview : Actualiza UI (slider)
+deactivate Preview
+
+Store -> Sync : broadcastState(state)
+Sync -> Window : postMessage({\n  type: 'SET_SPEED',\n  payload: {speed: newSpeed},\n  requestId: 'req-123',\n  ack: true\n})
+activate Window
+Window -> Window : setState({speed: newSpeed})
+Window -> Window : **Confirmado ✓**
+Window -> Sync : sendAck('req-123')
+deactivate Window
+
+deactivate Store
+deactivate Sync
+
+note over Store, Window
+  **VENTAJAS DE MAESTRO-ESCLAVO:**
+  
+  ✓ Sin loops infinitos
+  ✓ Estado siempre consistente
+  ✓ Esclavo no modifica directamente
+  ✓ Todas las vistas sincronizadas
+  ✓ Throttling inteligente
+  ✓ ACK para confirmación
+  ✓ Fácil agregar más esclavos
+  ✓ Debugging simplificado
+end note
+
+== Pausa desde Preview ==
+
+Preview <- Usuario : Click Pause
+activate Preview
+Preview -> Store : dispatch(pause())
+deactivate Preview
+
+activate Store
+Store -> Store : state.isPlaying = false
+Store -> Scroll : stop()
+activate Scroll
+Scroll -> Scroll : clearInterval(intervalId)
+Scroll -> Scroll : intervalId = null
+deactivate Scroll
+
+Store -> Store : notifyListeners()
+Store --> Preview : notify(newState)
+
+Store -> Sync : broadcastState(state)
+activate Sync
+Sync -> Window : postMessage({type: 'PAUSE'})
+activate Window
+Window -> Window : setState({isPlaying: false})
+Window -> Window : **Todos sincronizados ✓**
+deactivate Window
+deactivate Sync
+deactivate Store
+
+@enduml

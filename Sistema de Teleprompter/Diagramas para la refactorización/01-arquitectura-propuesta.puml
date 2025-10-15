@@ -1,0 +1,168 @@
+@startuml Arquitectura Refactorizada - Patrón Flux
+!theme plain
+skinparam componentStyle rectangle
+skinparam backgroundColor #FEFEFE
+skinparam component {
+  BackgroundColor<<store>> #FFD700
+  BackgroundColor<<service>> #87CEEB
+  BackgroundColor<<ui>> #90EE90
+  BackgroundColor<<hook>> #FFB6C1
+}
+
+title Sistema de Teleprompter - Arquitectura Refactorizada\n**Patrón Flux con Estado Centralizado**
+
+package "Capa de Estado (State Layer)" <<store>> {
+  [TeleprompterStore] <<store>>
+  [RunOrderStore] <<store>>
+  [ConfigurationStore] <<store>>
+  
+  note right of [TeleprompterStore]
+    **Estado Centralizado:**
+    - text, isPlaying, speed
+    - fontSize, scrollPosition
+    - currentScript
+    
+    **Métodos:**
+    - play(), pause(), reset()
+    - setSpeed(), setFontSize()
+    - setScrollPosition()
+    - subscribe(listener)
+  end note
+}
+
+package "Capa de Servicios (Service Layer)" <<service>> {
+  [SyncService] <<service>>
+  [AutoScrollService] <<service>>
+  [PersistenceService] <<service>>
+  [ExcelImportService] <<service>>
+  
+  note right of [SyncService]
+    **Sincronización Maestro-Esclavo:**
+    - Main window es MAESTRO
+    - Popup/Modal son ESCLAVOS
+    - Mensajes con timestamp
+    - Cola de comandos
+    - Resolución de conflictos
+  end note
+  
+  note right of [AutoScrollService]
+    **Auto-scroll Unificado:**
+    - Única fuente de verdad
+    - Cálculo centralizado
+    - Broadcast a todas las vistas
+    - Velocidad consistente
+  end note
+}
+
+package "Capa de UI (Presentation Layer)" <<ui>> {
+  component "Main Application" {
+    [App.tsx] <<ui>>
+    [MainLayout] <<ui>>
+  }
+  
+  component "Panels" {
+    [RunOrderPanel] <<ui>>
+    [EditorPanel] <<ui>>
+    [PreviewPanel] <<ui>>
+  }
+  
+  component "Windows" {
+    [TeleprompterWindow] <<ui>>
+    [TeleprompterModal] <<ui>>
+  }
+  
+  component "Controls" {
+    [TransportControls] <<ui>>
+    [MacroControls] <<ui>>
+    [SettingsPanel] <<ui>>
+  }
+}
+
+package "Hooks Personalizados" <<hook>> {
+  [useTeleprompterStore] <<hook>>
+  [useRunOrderStore] <<hook>>
+  [useAutoScroll] <<hook>>
+  [useMacros] <<hook>>
+  [usePersistence] <<hook>>
+}
+
+package "Almacenamiento" {
+  database "IndexedDB\n(Scripts, Config)" as IDB
+  database "localStorage\n(Macros)" as LS
+  file "Excel Files\n(.xlsx)" as Excel
+  file ".awn Files" as AWN
+}
+
+' Relaciones principales
+[App.tsx] --> [TeleprompterStore] : usa
+[App.tsx] --> [RunOrderStore] : usa
+[App.tsx] --> [ConfigurationStore] : usa
+
+[TeleprompterStore] --> [SyncService] : notifica cambios
+[TeleprompterStore] --> [AutoScrollService] : controla
+[TeleprompterStore] --> [PersistenceService] : guarda
+
+[SyncService] --> [TeleprompterWindow] : envía comandos
+[SyncService] --> [TeleprompterModal] : envía comandos
+[SyncService] --> [PreviewPanel] : actualiza
+
+[AutoScrollService] --> [TeleprompterStore] : actualiza scrollPosition
+[AutoScrollService] ..> [PreviewPanel] : scroll sincronizado
+[AutoScrollService] ..> [TeleprompterWindow] : scroll sincronizado
+
+[PersistenceService] --> IDB : guarda/carga
+[PersistenceService] --> LS : macros
+[ExcelImportService] --> Excel : importa
+[RunOrderStore] --> AWN : exporta/importa
+
+' Hooks
+[RunOrderPanel] ..> [useRunOrderStore] : usa
+[EditorPanel] ..> [useTeleprompterStore] : usa
+[PreviewPanel] ..> [useTeleprompterStore] : usa
+[PreviewPanel] ..> [useAutoScroll] : usa
+[TeleprompterWindow] ..> [useTeleprompterStore] : usa
+[TransportControls] ..> [useTeleprompterStore] : usa
+[MacroControls] ..> [useMacros] : usa
+
+note bottom of [SyncService]
+  **SOLUCIÓN BUG TP-1, VF-3/4/5:**
+  
+  Arquitectura Maestro-Esclavo:
+  1. Main window = MAESTRO (única fuente de verdad)
+  2. Popup/Modal = ESCLAVOS (solo reflejan)
+  3. Comandos unidireccionales con ACK
+  4. Timestamp para ordenar eventos
+  5. Cola de comandos pendientes
+  6. Auto-scroll centralizado
+  
+  Ventajas:
+  ✓ Sin loops infinitos
+  ✓ Estado consistente
+  ✓ Sincronización garantizada
+  ✓ Fácil debugging
+end note
+
+note right of [PersistenceService]
+  **SOLUCIÓN PD-1/2/3:**
+  
+  Persistencia automática:
+  - IndexedDB para scripts grandes
+  - localStorage para config ligera
+  - Auto-save cada 30s
+  - Versionado de datos
+  - Backup antes de cambios
+  - Restauración de sesión
+end note
+
+note left of [ExcelImportService]
+  **NUEVA FUNCIONALIDAD:**
+  
+  Importar desde Excel:
+  - Biblioteca xlsx/sheetjs
+  - Validación de columnas
+  - Mapeo a RunOrderItem
+  - Preview antes de importar
+  - Soporte .xlsx y .csv
+end note
+
+@enduml

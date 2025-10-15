@@ -1,0 +1,145 @@
+@startuml Diagrama de Componentes - Estado Actual
+!theme plain
+skinparam componentStyle rectangle
+skinparam backgroundColor #FEFEFE
+skinparam component {
+  BackgroundColor<<main>> LightBlue
+  BackgroundColor<<editor>> LightGreen
+  BackgroundColor<<teleprompter>> Yellow
+  BackgroundColor<<controls>> Orange
+  BackgroundColor<<config>> Pink
+}
+
+title Sistema de Teleprompter - Arquitectura de Componentes Actual\n(Estado antes de refactorización)
+
+package "Aplicación Principal" {
+  [main.tsx] <<main>>
+  [App.tsx] <<main>>
+  [index.css]
+}
+
+package "Panel Run Order" {
+  [RunOrderList] <<editor>>
+  [RunOrderPanel] <<editor>>
+  [DraggableRunOrderItem] <<editor>>
+}
+
+package "Panel Editor" {
+  [ScriptEditor] <<editor>>
+  [TextEditor] <<editor>>
+  [EditorToolbar] <<editor>>
+  [TextWithJumpMarkers] <<editor>>
+}
+
+package "Panel Preview" {
+  [TeleprompterPreview] <<teleprompter>>
+  [TeleprompterScreen] <<teleprompter>>
+}
+
+package "Ventana Flotante" {
+  [TeleprompterWindow] <<teleprompter>>
+}
+
+package "Modal Fullscreen" {
+  [TeleprompterModal] <<teleprompter>>
+  [FloatingTeleprompter] <<teleprompter>>
+}
+
+package "Controles" {
+  [TeleprompterControls] <<controls>>
+  [TeleprompterPanel] <<controls>>
+  [MainToolbar] <<controls>>
+}
+
+package "Configuración" {
+  [ConfigurationPanel] <<config>>
+  [MacroMenu] <<config>>
+  [MacroSettings] <<config>>
+  [GuideLineSettings] <<config>>
+  [SettingsDialog] <<config>>
+}
+
+package "Hooks Personalizados" {
+  [useMacros]
+}
+
+package "UI Components" {
+  [Toaster]
+  [Button]
+  [Slider]
+  [Dialog]
+}
+
+' Relaciones principales
+[main.tsx] --> [App.tsx] : renderiza
+[App.tsx] --> [index.css] : usa
+
+[App.tsx] --> [RunOrderList] : muestra
+[App.tsx] --> [ScriptEditor] : muestra
+[App.tsx] --> [TeleprompterPreview] : muestra
+[App.tsx] --> [TeleprompterControls] : muestra
+[App.tsx] --> [MainToolbar] : muestra
+[App.tsx] --> [TeleprompterWindow] : abre (window.open)
+[App.tsx] --> [TeleprompterModal] : muestra
+[App.tsx] --> [ConfigurationPanel] : muestra
+[App.tsx] --> [MacroMenu] : muestra
+[App.tsx] --> [Toaster] : usa
+
+' Run Order
+[RunOrderList] --> [RunOrderPanel] : contiene
+[RunOrderList] --> [DraggableRunOrderItem] : renderiza items
+
+' Editor
+[ScriptEditor] --> [TextEditor] : contiene
+[ScriptEditor] --> [EditorToolbar] : contiene
+[ScriptEditor] --> [TextWithJumpMarkers] : muestra marcadores
+
+' Preview
+[TeleprompterPreview] --> [TeleprompterScreen] : renderiza
+
+' Modal
+[TeleprompterModal] --> [FloatingTeleprompter] : contiene
+[FloatingTeleprompter] --> [TeleprompterScreen] : usa
+
+' Controles
+[TeleprompterControls] --> [TeleprompterPanel] : usa
+[MainToolbar] --> [TeleprompterControls] : contiene
+
+' Configuración
+[ConfigurationPanel] --> [MacroSettings] : muestra
+[ConfigurationPanel] --> [GuideLineSettings] : muestra
+[ConfigurationPanel] --> [SettingsDialog] : usa
+
+' Hooks
+[App.tsx] --> [useMacros] : usa hook
+[TeleprompterWindow] --> [useMacros] : usa hook
+
+' UI Components
+[TeleprompterControls] ..> [Button] : usa
+[ConfigurationPanel] ..> [Slider] : usa
+[ConfigurationPanel] ..> [Dialog] : usa
+
+note right of [App.tsx]
+  **PROBLEMA IDENTIFICADO:**
+  - Estado centralizado en App.tsx (monolítico)
+  - 15+ estados locales
+  - Sincronización manual vía postMessage
+  - Lógica de negocio mezclada con UI
+  - Conflictos entre Preview y Ventana
+end note
+
+note right of [TeleprompterWindow]
+  **PROBLEMA:**
+  - Estado duplicado
+  - Auto-scroll independiente
+  - Sincronización bidireccional causa loops
+  - No recibe actualizaciones del Preview
+end note
+
+note bottom of [useMacros]
+  **Hook personalizado**
+  Maneja atajos de teclado globales
+  con 10 macros configurables
+end note
+
+@enduml

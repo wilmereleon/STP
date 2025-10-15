@@ -1,0 +1,234 @@
+@startuml Diagrama de Clases TypeScript - Estado Actual
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam backgroundColor #FEFEFE
+
+title Sistema de Teleprompter - Modelo de Datos y Clases TypeScript\n(Estado antes de refactorización)
+
+package "Interfaces de Datos" {
+  class RunOrderItem {
+    + id: string
+    + title: string
+    + duration: string
+    + status: 'ready' | 'playing' | 'completed'
+    + text: string
+  }
+
+  class MacroSettings {
+    + playStop: string
+    + pause: string
+    + previous: string
+    + next: string
+    + increaseSpeed: string
+    + decreaseSpeed: string
+    + increaseFontSize: string
+    + decreaseFontSize: string
+    + nextCue?: string
+    + previousCue?: string
+  }
+
+  class MacroActions {
+    + onPlayStop: () => void
+    + onPause: () => void
+    + onPrevious: () => void
+    + onNext: () => void
+    + onIncreaseSpeed: () => void
+    + onDecreaseSpeed: () => void
+    + onIncreaseFontSize: () => void
+    + onDecreaseFontSize: () => void
+    + onNextCue?: () => void
+    + onPreviousCue?: () => void
+  }
+
+  class TeleprompterData {
+    + text: string
+    + isPlaying: boolean
+    + speed: number
+    + fontSize: number
+    + scrollPosition: number
+  }
+
+  class JumpMarkers {
+    + [key: string]: number
+  }
+}
+
+package "Componente Principal" {
+  class App {
+    ' Estados del Teleprompter
+    - text: string
+    - scriptTexts: {[key: string]: string}
+    - isPlaying: boolean
+    - speed: number (0.1-5x)
+    - fontSize: number (12-500px)
+    - scrollPosition: number
+    - currentScript: string
+    - loadedFileName: string | undefined
+    
+    ' Estados de UI
+    - isTeleprompterModalOpen: boolean
+    - showMacroConfig: boolean
+    - showMacroMenu: boolean
+    
+    ' Estados de Run Order
+    - runOrderItems: RunOrderItem[]
+    - currentItem: string | null
+    
+    ' Estados de Navegación
+    - jumpMarkers: JumpMarkers
+    
+    ' Referencias
+    - teleprompterWindowRef: Window | null
+    - isUpdatingFromPopup: boolean
+    
+    ' Configuración
+    - macroSettings: MacroSettings
+    
+    ' Métodos de Control
+    + handlePlayPause(): void
+    + handleReset(): void
+    + handleStop(): void
+    + handleForward(): void
+    + handleBackward(): void
+    + handleSpeedChange(speed: number): void
+    + handleSetFontSize(size: number): void
+    
+    ' Métodos de Navegación
+    + handleNextCue(): void
+    + handlePreviousCue(): void
+    + getCuePositions(text: string): number[]
+    + handleJumpToPosition(position: number): void
+    + handleJumpToScript(scriptId: string): void
+    
+    ' Métodos del Editor
+    + handleTextChange(newText: string): void
+    + generateJumpMarkers(text: string): void
+    
+    ' Métodos del Run Order
+    + handleAddItem(): void
+    + handleItemSelect(id: string): void
+    + handleReorderItems(dragIndex: number, hoverIndex: number): void
+    + handleTitleChange(id: string, newTitle: string): void
+    + handleFileLoad(scripts: Array, fileName: string): void
+    
+    ' Métodos de Ventana
+    + handleOpenTeleprompter(): void
+    + handleOpenTeleprompterModal(): void
+    + handleCloseTeleprompterModal(): void
+    + sendToTeleprompter(): void
+    
+    ' Auto-avance
+    + handleEnd(): void
+  }
+}
+
+package "Componentes de Teleprompter" {
+  class TeleprompterWindow {
+    - teleprompterData: TeleprompterData
+    - isConnected: boolean
+    - retryCount: number
+    - windowOpener: Window | null
+    - macroSettings: MacroSettings
+    
+    + handleWheel(event: WheelEvent): void
+    + getCuePositions(text: string): number[]
+    + handleControlChange(updates: Partial<TeleprompterData>): void
+    + sendControlUpdate(updates: Partial<TeleprompterData>): void
+  }
+
+  class TeleprompterModal {
+    - isPlaying: boolean
+    - speed: number
+    - fontSize: number
+    - scrollPosition: number
+    - guideLinePosition: number
+    
+    + handlePlayPause(): void
+    + handleSpeedChange(speed: number): void
+    + handleFontSizeChange(size: number): void
+  }
+
+  class TeleprompterScreen {
+    + text: string
+    + fontSize: number
+    + scrollPosition: number
+    + guideLinePosition: number
+    + showGuideLine: boolean
+  }
+}
+
+package "Hooks Personalizados" {
+  class useMacros <<hook>> {
+    + macroSettings: MacroSettings
+    + actions: MacroActions
+    + enabled: boolean
+    --
+    Maneja eventos keydown globales
+    Previene inputs en campos de texto
+    Ejecuta callbacks según tecla
+  }
+}
+
+package "Mensajes postMessage" {
+  enum MessageType {
+    TELEPROMPTER_READY
+    TELEPROMPTER_CONTROL
+    TELEPROMPTER_UPDATE
+  }
+
+  class PostMessageEvent {
+    + type: MessageType
+    + data: TeleprompterData | Partial<TeleprompterData>
+  }
+}
+
+' Relaciones
+App "1" *-- "0..1" TeleprompterWindow : abre >
+App "1" *-- "1" TeleprompterModal : contiene >
+App "1" *-- "*" RunOrderItem : gestiona >
+App "1" *-- "1" MacroSettings : configura >
+App "1" o-- "1" JumpMarkers : genera >
+
+TeleprompterWindow "1" *-- "1" TeleprompterData : mantiene >
+TeleprompterModal "1" *-- "1" TeleprompterScreen : renderiza >
+
+App ..> useMacros : usa hook >
+TeleprompterWindow ..> useMacros : usa hook >
+
+App ..> PostMessageEvent : envía/recibe >
+TeleprompterWindow ..> PostMessageEvent : envía/recibe >
+
+TeleprompterWindow ..> MacroActions : implementa >
+App ..> MacroActions : implementa >
+
+note right of App
+  **PROBLEMA CRÍTICO:**
+  - Demasiados estados (15+)
+  - Lógica compleja mezclada
+  - Difícil mantenimiento
+  - Bugs de sincronización
+  
+  **BUG TP-1:** Auto-scroll no funciona
+  conflicto entre Preview y Window
+  
+  **BUG VF-3/4/5:** Sincronización falla
+  estado duplicado sin coordinación
+end note
+
+note right of TeleprompterWindow
+  **PROBLEMA:**
+  - Estado duplicado
+  - Auto-scroll independiente (speed × 14)
+  - Diferente de App (speed × 0.5)
+  - Sincronización bidireccional
+  - Causa loops infinitos
+end note
+
+note bottom of PostMessageEvent
+  **PROBLEMA:**
+  Comunicación bidireccional sin
+  control de versión/timestamp
+  causa loops y conflictos
+end note
+
+@enduml

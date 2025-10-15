@@ -1,0 +1,177 @@
+@startuml Comunicación postMessage - Estado Actual
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam backgroundColor #FEFEFE
+
+title Sistema de Teleprompter - Protocolo postMessage Actual\n(Bidireccional - PROBLEMÁTICO)
+
+participant "App.tsx\n(Main Window)" as App
+participant "Window API" as WinAPI
+participant "TeleprompterWindow\n(Popup)" as Popup
+participant "Auto-scroll App\n(Interval)" as ScrollApp
+participant "Auto-scroll Popup\n(Interval)" as ScrollPopup
+
+== Establecimiento de Conexión ==
+App -> WinAPI : window.open(url + '?popup=true', 'teleprompter', features)
+activate WinAPI
+WinAPI -> Popup : Crea nueva ventana
+activate Popup
+Popup -> Popup : Detecta popup=true en URL
+Popup -> Popup : Renderiza TeleprompterWindow
+
+loop Retry hasta 50 veces (5 segundos)
+  Popup -> WinAPI : window.opener.postMessage(\n  {type: 'TELEPROMPTER_READY'},\n  '*'\n)
+  WinAPI -> App : Evento 'message'
+  App -> App : if (type === 'TELEPROMPTER_READY')
+  App -> WinAPI : teleprompterWindowRef.postMessage(\n  {type: 'TELEPROMPTER_UPDATE',\n   data: {text, isPlaying, speed, fontSize, scrollPosition}},\n  '*'\n)
+  WinAPI -> Popup : Evento 'message'
+  Popup -> Popup : setIsConnected(true)
+  Popup -> Popup : **PROBLEMA: Inicializa auto-scroll independiente**
+end
+
+deactivate WinAPI
+
+== Sincronización Inicial ==
+Popup -> Popup : setTeleprompterData(data)
+Popup -> Popup : Merge: {...prev, ...data}\n**PROBLEMA: No valida consistencia**
+
+== LOOP INFINITO: Cambio de Estado ==
+
+group Usuario hace Play en App
+  App -> App : setIsPlaying(true)
+  activate ScrollApp
+  
+  App -> WinAPI : setTimeout(50ms) then\npostMessage(\n  {type: 'TELEPROMPTER_UPDATE',\n   data: {isPlaying: true}}\n)
+  
+  ScrollApp -> ScrollApp : Cada 100ms:\nsetScrollPosition(prev + speed×0.5)
+  
+  WinAPI -> Popup : Evento 'message'
+  Popup -> Popup : if (!isUpdatingFromPopup)\nsetTeleprompterData(...data)
+  Popup -> Popup : **INICIA auto-scroll**
+  activate ScrollPopup
+  
+  ScrollPopup -> ScrollPopup : Cada 100ms:\nsetScrollPosition(prev + speed×14)
+  ScrollPopup -> ScrollPopup : **VELOCIDAD DIFERENTE**
+end
+
+group Popup envía actualización (PROBLEMA)
+  Popup -> WinAPI : postMessage(\n  {type: 'TELEPROMPTER_CONTROL',\n   data: {scrollPosition: X}}\n)
+  
+  WinAPI -> App : Evento 'message'
+  App -> App : isUpdatingFromPopup = true
+  App -> App : setScrollPosition(X)
+  App -> App : **DETIENE auto-scroll local**
+  deactivate ScrollApp
+  App -> App : setTimeout(100ms) →\nisUpdatingFromPopup = false
+  
+  App -> WinAPI : **VUELVE A ENVIAR**\npostMessage(TELEPROMPTER_UPDATE)
+  WinAPI -> Popup : Evento 'message'
+  Popup -> Popup : **RECIBE scrollPosition diferente**
+  Popup -> Popup : **CONFLICTO: Dos auto-scrolls activos**
+end
+
+note over App, Popup
+  **LOOP INFINITO DETECTADO:**
+  1. App cambia scrollPosition → envía a Popup
+  2. Popup recibe → cambia local → envía a App
+  3. App recibe → cambia local → envía a Popup
+  4. GOTO 2 (loop)
+  
+  **Flag isUpdatingFromPopup NO ES SUFICIENTE**
+  porque solo previene por 100ms
+end note
+
+== PROBLEMA: Mouse Wheel en Popup ==
+
+Popup <- Usuario : Mouse wheel
+Popup -> Popup : handleWheel(event)
+Popup -> Popup : event.preventDefault()
+
+alt Scroll arriba
+  Popup -> Popup : setSpeed(Math.max(0.1, speed - 0.1))
+else Scroll abajo  
+  Popup -> Popup : setSpeed(Math.min(5.0, speed + 0.1))
+end
+
+Popup -> Popup : if (!isPlaying)\nsetIsPlaying(true)\n**AUTO-INICIA**
+
+Popup -> WinAPI : postMessage(\n  {type: 'TELEPROMPTER_CONTROL',\n   data: {speed, isPlaying}}\n)
+
+WinAPI -> App : Evento 'message'
+App -> App : isUpdatingFromPopup = true
+App -> App : setSpeed(newSpeed)
+App -> App : setIsPlaying(true)
+
+App -> WinAPI : **PROBLEMA: Envía de vuelta**\npostMessage(TELEPROMPTER_UPDATE)
+WinAPI -> Popup : **Recibe su propio cambio**
+
+note over Popup
+  **BUG:** Popup recibe eco de sus
+  propios cambios, causando flickering
+  y desincronización
+end note
+
+== PROBLEMA: Sincronización de Font Size ==
+
+App <- Usuario : Click botón +Font
+App -> App : handleSetFontSize(fontSize + 2)
+App -> App : console.log('🔴 fontSize:', newSize)
+App -> App : setFontSize(newSize)
+
+App -> WinAPI : **ENVÍO INMEDIATO**\npostMessage(\n  {type: 'TELEPROMPTER_UPDATE',\n   data: {fontSize: newSize}}\n)
+
+WinAPI -> Popup : Evento 'message'
+Popup -> Popup : setTeleprompterData(prev => ({...prev, fontSize}))\n**FUNCIONA EN POPUP**
+
+App -> App : **PROBLEMA: Preview no se actualiza**\nporque no hay listener directo
+
+note over App
+  **BUG VF-5:**
+  - Funciona en Popup (recibe postMessage)
+  - NO funciona en Preview (solo re-render)
+  - Preview depende de prop fontSize
+  - pero render no se fuerza inmediatamente
+end note
+
+== Análisis de Mensajes ==
+
+note over WinAPI
+  **TIPOS DE MENSAJES:**
+  
+  1. TELEPROMPTER_READY (Popup → App)
+     - Solo al conectar
+     - Pide datos iniciales
+  
+  2. TELEPROMPTER_UPDATE (App → Popup)
+     - Envía estado completo o parcial
+     - Puede sobrescribir cambios locales
+  
+  3. TELEPROMPTER_CONTROL (Popup → App)
+     - Cambios desde controles del Popup
+     - Causa actualizaciones bidireccionales
+  
+  **PROBLEMA FUNDAMENTAL:**
+  No hay fuente única de verdad
+  No hay timestamping
+  No hay resolución de conflictos
+  No hay coordinación de auto-scroll
+end note
+
+== Cierre de Ventana ==
+
+Popup <- Usuario : Cierra ventana
+deactivate ScrollPopup
+Popup -> Popup : window.close()
+deactivate Popup
+
+App -> App : **NO detecta cierre automáticamente**
+App -> App : Solo detecta si intenta enviar:\nif (windowRef.closed)
+
+note over App
+  **PROBLEMA:**
+  No hay cleanup automático
+  Referencias huérfanas
+  Memory leaks potenciales
+end note
+
+@enduml
