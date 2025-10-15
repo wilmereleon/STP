@@ -1,8 +1,13 @@
+// ===== IMPORTACIONES / IMPORTS =====
+// Hooks de React / React hooks
 import { useState, useEffect, useRef, useCallback } from 'react';
+// Hook personalizado de macros / Custom macros hook
 import { useMacros, defaultMacroSettings, MacroSettings as MacroSettingsType } from './components/useMacros';
 
-// Define MacroKey type based on macroSettings keys
+// Tipo para las claves de macro basado en defaultMacroSettings / Type for macro keys based on defaultMacroSettings
 type MacroKey = keyof typeof defaultMacroSettings;
+
+// Componentes de la aplicación / Application components
 import { RunOrderList } from './components/RunOrderList';
 import { ScriptEditor } from './components/ScriptEditor';
 import { TeleprompterPreview } from './components/TeleprompterPreview';
@@ -13,6 +18,20 @@ import { ConfigurationPanel } from './components/ConfigurationPanel';
 import { MacroMenu } from './components/MacroMenu';
 import { Toaster } from './components/ui/sonner';
 
+/**
+ * Item del orden de ejecución (Run Order)
+ * Run Order item
+ * 
+ * Representa un script individual en la lista de ejecución del teleprompter.
+ * Represents an individual script in the teleprompter's execution list.
+ * 
+ * @interface RunOrderItem
+ * @property {string} id - Identificador único / Unique identifier
+ * @property {string} title - Título del script / Script title
+ * @property {string} duration - Duración estimada (formato HH:MM:SS) / Estimated duration (format HH:MM:SS)
+ * @property {'ready' | 'playing' | 'completed'} status - Estado actual / Current status
+ * @property {string} text - Contenido del script / Script content
+ */
 interface RunOrderItem {
   id: string;
   title: string;
@@ -22,32 +41,83 @@ interface RunOrderItem {
 }
 
 
-
+/**
+ * App - Componente principal de la aplicación Teleprompter
+ * App - Main Teleprompter application component
+ * 
+ * Componente raíz que orquesta toda la funcionalidad del sistema de teleprompter.
+ * Maneja el estado global, la comunicación entre ventanas, la navegación de scripts,
+ * y la coordinación de todos los componentes hijos.
+ * 
+ * Root component that orchestrates all teleprompter system functionality.
+ * Manages global state, inter-window communication, script navigation,
+ * and coordination of all child components.
+ * 
+ * Arquitectura de 3 paneles / 3-panel architecture:
+ * - Panel izquierdo: Lista de Run Order / Left panel: Run Order list
+ * - Panel central: Editor de scripts / Center panel: Script editor
+ * - Panel derecho: Vista previa del teleprompter / Right panel: Teleprompter preview
+ * 
+ * Características principales / Main features:
+ * - Sistema de Run Order con drag & drop / Run Order system with drag & drop
+ * - Editor de scripts con marcadores de salto / Script editor with jump markers
+ * - Vista previa en tiempo real / Real-time preview
+ * - Ventana emergente de teleprompter / Teleprompter popup window
+ * - Modal de teleprompter en pantalla completa / Fullscreen teleprompter modal
+ * - Auto-avance entre scripts / Auto-advance between scripts
+ * - Sistema de macros personalizable / Customizable macro system
+ * - Comunicación inter-ventana con postMessage / Inter-window communication with postMessage
+ * - Persistencia de configuración en localStorage / Configuration persistence in localStorage
+ * - Carga y guardado de archivos .awn / .awn file loading and saving
+ * 
+ * @component
+ * @returns {JSX.Element} Aplicación completa del teleprompter / Complete teleprompter application
+ */
 export default function App() {
-  // Check if this is a teleprompter popup window
+  // ===== DETECCIÓN DE VENTANA EMERGENTE / POPUP WINDOW DETECTION =====
+  /**
+   * Verifica si esta instancia es una ventana emergente del teleprompter
+   * Checks if this instance is a teleprompter popup window
+   * 
+   * Si popup=true en URL, renderiza solo TeleprompterWindow
+   * If popup=true in URL, renders only TeleprompterWindow
+   */
   const isPopupWindow = new URLSearchParams(window.location.search).get('popup') === 'true';
   
   if (isPopupWindow) {
     return <TeleprompterWindow />;
   }
 
-  const [text, setText] = useState('');
-  const [scriptTexts, setScriptTexts] = useState<{[key: string]: string}>({});
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState(1.0); // Velocidad mucho más lenta
-  const [fontSize, setFontSize] = useState(200);
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const [currentScript, setCurrentScript] = useState('How To Script.awn');
-  const [loadedFileName, setLoadedFileName] = useState<string | undefined>(undefined);
-  const [isTeleprompterModalOpen, setIsTeleprompterModalOpen] = useState(false);
-  const [showMacroConfig, setShowMacroConfig] = useState(false);
-  const [showMacroMenu, setShowMacroMenu] = useState(false);
-  const [jumpMarkers, setJumpMarkers] = useState<{[key: string]: number}>({});
-  const teleprompterWindowRef = useRef<Window | null>(null);
+  // ===== ESTADO PRINCIPAL DEL TELEPROMPTER / MAIN TELEPROMPTER STATE =====
+  const [text, setText] = useState(''); // Texto actual del script / Current script text
+  const [scriptTexts, setScriptTexts] = useState<{[key: string]: string}>({}); // Cache de textos de scripts / Script texts cache
+  const [isPlaying, setIsPlaying] = useState(false); // Estado de reproducción / Playback state
+  const [speed, setSpeed] = useState(1.0); // Velocidad de scroll (0.1-5x) / Scroll speed (0.1-5x)
+  const [fontSize, setFontSize] = useState(200); // Tamaño de fuente en píxeles / Font size in pixels
+  const [scrollPosition, setScrollPosition] = useState(0); // Posición de scroll actual / Current scroll position
+  const [currentScript, setCurrentScript] = useState('How To Script.awn'); // Nombre del script actual / Current script name
+  const [loadedFileName, setLoadedFileName] = useState<string | undefined>(undefined); // Nombre del archivo cargado / Loaded file name
   
-  // Flag to prevent postMessage loops between windows
-  const isUpdatingFromPopup = useRef(false);
+  // ===== ESTADO DE UI Y MODALES / UI AND MODALS STATE =====
+  const [isTeleprompterModalOpen, setIsTeleprompterModalOpen] = useState(false); // Modal de teleprompter fullscreen / Fullscreen teleprompter modal
+  const [showMacroConfig, setShowMacroConfig] = useState(false); // Panel de configuración de macros / Macro configuration panel
+  const [showMacroMenu, setShowMacroMenu] = useState(false); // Menú de atajos / Shortcuts menu
+  
+  // ===== ESTADO DE MARCADORES Y NAVEGACIÓN / MARKERS AND NAVIGATION STATE =====
+  const [jumpMarkers, setJumpMarkers] = useState<{[key: string]: number}>({}); // Marcadores de salto {nombre: posición} / Jump markers {name: position}
+  
+  // ===== REFERENCIAS / REFERENCES =====
+  const teleprompterWindowRef = useRef<Window | null>(null); // Referencia a ventana emergente / Reference to popup window
+  const isUpdatingFromPopup = useRef(false); // Flag para prevenir loops de postMessage / Flag to prevent postMessage loops
 
+  // ===== ESTADO DEL RUN ORDER / RUN ORDER STATE =====
+  /**
+   * Lista de items del Run Order con scripts predefinidos de ejemplo
+   * Run Order items list with predefined example scripts
+   * 
+   * Contiene 13 scripts de ejemplo sobre equipamiento de broadcast
+   * Contains 13 example scripts about broadcast equipment
+   */
   const [runOrderItems, setRunOrderItems] = useState<RunOrderItem[]>([
     { id: '1', title: 'INTRO/TECH SCRIPTS ROLLING', duration: '00:01:15', status: 'ready', text: '[1] KEEPING THOSE SCRIPTS ROLLING:\n\nTeleprompter - the unsung hero in the broadcast chain - a critical element, to be sure, but one too often taken for granted as just another tool - a critical essential, to be work.\n\nWhile the teleprompter has been around for decades, helping anchors and reporters deliver news with confidence and eye contact, its role in modern broadcasting has evolved significantly.' },
     { id: '2', title: 'Intro/VTr', duration: '00:02:36', status: 'ready', text: '' },
@@ -64,10 +134,17 @@ export default function App() {
     { id: '13', title: 'Performance', duration: '00:08:20', status: 'ready', text: '' }
   ]);
 
-  const [currentItem, setCurrentItem] = useState<string | null>('1');
-  // Macro settings state (for useMacros)
+  const [currentItem, setCurrentItem] = useState<string | null>('1'); // ID del item actual del Run Order / Current Run Order item ID
+  
+  // ===== ESTADO DE MACROS CON PERSISTENCIA / MACROS STATE WITH PERSISTENCE =====
+  /**
+   * Configuración de macros con carga desde localStorage
+   * Macro settings with loading from localStorage
+   * 
+   * Intenta cargar configuración guardada, usa defaults si no existe
+   * Tries to load saved configuration, uses defaults if not exists
+   */
   const [macroSettings, setMacroSettings] = useState<MacroSettingsType>(() => {
-    // Try to load from localStorage for persistence
     try {
       const saved = localStorage.getItem('macroSettings');
       if (saved) return JSON.parse(saved);
@@ -75,22 +152,38 @@ export default function App() {
     return defaultMacroSettings;
   });
 
-  // Persist macro settings
+  // ===== EFECTO: PERSISTIR CONFIGURACIÓN DE MACROS / EFFECT: PERSIST MACRO SETTINGS =====
+  /**
+   * Guarda la configuración de macros en localStorage cuando cambia
+   * Saves macro settings to localStorage when it changes
+   */
   useEffect(() => {
     localStorage.setItem('macroSettings', JSON.stringify(macroSettings));
   }, [macroSettings]);
 
-  // Enhanced setFontSize with immediate feedback and logging
+  // ===== MANEJADOR: CAMBIO DE TAMAÑO DE FUENTE / HANDLER: FONT SIZE CHANGE =====
+  /**
+   * Maneja cambios de tamaño de fuente con feedback inmediato y logging
+   * Handles font size changes with immediate feedback and logging
+   * 
+   * Proceso / Process:
+   * 1. Valida y limita el rango (12-500px)
+   * 2. Actualiza estado local
+   * 3. Envía actualización a ventana emergente si existe
+   * 4. Verifica la actualización después de 100ms
+   * 
+   * @param {number} size - Nuevo tamaño de fuente / New font size
+   */
   const handleSetFontSize = (size: number) => {
     console.log('🔴 App.handleSetFontSize CALLED with:', size, 'current fontSize:', fontSize);
-    const newSize = Math.max(12, Math.min(500, size));
+    const newSize = Math.max(12, Math.min(500, size)); // Límites: 12-500px / Limits: 12-500px
     console.log('🔴 App.handleSetFontSize - calculated newSize:', newSize);
     
-    // Log the actual state change
+    // Log del cambio de estado / Log state change
     console.log('🔴 App.handleSetFontSize - calling setFontSize with:', newSize);
     setFontSize(newSize);
     
-    // Send to teleprompter window immediately if open
+    // Enviar a ventana emergente inmediatamente si está abierta / Send to popup window immediately if open
     if (teleprompterWindowRef.current && !teleprompterWindowRef.current.closed) {
       console.log('🔴 App.handleSetFontSize - sending to teleprompter window:', newSize);
       teleprompterWindowRef.current.postMessage({
@@ -99,13 +192,17 @@ export default function App() {
       }, '*');
     }
     
-    // Verification after state update
+    // Verificación después de actualización / Verification after state update
     setTimeout(() => {
       console.log('🔴 App.handleSetFontSize - VERIFICATION: fontSize should now be:', newSize);
     }, 100);
   };
 
-  // Debug effects to monitor critical state changes
+  // ===== EFECTOS DE DEBUG: MONITOREO DE ESTADO / DEBUG EFFECTS: STATE MONITORING =====
+  /**
+   * Efectos para monitorear cambios críticos de estado
+   * Effects to monitor critical state changes
+   */
   useEffect(() => {
     console.log('🔵 STATE CHANGE - isPlaying:', isPlaying);
   }, [isPlaying]);
@@ -114,10 +211,23 @@ export default function App() {
     console.log('🔵 STATE CHANGE - fontSize:', fontSize);
   }, [fontSize]);
 
+  // ===== MANEJADOR: FIN DE SCRIPT CON AUTO-AVANCE / HANDLER: SCRIPT END WITH AUTO-ADVANCE =====
+  /**
+   * Maneja el fin de un script y auto-avanza al siguiente si existe
+   * Handles end of script and auto-advances to next if exists
+   * 
+   * Lógica de auto-avance / Auto-advance logic:
+   * 1. Encuentra el índice del script actual
+   * 2. Verifica si existe un script siguiente
+   * 3. Marca el actual como completado
+   * 4. Carga el siguiente script
+   * 5. Continúa reproducción si el siguiente tiene contenido
+   * 6. Si no hay más scripts, marca como completado y detiene
+   */
   const handleEnd = () => {
     console.log('🔚 Auto-advance: Current script ended, checking for next script...');
     
-    // Auto-advance to next script if available
+    // Auto-avance al siguiente script si está disponible / Auto-advance to next script if available
     if (currentItem) {
       const currentIndex = runOrderItems.findIndex(item => item.id === currentItem);
       const nextIndex = currentIndex + 1;
@@ -126,19 +236,19 @@ export default function App() {
         const nextItem = runOrderItems[nextIndex];
         console.log('🔚 Auto-advance: Moving to next script:', nextItem.title);
         
-        // Mark current as completed
+        // Marcar actual como completado / Mark current as completed
         const updatedItems = runOrderItems.map(item => 
           item.id === currentItem ? { ...item, status: 'completed' as const } : item
         );
         setRunOrderItems(updatedItems);
         
-        // Move to next script
+        // Moverse al siguiente script / Move to next script
         setCurrentItem(nextItem.id);
         setScrollPosition(0);
         setText(nextItem.text);
         setCurrentScript(nextItem.title + '.awn');
         
-        // Continue playing if there's content
+        // Continuar reproduciendo si hay contenido / Continue playing if there's content
         if (nextItem.text.trim()) {
           console.log('🔚 Auto-advance: Continuing playback with next script');
           setIsPlaying(true);
@@ -150,7 +260,7 @@ export default function App() {
         console.log('🔚 Auto-advance: End of run order reached');
         setIsPlaying(false);
         
-        // Mark current as completed
+        // Marcar actual como completado / Mark current as completed
         const updatedItems = runOrderItems.map(item => 
           item.id === currentItem ? { ...item, status: 'completed' as const } : item
         );
@@ -162,7 +272,24 @@ export default function App() {
     }
   };
 
-  // Auto scroll effect with auto-advance detection (MUCH slower speeds)
+  // ===== EFECTO: AUTO-SCROLL CON DETECCIÓN DE FIN / EFFECT: AUTO-SCROLL WITH END DETECTION =====
+  /**
+   * Efecto de auto-scroll con detección de fin de texto y auto-avance
+   * Auto-scroll effect with text end detection and auto-advance
+   * 
+   * Algoritmo / Algorithm:
+   * - Velocidad: speed × 0.5 píxeles cada 100ms (scroll lento y suave)
+   * - Speed: speed × 0.5 pixels every 100ms (slow and smooth scroll)
+   * - Detección de fin: Estima altura del texto y detecta cuando se alcanza
+   * - End detection: Estimates text height and detects when reached
+   * - Auto-avance: 1 segundo de delay antes de avanzar al siguiente script
+   * - Auto-advance: 1 second delay before advancing to next script
+   * 
+   * Cálculos / Calculations:
+   * - estimatedTextHeight = líneas × 40px (altura aproximada por línea)
+   * - maxScrollNeeded = estimatedTextHeight + viewportHeight (800px)
+   * - Si scrollPosition > maxScrollNeeded → activar auto-avance
+   */
   useEffect(() => {
     let interval: number | null = null;
     
@@ -170,31 +297,32 @@ export default function App() {
       console.log('🟡 Auto-scroll STARTED - speed:', speed, 'scrollPosition:', scrollPosition);
       interval = window.setInterval(() => {
         setScrollPosition(prev => {
-          // Don't scroll if we're at the very beginning and just reset
+          // No hacer scroll si estamos al inicio y acabamos de reiniciar / Don't scroll if at beginning and just reset
           if (prev === 0 && !isPlaying) {
             console.log('🟡 Auto-scroll: Reset state detected, not scrolling');
             return 0;
           }
           
-          const increment = speed * 0.5; // Mucho más lento: 0.5 en lugar de 3
+          const increment = speed * 0.5; // Mucho más lento: 0.5 en lugar de 3 / Much slower: 0.5 instead of 3
           const newPos = prev + increment;
           console.log('🟡 Auto-scroll tick:', prev, '->', newPos, 'increment:', increment);
           
-          // Estimate if we've reached the end of the text
+          // Estimar si hemos alcanzado el fin del texto / Estimate if we've reached the end of the text
+          // Esta es una aproximación - activaremos auto-avance cuando la posición sea muy alta
           // This is an approximation - we'll trigger auto-advance when scroll position gets very high
-          const estimatedTextHeight = text.split('\n').length * 40; // Approximate line height
-          const viewportHeight = 800; // Approximate viewport height
+          const estimatedTextHeight = text.split('\n').length * 40; // Altura aproximada de línea / Approximate line height
+          const viewportHeight = 800; // Altura aproximada del viewport / Approximate viewport height
           const maxScrollNeeded = estimatedTextHeight + viewportHeight;
           
           if (newPos > maxScrollNeeded && text.trim()) {
             console.log('🔚 Auto-scroll: End of text detected, triggering auto-advance');
-            setTimeout(() => handleEnd(), 1000); // 1 second delay before advancing
-            return prev; // Don't update scroll position further
+            setTimeout(() => handleEnd(), 1000); // 1 segundo de delay antes de avanzar / 1 second delay before advancing
+            return prev; // No actualizar más la posición / Don't update scroll position further
           }
           
           return newPos;
         });
-      }, 100); // Intervalo más lento: 100ms en lugar de 40ms
+      }, 100); // Intervalo más lento: 100ms en lugar de 40ms / Slower interval: 100ms instead of 40ms
     } else {
       console.log('🟡 Auto-scroll STOPPED - isPlaying:', isPlaying, 'hasText:', !!text.trim());
     }
@@ -207,7 +335,11 @@ export default function App() {
     };
   }, [isPlaying, speed, text, scrollPosition]);
 
-  // Update text when current item changes
+  // ===== EFECTO: ACTUALIZAR TEXTO AL CAMBIAR ITEM / EFFECT: UPDATE TEXT WHEN ITEM CHANGES =====
+  /**
+   * Actualiza el texto cuando cambia el item actual del Run Order
+   * Updates text when current Run Order item changes
+   */
   useEffect(() => {
     if (currentItem) {
       const item = runOrderItems.find(item => item.id === currentItem);
@@ -218,17 +350,28 @@ export default function App() {
     }
   }, [currentItem, runOrderItems]);
 
-  // Listen for messages from teleprompter window
+  // ===== EFECTO: ESCUCHAR MENSAJES DE VENTANA EMERGENTE / EFFECT: LISTEN TO POPUP WINDOW MESSAGES =====
+  /**
+   * Establece comunicación bidireccional con la ventana emergente del teleprompter
+   * Establishes two-way communication with teleprompter popup window
+   * 
+   * Mensajes manejados / Handled messages:
+   * - TELEPROMPTER_READY: Ventana lista, enviar datos iniciales / Window ready, send initial data
+   * - TELEPROMPTER_CONTROL: Actualización de controles desde ventana / Control update from window
+   * 
+   * Flag isUpdatingFromPopup previene loops infinitos de postMessage
+   * Flag isUpdatingFromPopup prevents infinite postMessage loops
+   */
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === 'TELEPROMPTER_READY') {
-        // Send initial data to teleprompter window
+        // Enviar datos iniciales a ventana emergente / Send initial data to popup window
         sendToTeleprompter();
       } else if (event.data.type === 'TELEPROMPTER_CONTROL') {
-        // Update local state from teleprompter controls
+        // Actualizar estado local desde controles del teleprompter / Update local state from teleprompter controls
         console.log('📩 Received TELEPROMPTER_CONTROL from popup:', event.data.data);
         
-        // Set flag to prevent sending updates back to popup
+        // Activar flag para prevenir enviar actualizaciones de vuelta / Set flag to prevent sending updates back
         isUpdatingFromPopup.current = true;
         
         const updates = event.data.data;
@@ -249,7 +392,7 @@ export default function App() {
           setScrollPosition(updates.scrollPosition);
         }
         
-        // Reset flag after a short delay
+        // Resetear flag después de un breve delay / Reset flag after a short delay
         setTimeout(() => {
           isUpdatingFromPopup.current = false;
         }, 100);
@@ -258,44 +401,80 @@ export default function App() {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, []); // Remover dependencias para evitar re-crear el listener
+  }, []); // Sin dependencias para evitar re-crear el listener / No dependencies to avoid re-creating listener
 
 
-  // Macro actions for useMacros
-  // Helper: get all cue/guion marker positions in the text
+  // ===== FUNCIONES AUXILIARES: NAVEGACIÓN DE CUES / HELPER FUNCTIONS: CUE NAVIGATION =====
+  
+  /**
+   * Obtiene todas las posiciones de marcadores de cue/guion en el texto
+   * Gets all cue/script marker positions in the text
+   * 
+   * Detecta 4 tipos de marcadores / Detects 4 types of markers:
+   * 1. [1], [2], ... (marcadores numerados)
+   * 2. # Título (markdown headings)
+   * 3. TÍTULO: (mayúsculas con dos puntos)
+   * 4. **Texto** (negrita markdown)
+   * 
+   * @param {string} text - Texto del guion / Script text
+   * @returns {number[]} Array de posiciones en caracteres / Array of character positions
+   */
   function getCuePositions(text: string): number[] {
     const lines = text.split('\n');
     let positions: number[] = [];
     let currentPos = 0;
+    
     for (const line of lines) {
+      // Coincidir [1], [2], ... o líneas con mayúsculas y dos puntos, o encabezados markdown
       // Match [1], [2], ... or lines with all caps and colon, or markdown headings
       if (/^(\[\d+\])/.test(line) || /^(#{1,3}\s+.+|[A-Z][A-Z\s]+:|^\*\*.+\*\*)/.test(line)) {
         positions.push(currentPos);
       }
-      currentPos += line.length + 1;
+      currentPos += line.length + 1; // +1 por salto de línea / +1 for newline
     }
     return positions;
   }
 
+  /**
+   * Salta al siguiente marcador de cue
+   * Jumps to next cue marker
+   * 
+   * Encuentra el primer cue después de la posición actual (+10px de tolerancia)
+   * Finds first cue after current position (+10px tolerance)
+   */
   const handleNextCue = useCallback(() => {
     const positions = getCuePositions(text);
     const current = scrollPosition;
-    const next = positions.find(pos => pos > current + 10);
+    const next = positions.find(pos => pos > current + 10); // +10 de tolerancia / +10 tolerance
     if (typeof next === 'number') {
       setScrollPosition(next);
     }
   }, [text, scrollPosition]);
 
+  /**
+   * Salta al marcador de cue anterior
+   * Jumps to previous cue marker
+   * 
+   * Encuentra el último cue antes de la posición actual (-10px de tolerancia)
+   * Finds last cue before current position (-10px tolerance)
+   */
   const handlePreviousCue = useCallback(() => {
     const positions = getCuePositions(text);
     const current = scrollPosition;
-    const prev = [...positions].reverse().find(pos => pos < current - 10);
+    const prev = [...positions].reverse().find(pos => pos < current - 10); // -10 de tolerancia / -10 tolerance
     if (typeof prev === 'number') {
       setScrollPosition(prev);
     }
   }, [text, scrollPosition]);
 
-  // Send data to teleprompter window
+  // ===== FUNCIÓN: ENVIAR DATOS A VENTANA EMERGENTE / FUNCTION: SEND DATA TO POPUP WINDOW =====
+  /**
+   * Envía datos actuales al teleprompter en ventana emergente
+   * Sends current data to teleprompter in popup window
+   * 
+   * Verifica que la ventana existe y está abierta antes de enviar
+   * Verifies window exists and is open before sending
+   */
   const sendToTeleprompter = () => {
     if (teleprompterWindowRef.current && !teleprompterWindowRef.current.closed) {
       const dataToSend = { text, isPlaying, speed, fontSize, scrollPosition };
@@ -307,45 +486,83 @@ export default function App() {
     }
   };
 
-  // Update teleprompter window when TEXT changes (not for other state changes)
+  // ===== EFECTO: SINCRONIZAR TEXTO CON VENTANA EMERGENTE / EFFECT: SYNC TEXT WITH POPUP WINDOW =====
+  /**
+   * Actualiza ventana emergente cuando cambia el TEXTO (no otros estados)
+   * Updates popup window when TEXT changes (not other states)
+   * 
+   * Solo envía cuando cambia el texto, no cuando cambian otros estados
+   * que pueden venir de la ventana emergente (previene loops)
+   */
   useEffect(() => {
-    // Solo enviar cuando cambia el texto, no cuando cambian otros estados
-    // que pueden venir de la ventana desplegable
     if (teleprompterWindowRef.current && !teleprompterWindowRef.current.closed && !isUpdatingFromPopup.current) {
       console.log('📤 Text changed, sending update');
       sendToTeleprompter();
     }
-  }, [text]); // Solo cuando cambia el texto
+  }, [text]); // Solo cuando cambia el texto / Only when text changes
   
-  // Para isPlaying, usar un pequeño debounce para evitar loops
+  // ===== EFECTO: SINCRONIZAR isPlaying CON DEBOUNCE / EFFECT: SYNC isPlaying WITH DEBOUNCE =====
+  /**
+   * Para isPlaying, usar un pequeño debounce para evitar loops
+   * For isPlaying, use small debounce to avoid loops
+   * 
+   * Delay de 50ms previene múltiples actualizaciones rápidas
+   * 50ms delay prevents multiple rapid updates
+   */
   useEffect(() => {
     const timer = setTimeout(() => {
       if (teleprompterWindowRef.current && !teleprompterWindowRef.current.closed && !isUpdatingFromPopup.current) {
         console.log('📤 isPlaying changed, sending update');
         sendToTeleprompter();
       }
-    }, 50);
+    }, 50); // Debounce de 50ms / 50ms debounce
     return () => clearTimeout(timer);
   }, [isPlaying]);
 
+  // ===== MANEJADORES: APERTURA DE VENTANAS DEL TELEPROMPTER / HANDLERS: OPEN TELEPROMPTER WINDOWS =====
+  
+  /**
+   * Abre el teleprompter en una nueva ventana emergente
+   * Opens teleprompter in a new popup window
+   * 
+   * Características de la ventana / Window features:
+   * - 1200×800px
+   * - Sin barras de scroll, estado, herramientas, menú
+   * - Redimensionable
+   */
   const handleOpenTeleprompter = () => {
     const features = 'width=1200,height=800,scrollbars=no,resizable=yes,status=no,toolbar=no,menubar=no';
     teleprompterWindowRef.current = window.open(
       `${window.location.origin}${window.location.pathname}?popup=true`,
-      'teleprompter',
+      'teleprompter', // Nombre de la ventana / Window name
       features
     );
   };
 
+  /**
+   * Abre el teleprompter en modal de pantalla completa
+   * Opens teleprompter in fullscreen modal
+   */
   const handleOpenTeleprompterModal = () => {
     setIsTeleprompterModalOpen(true);
   };
 
+  /**
+   * Cierra el modal del teleprompter
+   * Closes teleprompter modal
+   */
   const handleCloseTeleprompterModal = () => {
     setIsTeleprompterModalOpen(false);
   };
 
-  // Define handlePlayPause BEFORE using it in macroActions
+  // ===== MANEJADOR: PLAY/PAUSE / HANDLER: PLAY/PAUSE =====
+  /**
+   * Alterna entre reproducción y pausa del teleprompter
+   * Toggles between play and pause of teleprompter
+   * 
+   * Definido ANTES de usarse en macroActions
+   * Defined BEFORE being used in macroActions
+   */
   const handlePlayPause = () => {
     console.log('🟢 App.handlePlayPause called - current isPlaying:', isPlaying);
     setIsPlaying(prev => {
@@ -355,6 +572,15 @@ export default function App() {
     });
   };
 
+  /**
+   * Manejador para cambios de estado desde TeleprompterModal
+   * Handler for state changes from TeleprompterModal
+   * 
+   * @param {boolean} isPlaying - Estado de reproducción / Playback state
+   * @param {number} speed - Velocidad de scroll / Scroll speed
+   * @param {number} fontSize - Tamaño de fuente / Font size
+   * @param {number} scrollPosition - Posición de scroll / Scroll position
+   */
   const handleTeleprompterStateChange = (isPlaying: boolean, speed: number, fontSize: number, scrollPosition: number) => {
     setIsPlaying(isPlaying);
     setSpeed(speed);
@@ -362,7 +588,26 @@ export default function App() {
     setScrollPosition(scrollPosition);
   };
 
-  // macroActions defined AFTER handlePlayPause
+  // ===== CONFIGURACIÓN DE ACCIONES DE MACROS / MACRO ACTIONS CONFIGURATION =====
+  /**
+   * Objeto de acciones para el hook useMacros
+   * Actions object for useMacros hook
+   * 
+   * Definido DESPUÉS de handlePlayPause para evitar errores de referencia
+   * Defined AFTER handlePlayPause to avoid reference errors
+   * 
+   * 10 macros configuradas / 10 configured macros:
+   * - onPlayStop: Alternar play/pausa
+   * - onPause: Solo pausa
+   * - onPrevious: Script anterior
+   * - onNext: Siguiente script
+   * - onIncreaseSpeed: +0.1x (máx 5x)
+   * - onDecreaseSpeed: -0.1x (mín 0.1x)
+   * - onIncreaseFontSize: +2px
+   * - onDecreaseFontSize: -2px
+   * - onNextCue: Siguiente marcador
+   * - onPreviousCue: Marcador anterior
+   */
   const macroActions = {
     onPlayStop: useCallback(() => handlePlayPause(), []),
     onPause: useCallback(() => setIsPlaying(false), []),
@@ -376,19 +621,40 @@ export default function App() {
     onPreviousCue: handlePreviousCue,
   };
 
+  // ===== ACTIVACIÓN DEL HOOK DE MACROS / MACRO HOOK ACTIVATION =====
+  /**
+   * Activa el hook de macros excepto cuando hay modales abiertos
+   * Activates macro hook except when modals are open
+   * 
+   * Desactivado cuando / Disabled when:
+   * - showMacroConfig = true (panel de configuración)
+   * - showMacroMenu = true (menú de atajos)
+   * - isTeleprompterModalOpen = true (modal de teleprompter)
+   */
   useMacros(macroSettings, macroActions, !(showMacroConfig || showMacroMenu || isTeleprompterModalOpen));
 
+  // ===== MANEJADOR: RESET / HANDLER: RESET =====
+  /**
+   * Reinicia el teleprompter al inicio del script actual
+   * Resets teleprompter to beginning of current script
+   * 
+   * Proceso / Process:
+   * 1. Detiene la reproducción (isPlaying = false)
+   * 2. Reinicia posición de scroll (scrollPosition = 0)
+   * 3. Envía actualización a ventana emergente si existe
+   * 4. Verifica actualización después de 100ms
+   */
   const handleReset = () => {
     console.log('🟢 App.handleReset called - Resetting teleprompter to initial state');
     console.log('🟢 Before reset - isPlaying:', isPlaying, 'scrollPosition:', scrollPosition);
     
-    // Force stop playback first
+    // Forzar detener reproducción primero / Force stop playback first
     setIsPlaying(false);
     
-    // Reset to beginning of current script
+    // Reiniciar al inicio del script actual / Reset to beginning of current script
     setScrollPosition(0);
     
-    // Send message to teleprompter window if open
+    // Enviar mensaje a ventana emergente si está abierta / Send message to popup window if open
     if (teleprompterWindowRef.current && !teleprompterWindowRef.current.closed) {
       teleprompterWindowRef.current.postMessage({
         type: 'TELEPROMPTER_UPDATE',
@@ -398,12 +664,22 @@ export default function App() {
     
     console.log('🟢 After reset - State should be: isPlaying: false, scrollPosition: 0');
     
-    // Force re-render with timeout to ensure state update
+    // Forzar re-render con timeout para asegurar actualización de estado / Force re-render with timeout to ensure state update
     setTimeout(() => {
       console.log('🟢 Reset verification - isPlaying:', false, 'scrollPosition:', 0);
     }, 100);
   };
 
+  // ===== MANEJADOR: EJECUTAR ACCIÓN DE MACRO (LEGACY) / HANDLER: EXECUTE MACRO ACTION (LEGACY) =====
+  /**
+   * Ejecuta acciones de macro por string (función legacy)
+   * Executes macro actions by string (legacy function)
+   * 
+   * NOTA: Esta función puede estar obsoleta ya que se usa el hook useMacros
+   * NOTE: This function may be obsolete since useMacros hook is used
+   * 
+   * @param {string} action - Nombre de la acción / Action name
+   */
   const executeMacroAction = (action: string) => {
     console.log('MACRO: Executing action:', action);
     switch(action) {
@@ -429,11 +705,11 @@ export default function App() {
         break;
       case 'speed_up':
         console.log('MACRO: Speed up from', speed);
-        handleSpeedChange(Math.min(5, speed + 0.1)); // Incrementos más pequeños
+        handleSpeedChange(Math.min(5, speed + 0.1)); // Incrementos más pequeños / Smaller increments
         break;
       case 'speed_down':
         console.log('MACRO: Speed down from', speed);
-        handleSpeedChange(Math.max(0.1, speed - 0.1)); // Mínimo más bajo
+        handleSpeedChange(Math.max(0.1, speed - 0.1)); // Mínimo más bajo / Lower minimum
         break;
       case 'font_size_up':
         console.log('MACRO: Font size up from', fontSize);
@@ -454,6 +730,12 @@ export default function App() {
     }
   };
 
+  // ===== MANEJADORES DEL RUN ORDER / RUN ORDER HANDLERS =====
+  
+  /**
+   * Añade un nuevo item vacío al Run Order
+   * Adds a new empty item to Run Order
+   */
   const handleAddItem = () => {
     const newId = (runOrderItems.length + 1).toString();
     const newItem: RunOrderItem = {
@@ -466,8 +748,19 @@ export default function App() {
     setRunOrderItems([...runOrderItems, newItem]);
   };
 
+  /**
+   * Maneja cambios en el texto del script actual
+   * Handles changes in current script text
+   * 
+   * Actualiza el texto y genera marcadores de salto automáticamente
+   * Updates text and generates jump markers automatically
+   * 
+   * @param {string} newText - Nuevo texto del script / New script text
+   */
   const handleTextChange = (newText: string) => {
     setText(newText);
+    
+    // Actualizar el texto en el item actual del Run Order / Update text in current Run Order item
     if (currentItem) {
       const updatedItems = runOrderItems.map(item => 
         item.id === currentItem ? { ...item, text: newText } : item
@@ -475,10 +768,20 @@ export default function App() {
       setRunOrderItems(updatedItems);
     }
     
-    // Generar marcadores de salto automáticamente
+    // Generar marcadores de salto automáticamente / Generate jump markers automatically
     generateJumpMarkers(newText);
   };
 
+  /**
+   * Genera marcadores de salto automáticamente desde el texto
+   * Generates jump markers automatically from text
+   * 
+   * Detecta y mapea / Detects and maps:
+   * - [1], [2], ... → "Sección 1", "Sección 2"
+   * - Títulos markdown y mayúsculas → primeros 30 caracteres
+   * 
+   * @param {string} text - Texto del guion / Script text
+   */
   const generateJumpMarkers = (text: string) => {
     const markers: {[key: string]: number} = {};
     const lines = text.split('\n');
@@ -486,6 +789,7 @@ export default function App() {
     
     lines.forEach((line, index) => {
       // Buscar marcadores de sección como [1], [2], etc. o títulos
+      // Search for section markers like [1], [2], etc. or titles
       const sectionMatch = line.match(/^\[(\d+)\]/);
       const titleMatch = line.match(/^#{1,3}\s+(.+)/) || line.match(/^[A-Z][A-Z\s]+:/) || line.match(/^\*\*(.+)\*\*/);
       
@@ -494,25 +798,47 @@ export default function App() {
         markers[`Sección ${sectionNumber}`] = currentPosition;
       } else if (titleMatch && line.trim().length > 0) {
         const title = titleMatch[1] || line.trim();
-        markers[title.substring(0, 30)] = currentPosition;
+        markers[title.substring(0, 30)] = currentPosition; // Truncar a 30 chars / Truncate to 30 chars
       }
       
-      currentPosition += line.length + 1; // +1 para el salto de línea
+      currentPosition += line.length + 1; // +1 para el salto de línea / +1 for newline
     });
     
     setJumpMarkers(markers);
   };
 
+  /**
+   * Salta a una posición específica en el texto
+   * Jumps to a specific position in the text
+   * 
+   * Factor de conversión × 2 para ajuste visual
+   * Conversion factor × 2 for visual adjustment
+   * 
+   * @param {number} position - Posición en caracteres / Position in characters
+   */
   const handleJumpToPosition = (position: number) => {
     console.log('🎯 Saltando a posición:', position);
-    setScrollPosition(position * 2); // Factor de conversión aproximado
-    setIsPlaying(false); // Pausar para que el usuario vea el salto
+    setScrollPosition(position * 2); // Factor de conversión aproximado / Approximate conversion factor
+    setIsPlaying(false); // Pausar para que el usuario vea el salto / Pause so user sees the jump
   };
 
+  /**
+   * Salta a un script específico del Run Order e inicia reproducción
+   * Jumps to a specific Run Order script and starts playback
+   * 
+   * Proceso / Process:
+   * 1. Busca el script por ID
+   * 2. Cambia al script seleccionado
+   * 3. Reinicia scroll al inicio
+   * 4. Inicia reproducción automáticamente
+   * 5. Actualiza estado del script
+   * 
+   * @param {string} scriptId - ID del script / Script ID
+   */
   const handleJumpToScript = (scriptId: string) => {
     console.log('🎯 Saltando a script:', scriptId);
     
-    // Buscar el script por ID
+    // Buscar el script por ID / Find script by ID
     const targetScript = runOrderItems.find(item => item.id === scriptId);
     if (!targetScript) {
       console.log('🎯 Script no encontrado:', scriptId);
@@ -521,16 +847,16 @@ export default function App() {
     
     console.log('🎯 Saltando a:', targetScript.title);
     
-    // Cambiar al script seleccionado
+    // Cambiar al script seleccionado / Change to selected script
     setCurrentItem(scriptId);
     setText(targetScript.text);
     setCurrentScript(targetScript.title + '.awn');
-    setScrollPosition(0); // Empezar desde el principio
+    setScrollPosition(0); // Empezar desde el principio / Start from beginning
     
-    // Marcar como playing y empezar inmediatamente
+    // Marcar como playing y empezar inmediatamente / Mark as playing and start immediately
     setIsPlaying(true);
     
-    // Actualizar el estado del script actual como playing
+    // Actualizar el estado del script actual como playing / Update current script status as playing
     const updatedItems = runOrderItems.map(item => ({
       ...item,
       status: item.id === scriptId ? 'ready' as const : item.status
@@ -540,6 +866,12 @@ export default function App() {
     console.log('🎯 Script iniciado automáticamente:', targetScript.title);
   };
 
+  /**
+   * Selecciona un item del Run Order (sin iniciar reproducción)
+   * Selects a Run Order item (without starting playback)
+   * 
+   * @param {string} id - ID del item / Item ID
+   */
   const handleItemSelect = (id: string) => {
     setCurrentItem(id);
     const item = runOrderItems.find(item => item.id === id);
@@ -549,11 +881,24 @@ export default function App() {
     }
   };
 
+  // ===== MANEJADORES DE TRANSPORTE / TRANSPORT HANDLERS =====
+  
+  /**
+   * Stop: Usa la misma lógica que Reset para consistencia
+   * Stop: Uses same logic as Reset for consistency
+   */
   const handleStop = () => {
     console.log('🟢 App.handleStop called - Calling handleReset for consistency');
-    handleReset(); // Use the same logic as reset
+    handleReset(); // Usar la misma lógica que reset / Use same logic as reset
   };
 
+  /**
+   * Avanza al siguiente script en el Run Order
+   * Advances to next script in Run Order
+   * 
+   * Reinicia scroll al inicio del nuevo script
+   * Resets scroll to beginning of new script
+   */
   const handleForward = () => {
     console.log('🟢 App.handleForward called - navigating to next script in Run Order');
     if (!currentItem) return;
@@ -565,7 +910,7 @@ export default function App() {
       const nextItem = runOrderItems[nextIndex];
       console.log('🟢 Moving from script:', runOrderItems[currentIndex]?.title, 'to:', nextItem.title);
       setCurrentItem(nextItem.id);
-      setScrollPosition(0); // Reset scroll position for new script
+      setScrollPosition(0); // Reiniciar posición de scroll para nuevo script / Reset scroll position for new script
       setText(nextItem.text);
       setCurrentScript(nextItem.title + '.awn');
     } else {
@@ -573,6 +918,13 @@ export default function App() {
     }
   };
 
+  /**
+   * Retrocede al script anterior en el Run Order
+   * Goes back to previous script in Run Order
+   * 
+   * Reinicia scroll al inicio del nuevo script
+   * Resets scroll to beginning of new script
+   */
   const handleBackward = () => {
     console.log('🟢 App.handleBackward called - navigating to previous script in Run Order');
     if (!currentItem) return;
@@ -584,7 +936,7 @@ export default function App() {
       const prevItem = runOrderItems[prevIndex];
       console.log('🟢 Moving from script:', runOrderItems[currentIndex]?.title, 'to:', prevItem.title);
       setCurrentItem(prevItem.id);
-      setScrollPosition(0); // Reset scroll position for new script
+      setScrollPosition(0); // Reiniciar posición de scroll para nuevo script / Reset scroll position for new script
       setText(prevItem.text);
       setCurrentScript(prevItem.title + '.awn');
     } else {
@@ -592,19 +944,42 @@ export default function App() {
     }
   };
   
+  /**
+   * Cambia la velocidad de scroll
+   * Changes scroll speed
+   * 
+   * @param {number} newSpeed - Nueva velocidad (0.1-5x) / New speed (0.1-5x)
+   */
   const handleSpeedChange = (newSpeed: number) => {
     console.log('App.Speed change:', speed, '->', newSpeed);
     setSpeed(newSpeed);
   };
 
+  /**
+   * Reordena items del Run Order mediante drag & drop
+   * Reorders Run Order items via drag & drop
+   * 
+   * @param {number} dragIndex - Índice del item arrastrado / Index of dragged item
+   * @param {number} hoverIndex - Índice donde soltar / Index where to drop
+   */
   const handleReorderItems = (dragIndex: number, hoverIndex: number) => {
     const dragItem = runOrderItems[dragIndex];
     const newItems = [...runOrderItems];
-    newItems.splice(dragIndex, 1);
-    newItems.splice(hoverIndex, 0, dragItem);
+    newItems.splice(dragIndex, 1); // Remover de posición original / Remove from original position
+    newItems.splice(hoverIndex, 0, dragItem); // Insertar en nueva posición / Insert at new position
     setRunOrderItems(newItems);
   };
 
+  /**
+   * Cambia el título de un item del Run Order
+   * Changes title of a Run Order item
+   * 
+   * Si es el item actual, también actualiza currentScript
+   * If it's the current item, also updates currentScript
+   * 
+   * @param {string} id - ID del item / Item ID
+   * @param {string} newTitle - Nuevo título / New title
+   */
   const handleTitleChange = (id: string, newTitle: string) => {
     console.log('🟢 Updating title for item:', id, 'to:', newTitle);
     const updatedItems = runOrderItems.map(item => 
@@ -612,27 +987,38 @@ export default function App() {
     );
     setRunOrderItems(updatedItems);
     
+    // Actualizar nombre del script actual si este es el item actual
     // Update current script name if this is the current item
     if (currentItem === id) {
       setCurrentScript(newTitle + '.awn');
     }
   };
 
+  /**
+   * Carga scripts desde un archivo .awn
+   * Loads scripts from a .awn file
+   * 
+   * Reemplaza el Run Order actual con los scripts cargados
+   * Replaces current Run Order with loaded scripts
+   * 
+   * @param {Array} scripts - Array de scripts parseados / Array of parsed scripts
+   * @param {string} fileName - Nombre del archivo / File name
+   */
   const handleFileLoad = (scripts: Array<{id: string, title: string, text: string}>, fileName: string) => {
-    // Convert parsed scripts to RunOrderItems
+    // Convertir scripts parseados a RunOrderItems / Convert parsed scripts to RunOrderItems
     const newItems: RunOrderItem[] = scripts.map((script) => ({
       id: script.id,
       title: script.title,
-      duration: '00:00:00', // Default duration
+      duration: '00:00:00', // Duración por defecto / Default duration
       status: 'ready' as const,
       text: script.text
     }));
 
-    // Replace current run order with loaded scripts
+    // Reemplazar Run Order actual con scripts cargados / Replace current Run Order with loaded scripts
     setRunOrderItems(newItems);
-  setLoadedFileName(fileName);
+    setLoadedFileName(fileName);
     
-    // Select the first script
+    // Seleccionar el primer script / Select first script
     if (newItems.length > 0) {
       setCurrentItem(newItems[0].id);
       setText(newItems[0].text);
@@ -640,17 +1026,22 @@ export default function App() {
     }
   };
 
+  // ===== RENDERIZADO PRINCIPAL / MAIN RENDERING =====
   return (
     <div className="h-screen flex flex-col bg-gray-800">
-      {/* Top Toolbar */}
+      {/* ===== BARRA SUPERIOR DE HERRAMIENTAS / TOP TOOLBAR ===== */}
       <div className="h-12 bg-gray-900 border-b border-gray-700 flex items-center px-4">
+        {/* Logo y estado / Logo and status */}
         <div className="flex items-center gap-4">
           <div className="text-white text-sm font-medium">AutoScript</div>
           <div className="text-gray-400 text-xs">
             PROMPTING | 14:53:05
           </div>
         </div>
+        
+        {/* Controles del lado derecho / Right side controls */}
         <div className="ml-auto flex items-center gap-4">
+          {/* Menú de atajos / Shortcuts menu */}
           <div className="relative">
             <button
               onClick={() => setShowMacroMenu(!showMacroMenu)}
@@ -658,7 +1049,6 @@ export default function App() {
             >
               ⌨️ Atajos
             </button>
-            {/* MacroMenu can be updated to show macroSettings if needed */}
             <MacroMenu 
               isOpen={showMacroMenu}
               onClose={() => setShowMacroMenu(false)}
@@ -666,6 +1056,8 @@ export default function App() {
               onOpenFullConfig={() => setShowMacroConfig(true)}
             />
           </div>
+          
+          {/* Controles del teleprompter / Teleprompter controls */}
           <TeleprompterControls
             isPlaying={isPlaying}
             speed={speed}
@@ -681,9 +1073,9 @@ export default function App() {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* ===== CONTENIDO PRINCIPAL: 3 PANELES / MAIN CONTENT: 3 PANELS ===== */}
       <div className="flex-1 flex">
-        {/* Left Panel - Run Order */}
+        {/* ===== PANEL IZQUIERDO: RUN ORDER LIST / LEFT PANEL: RUN ORDER LIST ===== */}
         <div className="w-64 border-r border-gray-700">
           <RunOrderList
             items={runOrderItems}
@@ -696,7 +1088,7 @@ export default function App() {
           />
         </div>
 
-        {/* Center Panel - Script Editor */}
+        {/* ===== PANEL CENTRAL: SCRIPT EDITOR / CENTER PANEL: SCRIPT EDITOR ===== */}
         <div className="flex-1">
           <ScriptEditor
             text={text}
@@ -708,7 +1100,7 @@ export default function App() {
           />
         </div>
 
-        {/* Right Panel - Teleprompter Preview */}
+        {/* ===== PANEL DERECHO: TELEPROMPTER PREVIEW / RIGHT PANEL: TELEPROMPTER PREVIEW ===== */}
         <div className="w-80 border-l border-gray-700">
           <TeleprompterPreview
             text={text}
@@ -731,16 +1123,18 @@ export default function App() {
         </div>
       </div>
 
-      {/* Bottom Status Bar */}
+      {/* ===== BARRA INFERIOR DE ESTADO / BOTTOM STATUS BAR ===== */}
       <div className="h-8 bg-gray-900 border-t border-gray-700 flex items-center px-4">
         <div className="text-xs text-gray-400">
           Run Orders | Story Editor: {loadedFileName || currentScript} | Prompter Preview: {loadedFileName || currentScript}
         </div>
       </div>
       
+      {/* ===== COMPONENTE DE NOTIFICACIONES / NOTIFICATIONS COMPONENT ===== */}
       <Toaster />
       
-      {/* Teleprompter Modal */}
+      {/* ===== MODAL DE TELEPROMPTER / TELEPROMPTER MODAL ===== */}
+      {/* Modal fullscreen para teleprompter / Fullscreen modal for teleprompter */}
       <TeleprompterModal
         text={text}
         isOpen={isTeleprompterModalOpen}
@@ -751,8 +1145,8 @@ export default function App() {
         onJumpToPosition={handleJumpToPosition}
       />
       
-      {/* Configuration Panel */}
-      {/* Macro configuration panel for macroSettings */}
+      {/* ===== PANEL DE CONFIGURACIÓN DE MACROS / MACRO CONFIGURATION PANEL ===== */}
+      {/* Panel lateral para configurar atajos de teclado / Side panel to configure keyboard shortcuts */}
       <ConfigurationPanel
         isOpen={showMacroConfig}
         onClose={() => setShowMacroConfig(false)}

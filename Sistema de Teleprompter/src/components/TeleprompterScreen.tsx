@@ -1,6 +1,24 @@
+// ===== IMPORTACIONES / IMPORTS =====
+// Hooks de React / React hooks
 import { useEffect, useRef } from 'react';
+// Componente para renderizar texto con marcadores de salto / Component to render text with jump markers
 import { TextWithJumpMarkers } from './TextWithJumpMarkers';
 
+/**
+ * Propiedades del componente TeleprompterScreen
+ * TeleprompterScreen component properties
+ * 
+ * @interface TeleprompterScreenProps
+ * @property {string} text - Texto del guion a mostrar / Script text to display
+ * @property {boolean} isPlaying - Estado de reproducción / Playback state
+ * @property {number} speed - Velocidad de scroll (multiplicador) / Scroll speed (multiplier)
+ * @property {number} fontSize - Tamaño de fuente en píxeles / Font size in pixels
+ * @property {() => void} onEnd - Callback cuando se llega al final del texto / Callback when reaching end of text
+ * @property {number} scrollPosition - Posición actual de scroll en píxeles / Current scroll position in pixels
+ * @property {(position: number) => void} setScrollPosition - Función para actualizar posición de scroll / Function to update scroll position
+ * @property {boolean} [isManualScrolling=false] - true = usuario scrolleando manualmente / true = user manually scrolling
+ * @property {(position: number) => void} [onJumpToPosition] - Callback para saltar a posición específica / Callback to jump to specific position
+ */
 interface TeleprompterScreenProps {
   text: string;
   isPlaying: boolean;
@@ -13,6 +31,35 @@ interface TeleprompterScreenProps {
   onJumpToPosition?: (position: number) => void;
 }
 
+/**
+ * TeleprompterScreen - Pantalla principal del teleprompter
+ * TeleprompterScreen - Main teleprompter screen
+ * 
+ * Componente que renderiza la pantalla completa del teleprompter con texto scrolleando
+ * de forma fluida y suave. Proporciona auto-scroll configurable y scroll manual con inercia.
+ * 
+ * Component that renders the full teleprompter screen with smoothly scrolling text.
+ * Provides configurable auto-scroll and manual scroll with inertia.
+ * 
+ * Características principales / Main features:
+ * - Auto-scroll fluido con velocidad configurable / Smooth auto-scroll with configurable speed
+ * - Scroll manual con efecto de inercia / Manual scroll with inertia effect
+ * - Detección automática del final del texto / Automatic end-of-text detection
+ * - Gradientes superior e inferior para transiciones suaves / Top and bottom gradients for smooth transitions
+ * - Sincronización de posición de scroll / Scroll position synchronization
+ * - Soporte para marcadores de salto en el texto / Support for jump markers in text
+ * - Control mediante rueda del mouse con suavidad / Mouse wheel control with smoothness
+ * 
+ * Algoritmo de scroll / Scroll algorithm:
+ * - Base: speed × 14 píxeles/segundo (optimizado para lectura)
+ * - Inercia: Decaimiento del 92% (0.92) para suavidad natural
+ * - Detección de fin: 100px antes del final real
+ * - Delay de fin: 1 segundo antes de llamar onEnd()
+ * 
+ * @component
+ * @param {TeleprompterScreenProps} props - Propiedades del componente / Component properties
+ * @returns {JSX.Element} Pantalla del teleprompter / Teleprompter screen
+ */
 export function TeleprompterScreen({ 
   text, 
   isPlaying, 
@@ -24,48 +71,93 @@ export function TeleprompterScreen({
   isManualScrolling = false,
   onJumpToPosition
 }: TeleprompterScreenProps) {
+  // ===== REFERENCIAS / REFERENCES =====
+  // Referencia al contenedor principal de scroll / Reference to main scroll container
   const containerRef = useRef<HTMLDivElement>(null);
+  // Referencia al frame de animación de auto-scroll / Reference to auto-scroll animation frame
   const animationRef = useRef<number | undefined>(undefined);
+  // Referencia a la inercia del scroll manual / Reference to manual scroll inertia
   const inertiaRef = useRef<number>(0);
-  const inertiaDecay = 0.92; // Suavidad del scroll manual
+  // Factor de decaimiento de la inercia (0.92 = 92% por frame, suave y natural)
+  // Inertia decay factor (0.92 = 92% per frame, smooth and natural)
+  const inertiaDecay = 0.92;
 
-  // Auto-scroll efecto más fluido
+  // ===== EFECTO: AUTO-SCROLL FLUIDO / EFFECT: SMOOTH AUTO-SCROLL =====
+  /**
+   * Maneja el auto-scroll suave del teleprompter usando requestAnimationFrame
+   * Handles smooth teleprompter auto-scroll using requestAnimationFrame
+   * 
+   * Algoritmo / Algorithm:
+   * 1. Calcula delta time entre frames para scroll consistente
+   * 2. Velocidad base: speed × 14 px/s (optimizado para lectura)
+   * 3. Incrementa posición según velocidad y tiempo transcurrido
+   * 4. Detecta cuando está a 100px del final
+   * 5. Espera 1 segundo y llama onEnd()
+   * 
+   * Se detiene si / Stops if:
+   * - isPlaying = false
+   * - isManualScrolling = true
+   */
   useEffect(() => {
     let animationFrame: number | null = null;
     let lastTimestamp: number | null = null;
 
+    /**
+     * Función de animación que se llama en cada frame
+     * Animation function called on each frame
+     * 
+     * @param {number} timestamp - Timestamp actual del frame / Current frame timestamp
+     */
     function animateScroll(timestamp: number) {
+      // **CONDICIÓN DE PARADA 1: No está reproduciendo o está en modo manual**
+      // **STOP CONDITION 1: Not playing or in manual mode**
       if (!isPlaying || isManualScrolling) {
         lastTimestamp = null;
         return;
       }
+      
+      // Inicializar timestamp en el primer frame / Initialize timestamp on first frame
       if (lastTimestamp === null) lastTimestamp = timestamp;
+      
+      // Calcular tiempo transcurrido desde último frame / Calculate elapsed time since last frame
       const elapsed = timestamp - lastTimestamp;
-      // Más fluido y lento
-      const pixelsPerSecond = speed * 14; // 14 es más lento y suave
-      const increment = (pixelsPerSecond * elapsed) / 1000;
+      
+      // **CÁLCULO DE VELOCIDAD: Más fluido y lento**
+      // **SPEED CALCULATION: Smoother and slower**
+      const pixelsPerSecond = speed * 14; // 14 es más lento y suave / 14 is slower and smoother
+      const increment = (pixelsPerSecond * elapsed) / 1000; // Convertir ms a segundos / Convert ms to seconds
       const newPos = scrollPosition + increment;
 
-      // Detectar final del texto
+      // **DETECCIÓN DE FINAL DEL TEXTO / END-OF-TEXT DETECTION**
       if (containerRef.current) {
         const container = containerRef.current;
-        const maxScroll = container.scrollHeight - container.clientHeight;
-        const endThreshold = maxScroll - 100;
+        const maxScroll = container.scrollHeight - container.clientHeight; // Scroll máximo posible / Maximum possible scroll
+        const endThreshold = maxScroll - 100; // Umbral: 100px antes del final / Threshold: 100px before end
+        
+        // Si llegó al umbral de fin (y ya scrolleó más de 100px)
+        // If reached end threshold (and already scrolled more than 100px)
         if (newPos >= endThreshold && newPos > 100) {
-          setTimeout(() => onEnd(), 1000);
+          setTimeout(() => onEnd(), 1000); // Esperar 1 segundo antes de notificar / Wait 1 second before notifying
           return;
         }
       }
 
+      // Actualizar posición de scroll / Update scroll position
       setScrollPosition(newPos);
       lastTimestamp = timestamp;
+      
+      // Solicitar siguiente frame / Request next frame
       animationFrame = window.requestAnimationFrame(animateScroll);
     }
 
+    // Iniciar animación si está reproduciendo y no está en modo manual
+    // Start animation if playing and not in manual mode
     if (isPlaying && !isManualScrolling) {
       animationFrame = window.requestAnimationFrame(animateScroll);
     }
 
+    // Cleanup: Cancelar animación al desmontar o cambiar dependencias
+    // Cleanup: Cancel animation on unmount or dependency change
     return () => {
       if (animationFrame !== null) {
         window.cancelAnimationFrame(animationFrame);
@@ -74,62 +166,127 @@ export function TeleprompterScreen({
     };
   }, [isPlaying, speed, onEnd, setScrollPosition, isManualScrolling, scrollPosition]);
 
-  // Scroll manual con inercia suave
+  // ===== EFECTO: SCROLL MANUAL CON INERCIA / EFFECT: MANUAL SCROLL WITH INERTIA =====
+  /**
+   * Maneja el scroll manual con efecto de inercia suave
+   * Handles manual scroll with smooth inertia effect
+   * 
+   * Algoritmo de inercia / Inertia algorithm:
+   * 1. inertiaRef.current contiene la velocidad de inercia actual
+   * 2. Se multiplica por inertiaDecay (0.92) en cada frame
+   * 3. Se detiene cuando la inercia es menor a 0.5
+   * 4. Crea un efecto de "deslizamiento" natural después de scrollear
+   * 
+   * Umbral de detención: 0.5 (si |inercia| < 0.5, se detiene)
+   * Stop threshold: 0.5 (if |inertia| < 0.5, stops)
+   */
   useEffect(() => {
     let animationFrame: number | null = null;
-    let localScroll = scrollPosition;
+    let localScroll = scrollPosition; // Copia local para evitar loops / Local copy to avoid loops
+    
+    /**
+     * Función de animación de inercia
+     * Inertia animation function
+     */
     function animateInertia() {
+      // Continuar solo si hay inercia significativa / Continue only if there's significant inertia
       if (Math.abs(inertiaRef.current) > 0.5) {
+        // Aplicar inercia a la posición / Apply inertia to position
         localScroll = localScroll + inertiaRef.current;
         setScrollPosition(localScroll);
+        
+        // Decaer la inercia (92% del valor anterior) / Decay inertia (92% of previous value)
         inertiaRef.current *= inertiaDecay;
+        
+        // Solicitar siguiente frame / Request next frame
         animationFrame = window.requestAnimationFrame(animateInertia);
       }
     }
+    
+    // Iniciar animación si hay inercia / Start animation if there's inertia
     if (Math.abs(inertiaRef.current) > 0.5) {
       animationFrame = window.requestAnimationFrame(animateInertia);
     }
+    
+    // Cleanup: Cancelar animación / Cleanup: Cancel animation
     return () => {
       if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scrollPosition, setScrollPosition]);
 
-  // Sincronizar scroll visual
+  // ===== EFECTO: SINCRONIZAR SCROLL VISUAL / EFFECT: SYNCHRONIZE VISUAL SCROLL =====
+  /**
+   * Sincroniza la posición de scroll lógica con el scroll visual del contenedor
+   * Synchronizes logical scroll position with container's visual scroll
+   * 
+   * Se ejecuta cada vez que cambia scrollPosition o isManualScrolling
+   * Runs whenever scrollPosition or isManualScrolling changes
+   */
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = scrollPosition;
     }
   }, [scrollPosition, isManualScrolling]);
 
-  // Handler para scroll del mouse con suavidad
+  // ===== MANEJADOR: RUEDA DEL MOUSE CON SUAVIDAD / HANDLER: MOUSE WHEEL WITH SMOOTHNESS =====
+  /**
+   * Maneja el scroll del mouse añadiendo inercia para suavidad
+   * Handles mouse scroll by adding inertia for smoothness
+   * 
+   * Proceso / Process:
+   * 1. Previene el scroll nativo del navegador
+   * 2. Detecta la dirección del scroll (deltaY)
+   * 3. Añade inercia acumulativa (factor 0.18 para lentitud y fluidez)
+   * 4. Limita la inercia máxima a ±40 para evitar descontrol
+   * 5. El efecto de inercia se anima automáticamente (ver useEffect de inercia)
+   * 
+   * Factor 0.18: Hace el scroll lento y fluido
+   * Límites ±40: Evita scroll demasiado rápido
+   * 
+   * @param {React.WheelEvent<HTMLDivElement>} e - Evento de rueda del mouse / Mouse wheel event
+   */
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const delta = e.deltaY;
-    inertiaRef.current += delta * 0.18; // Factor para hacerlo lento y fluido
-    // Limitar inercia máxima
-    if (inertiaRef.current > 40) inertiaRef.current = 40;
-    if (inertiaRef.current < -40) inertiaRef.current = -40;
+    e.preventDefault(); // Prevenir scroll nativo / Prevent native scroll
+    
+    const delta = e.deltaY; // Valor de scroll (positivo = abajo, negativo = arriba) / Scroll value (positive = down, negative = up)
+    
+    // Añadir inercia con factor de suavidad / Add inertia with smoothness factor
+    inertiaRef.current += delta * 0.18; // Factor para hacerlo lento y fluido / Factor to make it slow and fluid
+    
+    // **LIMITAR INERCIA MÁXIMA / LIMIT MAXIMUM INERTIA**
+    // Evita que el scroll se vuelva incontrolable / Prevents scroll from becoming uncontrollable
+    if (inertiaRef.current > 40) inertiaRef.current = 40;   // Límite superior / Upper limit
+    if (inertiaRef.current < -40) inertiaRef.current = -40; // Límite inferior / Lower limit
   };
 
   return (
+    // ===== CONTENEDOR PRINCIPAL / MAIN CONTAINER =====
+    // Contenedor con fondo negro y scroll oculto (overflow-hidden)
+    // Container with black background and hidden scroll (overflow-hidden)
     <div 
       ref={containerRef}
       className="h-full w-full bg-black text-white overflow-hidden relative"
-      style={{ fontSize: `${fontSize}px` }}
-      onWheel={handleWheel}
+      style={{ fontSize: `${fontSize}px` }} // Tamaño de fuente dinámico / Dynamic font size
+      onWheel={handleWheel} // Capturar eventos de rueda del mouse / Capture mouse wheel events
     >
+      {/* ===== CONTENIDO DE TEXTO / TEXT CONTENT ===== */}
+      {/* Padding inferior grande (pb-96) para que el texto pueda scrollear hasta el final */}
+      {/* Large bottom padding (pb-96) so text can scroll to the end */}
       <div className="p-8 pb-96">
         {text ? (
+          // **Componente TextWithJumpMarkers: Renderiza texto con marcadores de salto**
+          // **TextWithJumpMarkers Component: Renders text with jump markers**
           <TextWithJumpMarkers
             text={text}
             onJumpToPosition={onJumpToPosition}
             fontSize={fontSize}
             className=""
-            style={{ lineHeight: 1.6 }}
-            showJumpIcons={true}
+            style={{ lineHeight: 1.6 }} // Espaciado entre líneas / Line spacing
+            showJumpIcons={true} // Mostrar iconos de salto / Show jump icons
           />
         ) : (
+          // **Mensaje cuando no hay texto / Message when there's no text**
           <div className="text-center text-gray-500 mt-20">
             <p>No hay texto para mostrar</p>
             <p className="text-sm">Escribe texto en el editor principal</p>
@@ -137,8 +294,11 @@ export function TeleprompterScreen({
         )}
       </div>
 
-      {/* Gradient overlay at top and bottom */}
+      {/* ===== OVERLAYS DE GRADIENTE / GRADIENT OVERLAYS ===== */}
+      {/* Gradiente superior: Oculta el texto que entra suavemente / Top gradient: Hides entering text smoothly */}
       <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-black to-transparent pointer-events-none" />
+      
+      {/* Gradiente inferior: Oculta el texto que sale suavemente / Bottom gradient: Hides exiting text smoothly */}
       <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black to-transparent pointer-events-none" />
     </div>
   );

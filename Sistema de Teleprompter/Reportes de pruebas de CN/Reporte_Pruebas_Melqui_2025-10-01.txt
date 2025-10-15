@@ -1,0 +1,886 @@
+═══════════════════════════════════════════════════════════════
+     REPORTE DE PRUEBAS FUNCIONALES - SISTEMA DE TELEPROMPTER
+═══════════════════════════════════════════════════════════════
+
+📝 INFORMACIÓN DE LA SESIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Tester:           Melqui
+Fecha:            2025-10-01
+Versión App:      v1.0.0.
+Navegador:        Edge
+Generado:         1/10/2025, 16:39:04
+
+📊 RESUMEN DE RESULTADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Aprobadas:      35 / 75 (46.7%)
+❌ Fallidas:       31 / 75 (41.3%)
+➖ N/A:             9 / 75 (12.0%)
+⏳ Pendientes:      0 / 75 (0.0%)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TOTAL:         75 pruebas
+
+
+📋 RESULTADOS DETALLADOS POR CATEGORÍA
+═══════════════════════════════════════════════════════════════
+
+🎨 INTERFAZ DE USUARIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[UI-1] Visualización del panel de Run Order
+Estado: ✅ PASS
+Descripción: Verificar que el panel de Run Order se muestra correctamente con todos los scripts listados
+
+[UI-2] Visualización del editor de scripts
+Estado: ✅ PASS
+Descripción: Verificar que el editor de texto se muestra y permite escribir
+
+[UI-3] Visualización del Prompter Preview
+Estado: ✅ PASS
+Descripción: Verificar que el panel de vista previa del teleprompter se muestra correctamente
+
+[UI-4] Botones de control visibles
+Estado: ✅ PASS
+Descripción: Verificar que todos los botones de control (Play, Pause, Reset, etc.) son visibles
+
+
+📜 FUNCIONALIDAD DEL TELEPROMPTER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[TP-1] Inicio del desplazamiento (Play)
+Estado: ❌ FAIL
+Descripción: Al presionar Play, el texto debe comenzar a desplazarse automáticamente
+Observaciones:
+  No funciona al ejecutar el botón y la macro. Se presume un solapamiento de las funcionalidades
+  del Preview y la Ventana desplegada.
+
+[TP-2] Pausa del desplazamiento
+Estado: ❌ FAIL
+Descripción: Al presionar Pause, el desplazamiento debe detenerse inmediatamente
+Observaciones:
+  No funciona si el teleprómpter no rueda con el Play; por lo tanto, está ligado al caso [TP-1]
+
+[TP-3] Reinicio de la posición (Reset)
+Estado: ❌ FAIL
+Descripción: Al presionar Reset, el texto debe volver al inicio
+Observaciones:
+  (no funciona): No funciona si el teleprómpter no rueda con el Play; por lo tanto, está
+  ligado al caso [TP-1]
+
+[TP-4] Control de velocidad
+Estado: ❌ FAIL
+Descripción: La velocidad de desplazamiento debe cambiar según el ajuste del slider
+Observaciones:
+  (no funciona): al depender del caso [TP-1], la velocidad no funciona.
+
+[TP-5] Control de tamaño de fuente
+Estado: ✅ PASS
+Descripción: El tamaño de la fuente debe cambiar correctamente en el Preview (revisar).
+Observaciones: Al parecer, hay un solapamiento de los comportamientos del Preview y ventana
+  desplegable, ya que no se refleja el cambio en la botonera ni en el Preview al manipular dichos
+  botones; sin embargo, sí cambia en la ventana desplegable.	
+
+[TP-6] Auto-avance al final del script
+Estado: ❌ FAIL
+Descripción: Al llegar al final de un script, debe avanzar automáticamente al siguiente
+Observaciones: Al ir avanzando en el texto, debe seguir al siguiente guion, se debe implementar
+  una especie de separación tipo barra para distinguir que se está pasando de un guion al otro.
+
+
+🪟 VENTANA FLOTANTE DEL TELEPROMPTER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[VF-1] Apertura de ventana flotante
+Estado: ✅ PASS
+Descripción: Al hacer clic en 'Nueva Ventana', debe abrirse una ventana emergente
+
+[VF-2] Sincronización de texto
+Estado: ✅ PASS
+Descripción: El texto en la ventana flotante debe coincidir con el texto actual
+
+[VF-3] Sincronización de desplazamiento
+Estado: ❌ FAIL
+Descripción: El desplazamiento en ambas ventanas debe estar sincronizado
+Observaciones:
+  No funciona el sincronismo del previo (Preview) con la ventana emergente. Hay algo
+  en los comportamientos mutuos que afecta de uno al otro.
+
+[VF-4] Sincronización de velocidad
+Estado: ❌ FAIL
+Descripción: Los cambios de velocidad deben reflejarse en ambas ventanas
+Observaciones:
+  (no funciona): Se debe revisar por qué no funciona. Hay algo en los comportamientos
+  que interfieren de un lado al otro o entre sí entre el Preview y la ventana desplegable.
+
+[VF-5] Sincronización de tamaño de fuente
+Estado: ❌ FAIL
+Descripción: Los cambios de tamaño deben reflejarse en ambas ventanas
+Observaciones:
+  (funciona parcialmente: funciona en ventana emergente pero no en previo)
+
+[VF-6] Controles independientes en ventana flotante
+Estado: ➖ N/A
+Descripción: Los controles en la ventana flotante deben funcionar correctamente
+Observaciones:
+  (Hay que implementar botones para la ventana emergente): la botonera debe tener la
+  opción de visualización y ocultamiento, debe ser discreta y debe poder funcionar con macros.
+  Las funcionalidades que debe tener son: ajuste de guía de texto, ajuste de tamaño de
+  fuente, color de fondo (negro: texto blanco y blanco: texto negro).
+
+
+⛶ MODO PANTALLA COMPLETA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[PC-1] Activación de pantalla completa
+Estado: ✅ PASS
+Descripción: Al hacer clic en 'Pantalla Completa', debe entrar en modo fullscreen
+Observaciones:
+  F10 fuera de app... funciona solo para ventana emergente: problemas con macros.
+
+[PC-2] Visualización en pantalla completa
+Estado: ✅ PASS
+Descripción: El texto debe mostrarse correctamente ocupando toda la pantalla
+
+[PC-3] Controles en pantalla completa
+Estado: ➖ N/A
+Descripción: Los controles deben permanecer accesibles en modo fullscreen
+Observaciones:
+  (hay que implementar los controles en full screen)
+
+[PC-4] Salida de pantalla completa
+Estado: ❌ FAIL
+Descripción: Debe poder salir del modo fullscreen con ESC o el botón correspondiente
+Observaciones:
+  (no funciona)
+
+
+✍️ EDITOR DE SCRIPTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ED-1] Edición de texto
+Estado: ✅ PASS
+Descripción: Debe poder escribir y editar texto en el editor
+
+[ED-2] Formato de texto (negritas)
+Estado: ❌ FAIL
+Descripción: Debe poder aplicar formato de negritas al texto seleccionado
+Observaciones:
+  (no funciona): debe tener todas las propiedades de texto que suelen tener
+  los procesadores de texto tipo Word. Además, debe haber un «Negrita especial» llamada
+  Señalizador que sombree un texto un resaltador (puede ser fondo blanco con letras rojas)… se
+  suele usar para marcar quien habla dentro del guion. Debe ser visible en Preview y ventana desplegable.
+
+[ED-3] Formato de texto (cursivas)
+Estado: ❌ FAIL
+Descripción: Debe poder aplicar formato de cursivas al texto seleccionado
+Observaciones:
+  (no funciona): debe tener esa propiedad como cualquier procesador de texto. Debe ser visible en
+  Preview y ventana desplegable.
+
+[ED-4] Inserción de marcadores de salto
+Estado: ➖ N/A
+Descripción: Debe poder insertar marcadores [1], [2], etc. para navegación
+Observaciones:
+  (no está implementado): se supone que estas marcas se usan para brindar dentro de apartados del mismo
+  guion para hacer más sencilla la búsqueda de un apartado cuando el guion es largo. Debe ponerse una botones
+  especial en el Story Editor que tenga estas marcas y que muestre parte del previo que se marcó en un Thumbnail.
+  Debe ser aplicable con una macro de Marcador de lectura. También hay que insertar este botón en la botonera del
+  Story Editor.
+
+[ED-5] Actualización en tiempo real
+Estado: ✅ PASS
+Descripción: Los cambios en el editor deben reflejarse inmediatamente en el preview
+
+
+📋 RUN ORDER (LISTA DE SCRIPTS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[RO-1] Selección de script
+Estado: ✅ PASS
+Descripción: Al hacer clic en un script, debe cargarse en el editor
+
+[RO-2] Agregar nuevo script
+Estado: ✅ PASS
+Descripción: Debe poder agregar un nuevo script vacío a la lista
+
+[RO-3] Eliminar script
+Estado: ❌ FAIL
+Descripción: Debe poder eliminar un script de la lista
+Observaciones:
+  Hay que arreglar la responsividad de la ventana de Run Order para poder visualizar la opción de Eliminar.
+  Hay que hacefr un ajuste total de responsividad ajustable de las ventanas al cambiar tamaños.
+
+[RO-4] Reordenar scripts (drag & drop)
+Estado: ✅ PASS
+Descripción: Debe poder arrastrar y soltar scripts para reordenarlos
+
+[RO-5] Indicador de script activo
+Estado: ❌ FAIL
+Descripción: El script actualmente reproduciendo debe estar visualmente marcado
+Observaciones:
+  (hay que arreglar función): se debe saber que se rodo y/o cuantas veces.
+
+[RO-6] Estado de scripts (ready/on-air/completed)
+Estado: ❌ FAIL
+Descripción: Los estados de los scripts deben cambiar correctamente
+Observaciones:
+  (hay que arreglar función): Al no funcionar el Play, no se ha podido validar si esto funciona.
+
+
+⌨️ ATAJOS DE TECLADO (MACROS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[MK-1] Configuración de macros
+Estado: ❌ FAIL
+Descripción: Debe poder abrir el panel de configuración de atajos de teclado
+Observaciones:
+  (no funcionan en teclado ya predefinido): se debe reparar esta funcionalidad (se hicieron en teclas funcionales), pero en teclados
+  con funciones ya predeterminadas no funciona. Las próximas pruebas se harán con teclas diferentes.
+
+[MK-2] Asignación de teclas
+Estado: ❌ FAIL
+Descripción: Debe poder asignar teclas personalizadas a cada acción
+Observaciones:
+  (hay que separar la funcionalidad de macros de la botonera principal para evitar conflictos con la ventana emergente)
+
+[MK-3] Play/Pause con atajo
+Estado: ❌ FAIL
+Descripción: El atajo de Play/Pause debe funcionar correctamente
+Observaciones:
+  (revisar la botonera y las macros): al no funcionar el Play, no hay formas de validar si sirven los atajos.
+
+[MK-4] Velocidad con atajos
+Estado: ❌ FAIL
+Descripción: Los atajos de aumentar/disminuir velocidad deben funcionar
+Observaciones:
+  (revisar la botonera y las macros): al no funcionar el Play, no hay formas de validar si sirven los atajos.
+
+[MK-5] Tamaño de fuente con atajos
+Estado: ✅ PASS
+Descripción: Los atajos de aumentar/disminuir fuente deben funcionar
+Observaciones:
+  Revisar funcionalidad entre previo y ventana emergente. Hay algunos conflictos de los comportamientos solapados.
+
+[MK-6] Navegación entre scripts con atajos
+Estado: ✅ PASS
+Descripción: Los atajos de anterior/siguiente script deben funcionar
+Observaciones:
+  (funciona parcialmente: revisar atajos con teclas funcionales)
+
+[MK-7] Persistencia de macros
+Estado: ✅ PASS
+Descripción: Las configuraciones de macros deben guardarse al recargar
+Observaciones:
+  funcional
+
+
+🖱️ CONTROL CON RUEDA DEL RATÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[RM-1] Desplazamiento manual con rueda
+Estado: ❌ FAIL
+Descripción: La rueda del ratón debe permitir desplazamiento manual
+Observaciones:
+  (no funciona): Al no funcionar Play, no hay formas de saber si funciona.
+
+[RM-2] Control de velocidad (Ctrl + rueda)
+Estado: ❌ FAIL
+Descripción: Ctrl + rueda debe ajustar la velocidad
+Observaciones:
+  (no funciona): Al no funcionar Play, no hay formas de saber si funciona.
+
+[RM-3] Control de tamaño (Shift + rueda)
+Estado: ❌ FAIL
+Descripción: Shift + rueda debe ajustar el tamaño de fuente
+Observaciones:
+  (no funciona): No probado aún.
+
+[RM-4] Desplazamiento fino (Alt + rueda)
+Estado: ❌ FAIL
+Descripción: Alt + rueda debe permitir desplazamiento fino
+Observaciones:
+  (no funciona): Al no funcionar Play, no hay formas de saber si funciona.
+
+
+📏 LÍNEA GUÍA DE LECTURA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[LG-1] Visualización de línea guía
+Estado: ✅ PASS
+Descripción: La línea guía roja debe ser visible durante la reproducción
+
+[LG-2] Configuración de posición
+Estado: ❌ FAIL
+Descripción: Debe poder ajustar la posición vertical de la línea guía
+Observaciones:
+  Solo funciona en previo, no en ventana emergente.
+
+[LG-3] Persistencia de configuración
+Estado: ❌ FAIL
+Descripción: La posición de la línea guía debe guardarse
+Observaciones:
+  (revisar de acuerdo con Configuración de posición): por tanto, a que crear un backend que permita
+  almacenar estas preferencias.
+
+
+💾 PERSISTENCIA DE DATOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[PD-1] Guardado de scripts
+Estado: ❌ FAIL
+Descripción: Los scripts editados deben persistir al recargar la página
+Observaciones:
+  (falta backend)
+
+[PD-2] Guardado de configuración
+Estado: ❌ FAIL
+Descripción: Las configuraciones (velocidad, fuente, etc.) deben persistir
+Observaciones:
+  (falta backend)
+
+[PD-3] Guardado de orden de scripts
+Estado: ❌ FAIL
+Descripción: El orden de los scripts debe persistir al recargar
+Observaciones:
+  (falta backend).
+
+
+⚡ RENDIMIENTO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[RN-1] Fluidez del desplazamiento
+Estado: ❌ FAIL
+Descripción: El desplazamiento debe ser suave sin saltos o tirones
+Observaciones:
+  (no funciona: hay que arreglar el Play para probar)
+
+[RN-2] Tiempo de respuesta
+Estado: ❌ FAIL
+Descripción: Los controles deben responder inmediatamente al interactuar
+Observaciones:
+  (no funciona: hay que arreglar el Play para probar)
+
+[RN-3] Uso de recursos
+Estado: ✅ PASS
+Descripción: La aplicación no debe consumir excesiva CPU/memoria
+
+
+🌐 COMPATIBILIDAD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[CP-1] Funcionamiento en Chrome
+Estado: ➖ N/A
+Descripción: Todas las funcionalidades deben trabajar en Chrome
+Observaciones: Al ser un programa que se instala, no requiere de pruebas para Chrome
+
+[CP-2] Funcionamiento en Firefox
+Estado: ➖ N/A
+Descripción: Todas las funcionalidades deben trabajar en Firefox
+Observaciones: Al ser un programa que se instala, no requiere de pruebas para Chrome
+
+[CP-3] Funcionamiento en Edge
+Estado: ➖ N/A
+Descripción: Todas las funcionalidades deben trabajar en Edge
+Observaciones: Al ser un programa que se instala, no requiere de pruebas para Chrome.
+  Aunque es importante validar que funcione en sistemas operativos Linux y iMac
+
+[CP-4] Responsividad
+Estado: ❌ FAIL
+Descripción: La interfaz debe adaptarse a diferentes tamaños de pantalla
+Observaciones:
+  (hay que arreglar responsividad).
+
+
+📦 INSTALACIÓN Y DESPLIEGUE (ELECTRON)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[IN-1] Generación del instalador
+Estado: ✅ PASS
+Descripción: Ejecutar 'npm run electron:build:win' debe generar el instalador sin errores
+
+[IN-2] Tamaño del instalador
+Estado: ❌ FAIL
+Descripción: El instalador debe tener un tamaño razonable (aproximadamente 140-160 MB)
+Observaciones:
+  Pesa más de 240 MB (arreglar compresión); si es indispensable. Si se requiere un tamaño superior debido a
+  funcionalidades, no hay problema.
+
+[IN-3] Descarga del instalador
+Estado: ✅ PASS
+Descripción: El archivo .exe del instalador debe descargarse correctamente desde la carpeta release/
+
+[IN-4] Ejecución del instalador
+Estado: ✅ PASS
+Descripción: El instalador debe iniciarse al hacer doble clic en el archivo .exe
+
+[IN-5] Interfaz del instalador (NSIS)
+Estado: ✅ PASS
+Descripción: El wizard de instalación debe mostrarse correctamente con el nombre y el icono de la aplicación
+
+[IN-6] Selección de directorio de instalación
+Estado: ✅ PASS
+Descripción: Debe permitir seleccionar la carpeta de instalación (por defecto: Program Files)
+
+[IN-7] Creación de acceso directo en escritorio
+Estado: ✅ PASS
+Descripción: Debe ofrecer la opción de crear un acceso directo en el escritorio
+
+[IN-8] Creación de acceso directo en menú inicio
+Estado: ✅ PASS
+Descripción: Debe crear un acceso directo en el menú de inicio de Windows
+
+[IN-9] Progreso de instalación
+Estado: ✅ PASS
+Descripción: La barra de progreso debe mostrarse durante la instalación
+
+[IN-10] Finalización de instalación
+Estado: ✅ PASS
+Descripción: El instalador debe completarse exitosamente y mostrar mensaje de confirmación
+
+[IN-11] Inicio automático post-instalación
+Estado: ✅ PASS
+Descripción: Debe ofrecer la opción de iniciar la aplicación inmediatamente después de instalar
+
+[IN-12] Icono de la aplicación instalada
+Estado: ✅ PASS
+Descripción: El icono del acceso directo debe mostrarse correctamente
+
+[IN-13] Apertura de la aplicación instalada
+Estado: ✅ PASS
+Descripción: Al hacer doble clic en el acceso directo, la aplicación debe abrirse
+
+[IN-14] Ventana de Electron
+Estado: ➖ N/A
+Descripción: La aplicación debe abrirse en una ventana de Electron (no navegador)
+Observaciones:
+  (solamente es para el ejecutable)
+
+[IN-15] Funcionalidad completa en versión instalada
+Estado: ➖ N/A
+Descripción: Todas las funcionalidades deben trabajar igual que en la versión web
+Observaciones:
+  (es solo para versión de escritorio de forma portátil)
+
+[IN-16] Cierre de la aplicación
+Estado: ✅ PASS
+Descripción: La aplicación debe cerrarse correctamente sin dejar procesos residuales
+
+[IN-17] Reinstalación sobre versión existente
+Estado: ➖ N/A
+Descripción: Debe permitir reinstalar sobre una instalación existente sin errores
+Observaciones:
+  Hasta el momento no hay versiones más alla de la v1.0.0.
+
+[IN-18] Desinstalación desde Panel de Control
+Estado: ✅ PASS
+Descripción: La aplicación debe aparecer en 'Programas y características' y permitir desinstalar
+
+[IN-19] Proceso de desinstalación
+Estado: ✅ PASS
+Descripción: El desinstalador debe ejecutarse correctamente y eliminar todos los archivos
+
+[IN-20] Limpieza post-desinstalación
+Estado: ✅ PASS
+Descripción: Los accesos directos y carpetas deben eliminarse completamente tras desinstalar
+
+
+📈 ESTADÍSTICAS POR CATEGORÍA
+═══════════════════════════════════════════════════════════════
+
+🎨 Interfaz de Usuario
+  Total:      4 pruebas
+  Progreso:   100% (4/4)
+  ✅ Pass:    4
+  ❌ Fail:    0
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+📜 Funcionalidad del Teleprompter
+  Total:      6 pruebas
+  Progreso:   100% (6/6)
+  ✅ Pass:    1
+  ❌ Fail:    5
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+🪟 Ventana Flotante del Teleprompter
+  Total:      6 pruebas
+  Progreso:   100% (6/6)
+  ✅ Pass:    2
+  ❌ Fail:    3
+  ➖ N/A:     1
+  ⏳ Pendiente: 0
+
+⛶ Modo Pantalla Completa
+  Total:      4 pruebas
+  Progreso:   100% (4/4)
+  ✅ Pass:    2
+  ❌ Fail:    1
+  ➖ N/A:     1
+  ⏳ Pendiente: 0
+
+✍️ Editor de Scripts
+  Total:      5 pruebas
+  Progreso:   100% (5/5)
+  ✅ Pass:    2
+  ❌ Fail:    2
+  ➖ N/A:     1
+  ⏳ Pendiente: 0
+
+📋 Run Order (Lista de Scripts)
+  Total:      6 pruebas
+  Progreso:   100% (6/6)
+  ✅ Pass:    3
+  ❌ Fail:    3
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+⌨️ Atajos de Teclado (Macros)
+  Total:      7 pruebas
+  Progreso:   100% (7/7)
+  ✅ Pass:    3
+  ❌ Fail:    4
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+🖱️ Control con Rueda del Ratón
+  Total:      4 pruebas
+  Progreso:   100% (4/4)
+  ✅ Pass:    0
+  ❌ Fail:    4
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+📏 Línea Guía de Lectura
+  Total:      3 pruebas
+  Progreso:   100% (3/3)
+  ✅ Pass:    1
+  ❌ Fail:    2
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+💾 Persistencia de Datos
+  Total:      3 pruebas
+  Progreso:   100% (3/3)
+  ✅ Pass:    0
+  ❌ Fail:    3
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+⚡ Rendimiento
+  Total:      3 pruebas
+  Progreso:   100% (3/3)
+  ✅ Pass:    1
+  ❌ Fail:    2
+  ➖ N/A:     0
+  ⏳ Pendiente: 0
+
+🌐 Compatibilidad
+  Total:      4 pruebas
+  Progreso:   100% (4/4)
+  ✅ Pass:    0
+  ❌ Fail:    1
+  ➖ N/A:     3
+  ⏳ Pendiente: 0
+
+📦 Instalación y Despliegue (Electron)
+  Total:      20 pruebas
+  Progreso:   100% (20/20)
+  ✅ Pass:    16
+  ❌ Fail:    1
+  ➖ N/A:     3
+  ⏳ Pendiente: 0
+
+
+🐛 BUGS ENCONTRADOS (SOLO FALLIDAS)
+═══════════════════════════════════════════════════════════════
+
+BUG #1
+────────────────────────────────────────────────────────────
+ID:          TP-1
+Categoría:   Funcionalidad del Teleprompter
+Prueba:      Inicio del desplazamiento (Play)
+Descripción: Al presionar Play, el texto debe comenzar a desplazarse automáticamente
+Observaciones:
+  No funciona al ejecutar el botón y la macro
+
+BUG #2
+────────────────────────────────────────────────────────────
+ID:          TP-2
+Categoría:   Funcionalidad del Teleprompter
+Prueba:      Pausa del desplazamiento
+Descripción: Al presionar Pause, el desplazamiento debe detenerse inmediatamente
+Observaciones:
+  No funciona si el teleprómpter no rueda con el Play
+
+BUG #3
+────────────────────────────────────────────────────────────
+ID:          TP-3
+Categoría:   Funcionalidad del Teleprompter
+Prueba:      Reinicio de la posición (Reset)
+Descripción: Al presionar Reset, el texto debe volver al inicio
+Observaciones:
+  (no funciona)
+
+BUG #4
+────────────────────────────────────────────────────────────
+ID:          TP-4
+Categoría:   Funcionalidad del Teleprompter
+Prueba:      Control de velocidad
+Descripción: La velocidad de desplazamiento debe cambiar según el ajuste del slider
+Observaciones:
+  (no funciona)
+
+BUG #5
+────────────────────────────────────────────────────────────
+ID:          TP-6
+Categoría:   Funcionalidad del Teleprompter
+Prueba:      Auto-avance al final del script
+Descripción: Al llegar al final de un script, debe avanzar automáticamente al siguiente
+
+BUG #6
+────────────────────────────────────────────────────────────
+ID:          VF-3
+Categoría:   Ventana Flotante del Teleprompter
+Prueba:      Sincronización de desplazamiento
+Descripción: El desplazamiento en ambas ventanas debe estar sincronizado
+Observaciones:
+  No funciona el sincronismo del previo con la ventana emergente
+
+BUG #7
+────────────────────────────────────────────────────────────
+ID:          VF-4
+Categoría:   Ventana Flotante del Teleprompter
+Prueba:      Sincronización de velocidad
+Descripción: Los cambios de velocidad deben reflejarse en ambas ventanas
+Observaciones:
+  (no funciona)
+
+BUG #8
+────────────────────────────────────────────────────────────
+ID:          VF-5
+Categoría:   Ventana Flotante del Teleprompter
+Prueba:      Sincronización de tamaño de fuente
+Descripción: Los cambios de tamaño deben reflejarse en ambas ventanas
+Observaciones:
+  (funciona parcialmente: funciona en ventana emergente pero no en previo)
+
+BUG #9
+────────────────────────────────────────────────────────────
+ID:          PC-4
+Categoría:   Modo Pantalla Completa
+Prueba:      Salida de pantalla completa
+Descripción: Debe poder salir del modo fullscreen con ESC o el botón correspondiente
+Observaciones:
+  (no funciona)
+
+BUG #10
+────────────────────────────────────────────────────────────
+ID:          ED-2
+Categoría:   Editor de Scripts
+Prueba:      Formato de texto (negritas)
+Descripción: Debe poder aplicar formato de negritas al texto seleccionado
+Observaciones:
+  (no funciona)
+
+BUG #11
+────────────────────────────────────────────────────────────
+ID:          ED-3
+Categoría:   Editor de Scripts
+Prueba:      Formato de texto (cursivas)
+Descripción: Debe poder aplicar formato de cursivas al texto seleccionado
+Observaciones:
+  (no funciona)
+
+BUG #12
+────────────────────────────────────────────────────────────
+ID:          RO-3
+Categoría:   Run Order (Lista de Scripts)
+Prueba:      Eliminar script
+Descripción: Debe poder eliminar un script de la lista
+Observaciones:
+  Hay que arreglar la responsividad de la ventana de Run Order para poder visualizar la opción de Eliminar.
+
+BUG #13
+────────────────────────────────────────────────────────────
+ID:          RO-5
+Categoría:   Run Order (Lista de Scripts)
+Prueba:      Indicador de script activo
+Descripción: El script actualmente reproduciendo debe estar visualmente marcado
+Observaciones:
+  (hay que arreglar función)
+
+BUG #14
+────────────────────────────────────────────────────────────
+ID:          RO-6
+Categoría:   Run Order (Lista de Scripts)
+Prueba:      Estado de scripts (ready/on-air/completed)
+Descripción: Los estados de los scripts deben cambiar correctamente
+Observaciones:
+  (hay que arreglar función)
+
+BUG #15
+────────────────────────────────────────────────────────────
+ID:          MK-1
+Categoría:   Atajos de Teclado (Macros)
+Prueba:      Configuración de macros
+Descripción: Debe poder abrir el panel de configuración de atajos de teclado
+Observaciones:
+  (no funcionan en teclado ya predefinido)
+
+BUG #16
+────────────────────────────────────────────────────────────
+ID:          MK-2
+Categoría:   Atajos de Teclado (Macros)
+Prueba:      Asignación de teclas
+Descripción: Debe poder asignar teclas personalizadas a cada acción
+Observaciones:
+  (hay que separar la funcionalidad de macros de la botonera principal para evitar conflictos con la ventana emergente)
+
+BUG #17
+────────────────────────────────────────────────────────────
+ID:          MK-3
+Categoría:   Atajos de Teclado (Macros)
+Prueba:      Play/Pause con atajo
+Descripción: El atajo de Play/Pause debe funcionar correctamente
+Observaciones:
+  (revisar la botonera y las macros)
+
+BUG #18
+────────────────────────────────────────────────────────────
+ID:          MK-4
+Categoría:   Atajos de Teclado (Macros)
+Prueba:      Velocidad con atajos
+Descripción: Los atajos de aumentar/disminuir velocidad deben funcionar
+Observaciones:
+  (revisar la botonera y las macros)
+
+BUG #19
+────────────────────────────────────────────────────────────
+ID:          RM-1
+Categoría:   Control con Rueda del Ratón
+Prueba:      Desplazamiento manual con rueda
+Descripción: La rueda del ratón debe permitir desplazamiento manual
+Observaciones:
+  (no funciona)
+
+BUG #20
+────────────────────────────────────────────────────────────
+ID:          RM-2
+Categoría:   Control con Rueda del Ratón
+Prueba:      Control de velocidad (Ctrl + rueda)
+Descripción: Ctrl + rueda debe ajustar la velocidad
+Observaciones:
+  (no funciona)
+
+BUG #21
+────────────────────────────────────────────────────────────
+ID:          RM-3
+Categoría:   Control con Rueda del Ratón
+Prueba:      Control de tamaño (Shift + rueda)
+Descripción: Shift + rueda debe ajustar el tamaño de fuente
+Observaciones:
+  (no funciona)
+
+BUG #22
+────────────────────────────────────────────────────────────
+ID:          RM-4
+Categoría:   Control con Rueda del Ratón
+Prueba:      Desplazamiento fino (Alt + rueda)
+Descripción: Alt + rueda debe permitir desplazamiento fino
+Observaciones:
+  (no funciona)
+
+BUG #23
+────────────────────────────────────────────────────────────
+ID:          LG-2
+Categoría:   Línea Guía de Lectura
+Prueba:      Configuración de posición
+Descripción: Debe poder ajustar la posición vertical de la línea guía
+Observaciones:
+  Solo funciona en previo, no en ventana emergente
+
+BUG #24
+────────────────────────────────────────────────────────────
+ID:          LG-3
+Categoría:   Línea Guía de Lectura
+Prueba:      Persistencia de configuración
+Descripción: La posición de la línea guía debe guardarse
+Observaciones:
+  (revisar de acuerdo con Configuración de posición)
+
+BUG #25
+────────────────────────────────────────────────────────────
+ID:          PD-1
+Categoría:   Persistencia de Datos
+Prueba:      Guardado de scripts
+Descripción: Los scripts editados deben persistir al recargar la página
+Observaciones:
+  (falta backend)
+
+BUG #26
+────────────────────────────────────────────────────────────
+ID:          PD-2
+Categoría:   Persistencia de Datos
+Prueba:      Guardado de configuración
+Descripción: Las configuraciones (velocidad, fuente, etc.) deben persistir
+Observaciones:
+  (falta backend)
+
+BUG #27
+────────────────────────────────────────────────────────────
+ID:          PD-3
+Categoría:   Persistencia de Datos
+Prueba:      Guardado de orden de scripts
+Descripción: El orden de los scripts debe persistir al recargar
+Observaciones:
+  (falta backend)
+
+BUG #28
+────────────────────────────────────────────────────────────
+ID:          RN-1
+Categoría:   Rendimiento
+Prueba:      Fluidez del desplazamiento
+Descripción: El desplazamiento debe ser suave sin saltos o tirones
+Observaciones:
+  (no funciona: hay que arreglar el Play para probar)
+
+BUG #29
+────────────────────────────────────────────────────────────
+ID:          RN-2
+Categoría:   Rendimiento
+Prueba:      Tiempo de respuesta
+Descripción: Los controles deben responder inmediatamente al interactuar
+Observaciones:
+  (no funciona: hay que arreglar el Play para probar)
+
+BUG #30
+────────────────────────────────────────────────────────────
+ID:          CP-4
+Categoría:   Compatibilidad
+Prueba:      Responsividad
+Descripción: La interfaz debe adaptarse a diferentes tamaños de pantalla
+Observaciones:
+  (hay que arreglar responsividad)
+
+BUG #31
+────────────────────────────────────────────────────────────
+ID:          IN-2
+Categoría:   Instalación y Despliegue (Electron)
+Prueba:      Tamaño del instalador
+Descripción: El instalador debe tener un tamaño razonable (aproximadamente 140-160 MB)
+Observaciones:
+  Pesa más de 240 MB (arreglar compresión)
+
+
+═══════════════════════════════════════════════════════════════
+              FIN DEL REPORTE DE PRUEBAS
+═══════════════════════════════════════════════════════════════
+Sugerencias: Hay que permitir la lectura de un Excel (la idea es que reconozca determinadas
+celdas en las que deben ir los números de guion, títulos y texto); es necesario que al momento
+de refrescar los cambios, estos se reflejen en el teleprómpter; por lo tanto, es necesario crear una
+arquitectura con patrones (la que mejor se ajuste para este proyecto): refactorización.
+También, hay que arreglar la vista de la ventana de Ventana de Configuración de Macros... debería
+desplegarse como una especie de modal (se ve oscuro el fondo, en vez de verse de fondo el campo de trabajo)
+Archivo generado: 2025-10-01T21:39:04.590Z
+Sistema de Teleprompter Pro - Control de Calidad
+© 2025 - Todos los derechos reservados

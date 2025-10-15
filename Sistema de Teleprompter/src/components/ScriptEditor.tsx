@@ -1,11 +1,29 @@
+// ===== IMPORTACIONES / IMPORTS =====
+// Iconos de Lucide React para UI / Lucide React icons for UI
 import { FileText, Upload, Save, Copy, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, ChevronDown, Type, RefreshCw, Target, SkipForward } from 'lucide-react';
+// Componentes UI reutilizables / Reusable UI components
 import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+// Hooks de React / React hooks
 import { useRef, useState } from 'react';
+// Notificaciones toast / Toast notifications
 import { toast } from 'sonner';
+// Componente personalizado para marcadores de salto / Custom component for jump markers
 import { TextWithJumpMarkers } from './TextWithJumpMarkers';
 
+/**
+ * Propiedades del componente ScriptEditor
+ * ScriptEditor component properties
+ * 
+ * @interface ScriptEditorProps
+ * @property {string} text - Texto actual del script / Current script text
+ * @property {(text: string) => void} onTextChange - Callback cuando el texto cambia / Callback when text changes
+ * @property {string} currentScript - Nombre del script actual / Current script name
+ * @property {(scripts: Array<{id: string, title: string, text: string}>, fileName: string) => void} [onFileLoad] - Callback para cargar múltiples scripts desde archivo / Callback to load multiple scripts from file
+ * @property {{[key: string]: number}} [jumpMarkers] - Mapa de marcadores de salto (etiqueta -> posición) / Map of jump markers (label -> position)
+ * @property {(position: number) => void} [onJumpToPosition] - Callback para saltar a una posición específica / Callback to jump to specific position
+ */
 interface ScriptEditorProps {
   text: string;
   onTextChange: (text: string) => void;
@@ -15,31 +33,87 @@ interface ScriptEditorProps {
   onJumpToPosition?: (position: number) => void;
 }
 
+/**
+ * ScriptEditor - Editor de texto enriquecido para scripts de teleprompter
+ * ScriptEditor - Rich text editor for teleprompter scripts
+ * 
+ * Componente principal para editar scripts con:
+ * - Formateo de texto completo (fuente, tamaño, negrita, cursiva, subrayado)
+ * - Alineación de texto (izquierda, centro, derecha)
+ * - Conversión mayúsculas/minúsculas
+ * - Carga de archivos .txt con formato estructurado [número] {TÍTULO}
+ * - Recarga automática del último archivo cargado
+ * - Marcadores de salto integrados en el texto
+ * - Vista previa con iconos de salto activables/desactivables
+ * - Atajos numéricos (1-0) para funciones rápidas
+ * 
+ * Component for editing scripts with:
+ * - Complete text formatting (font, size, bold, italic, underline)
+ * - Text alignment (left, center, right)
+ * - Upper/lowercase conversion
+ * - Loading .txt files with structured format [number] {TITLE}
+ * - Automatic reload of last loaded file
+ * - Jump markers integrated in text
+ * - Preview with toggleable jump icons
+ * - Numeric shortcuts (1-0) for quick functions
+ * 
+ * @component
+ * @param {ScriptEditorProps} props - Propiedades del componente / Component properties
+ * @returns {JSX.Element} Editor de scripts / Script editor
+ */
 export function ScriptEditor({ text, onTextChange, currentScript, onFileLoad, jumpMarkers = {}, onJumpToPosition }: ScriptEditorProps) {
+  // ===== REFERENCIAS / REFERENCES =====
+  // Referencia al input oculto de archivo / Reference to hidden file input
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [fontFamily, setFontFamily] = useState('Arial');
-  const [fontSize, setFontSize] = useState('72');
-  const [isBold, setIsBold] = useState(false);
-  const [isItalic, setIsItalic] = useState(false);
-  const [isUnderline, setIsUnderline] = useState(false);
-  const [alignment, setAlignment] = useState('left');
-  const [isUpperCase, setIsUpperCase] = useState(false);
-  const [lastLoadedFile, setLastLoadedFile] = useState<File | null>(null);
-  const [isReloading, setIsReloading] = useState(false);
-  const [showJumpIcons, setShowJumpIcons] = useState(true);
+  
+  // ===== ESTADO LOCAL / LOCAL STATE =====
+  // Estado de formateo de texto / Text formatting state
+  const [fontFamily, setFontFamily] = useState('Arial'); // Familia de fuente / Font family
+  const [fontSize, setFontSize] = useState('72'); // Tamaño de fuente / Font size
+  const [isBold, setIsBold] = useState(false); // Texto en negrita / Bold text
+  const [isItalic, setIsItalic] = useState(false); // Texto en cursiva / Italic text
+  const [isUnderline, setIsUnderline] = useState(false); // Texto subrayado / Underlined text
+  const [alignment, setAlignment] = useState('left'); // Alineación del texto / Text alignment
+  const [isUpperCase, setIsUpperCase] = useState(false); // Modo mayúsculas / Uppercase mode
+  
+  // Estado de gestión de archivos / File management state
+  const [lastLoadedFile, setLastLoadedFile] = useState<File | null>(null); // Último archivo cargado / Last loaded file
+  const [isReloading, setIsReloading] = useState(false); // Estado de recarga / Reloading state
+  
+  // Estado de visualización / Display state
+  const [showJumpIcons, setShowJumpIcons] = useState(true); // Mostrar iconos de salto / Show jump icons
 
+  /**
+   * Alterna entre mayúsculas y minúsculas del texto completo
+   * Toggles between uppercase and lowercase for entire text
+   */
   const toggleCase = () => {
-    if (!text.trim()) return; // Don't do anything if text is empty
+    if (!text.trim()) return; // No hacer nada si el texto está vacío / Don't do anything if text is empty
     
     const newText = isUpperCase ? text.toLowerCase() : text.toUpperCase();
     onTextChange(newText);
     setIsUpperCase(!isUpperCase);
   };
 
+  /**
+   * Analiza un archivo de texto y extrae scripts estructurados
+   * Parses a text file and extracts structured scripts
+   * 
+   * Formato esperado: [número] {TÍTULO} contenido del texto
+   * Expected format: [number] {TITLE} text content
+   * 
+   * Ejemplo / Example:
+   * [1] {INTRO} Este es el primer script...
+   * [2] {MAIN CONTENT} Este es el segundo script...
+   * 
+   * @param {string} content - Contenido del archivo / File content
+   * @returns {Array<{id: string, title: string, text: string}>} Array de scripts parseados / Array of parsed scripts
+   */
   const parseScriptFile = (content: string) => {
     const scripts: Array<{id: string, title: string, text: string}> = [];
     
-    // Find all script blocks using regex
+    // Buscar todos los bloques de script usando regex / Find all script blocks using regex
+    // Patrón: [número] {título} texto hasta el próximo [número] o final / Pattern: [number] {title} text until next [number] or end
     const scriptRegex = /\[(\d+)\]\s*\{([^}]+)\}([\s\S]*?)(?=\[\d+\]\s*\{[^}]+\}|$)/g;
     let match;
     
@@ -56,6 +130,19 @@ export function ScriptEditor({ text, onTextChange, currentScript, onFileLoad, ju
     return scripts;
   };
 
+  /**
+   * Maneja la carga de archivos .txt desde el sistema de archivos
+   * Handles loading .txt files from file system
+   * 
+   * Proceso / Process:
+   * 1. Lee el archivo seleccionado
+   * 2. Intenta parsear formato estructurado [número] {TÍTULO}
+   * 3. Si encuentra estructura: carga múltiples scripts
+   * 4. Si no encuentra estructura: carga como texto único
+   * 5. Guarda referencia del archivo para función de recarga
+   * 
+   * @param {React.ChangeEvent<HTMLInputElement>} event - Evento de cambio del input file / File input change event
+   */
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type === 'text/plain') {
@@ -63,21 +150,21 @@ export function ScriptEditor({ text, onTextChange, currentScript, onFileLoad, ju
       reader.onload = (e) => {
         const content = e.target?.result as string;
         
-        // Try to parse as structured script file
+        // Intentar parsear como archivo de script estructurado / Try to parse as structured script file
         const parsedScripts = parseScriptFile(content);
         
         if (parsedScripts.length > 0 && onFileLoad) {
-          // If we have structured scripts, use the file loading handler
+          // Si tenemos scripts estructurados, usar el handler de carga / If we have structured scripts, use the file loading handler
           const fileName = file.name.replace('.txt', '');
           onFileLoad(parsedScripts, fileName);
           toast.success(`Archivo cargado: ${parsedScripts.length} guiones encontrados en "${file.name}"`);
         } else {
-          // If no structured format found, load as single script
+          // Si no se encuentra formato estructurado, cargar como script único / If no structured format found, load as single script
           onTextChange(content);
           toast.info('Archivo cargado como texto único. Use el formato [1] {TITULO} para múltiples guiones.');
         }
         
-        // Store the file for reload functionality
+        // Almacenar archivo para funcionalidad de recarga / Store the file for reload functionality
         setLastLoadedFile(file);
         setIsReloading(false);
       };
@@ -85,6 +172,19 @@ export function ScriptEditor({ text, onTextChange, currentScript, onFileLoad, ju
     }
   };
 
+  /**
+   * Recarga el último archivo cargado desde el sistema de archivos
+   * Reloads the last loaded file from file system
+   * 
+   * Útil cuando el archivo .txt se ha editado externamente y se necesita actualizar
+   * Useful when the .txt file has been edited externally and needs to be refreshed
+   * 
+   * Proceso / Process:
+   * 1. Verifica que haya un archivo previamente cargado
+   * 2. Lee el archivo nuevamente usando File API
+   * 3. Parsea y carga el contenido actualizado
+   * 4. Muestra notificación de éxito con detalles
+   */
   const handleReloadFile = () => {
     if (!lastLoadedFile) {
       toast.error('No hay archivo cargado para recargar');
@@ -94,21 +194,21 @@ export function ScriptEditor({ text, onTextChange, currentScript, onFileLoad, ju
     setIsReloading(true);
     toast.info(`Recargando "${lastLoadedFile.name}"...`);
     
-    // Re-process the same file using File API
+    // Re-procesar el mismo archivo usando File API / Re-process the same file using File API
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
       
-      // Try to parse as structured script file
+      // Intentar parsear como archivo de script estructurado / Try to parse as structured script file
       const parsedScripts = parseScriptFile(content);
       
       if (parsedScripts.length > 0 && onFileLoad) {
-        // If we have structured scripts, use the file loading handler
+        // Si tenemos scripts estructurados, usar el handler de carga / If we have structured scripts, use the file loading handler
         const fileName = lastLoadedFile.name.replace('.txt', '');
         onFileLoad(parsedScripts, fileName);
         toast.success(`✅ Archivo recargado: ${parsedScripts.length} guiones actualizados desde "${lastLoadedFile.name}"`);
       } else {
-        // If no structured format found, load as single script
+        // Si no se encuentra formato estructurado, cargar como script único / If no structured format found, load as single script
         onTextChange(content);
         toast.success(`✅ Archivo recargado: "${lastLoadedFile.name}"`);
       }
@@ -118,6 +218,9 @@ export function ScriptEditor({ text, onTextChange, currentScript, onFileLoad, ju
     reader.readAsText(lastLoadedFile);
   };
 
+  // ===== TEXTO DE EJEMPLO / SAMPLE TEXT =====
+  // Texto de demostración con formato estructurado [número] {TÍTULO}
+  // Demo text with structured format [number] {TITLE}
   const sampleText = `[1] {INTRO/TECH SCRIPTS ROLLING} KEEPING THOSE SCRIPTS ROLLING:
 
 Teleprompter - the unsung hero in the broadcast chain - a critical element, to be sure, but one too often taken for granted as just another tool - a critical essential, to be work.
@@ -132,22 +235,26 @@ For best results, use the format: [number] {TITLE} text content`;
 
   return (
     <div className="h-full bg-gray-100 border-r border-gray-300">
-      {/* Header */}
+      {/* ===== ENCABEZADO / HEADER ===== */}
       <div className="border-b border-gray-300 bg-gray-200">
-        {/* Title Bar */}
+        {/* ===== BARRA DE TÍTULO / TITLE BAR ===== */}
         <div className="p-3">
           <div className="flex items-center justify-between mb-2">
+            {/* Título del editor con nombre del script actual / Editor title with current script name */}
             <h3 className="text-sm font-medium text-gray-800">Story Editor: {currentScript}</h3>
             <div className="flex gap-1">
+              {/* Botón guardar / Save button */}
               <Button size="sm" variant="ghost" className="text-gray-600 hover:bg-gray-300 p-1">
                 <Save className="h-4 w-4" />
               </Button>
+              {/* Botón copiar / Copy button */}
               <Button size="sm" variant="ghost" className="text-gray-600 hover:bg-gray-300 p-1">
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
           </div>
           <div className="flex gap-2">
+            {/* Botón para cargar texto de ejemplo / Button to load sample text */}
             <Button
               variant="outline"
               size="sm"
@@ -156,6 +263,7 @@ For best results, use the format: [number] {TITLE} text content`;
             >
               Texto de Ejemplo
             </Button>
+            {/* Botón para cargar archivo .txt / Button to load .txt file */}
             <Button
               variant="outline"
               size="sm"
@@ -166,6 +274,7 @@ For best results, use the format: [number] {TITLE} text content`;
               <Upload className="h-3 w-3 mr-1" />
               Cargar TXT
             </Button>
+            {/* Botón para recargar último archivo / Button to reload last file */}
             <Button
               variant="outline"
               size="sm"
@@ -177,6 +286,7 @@ For best results, use the format: [number] {TITLE} text content`;
               <RefreshCw className={`h-3 w-3 mr-1 ${isReloading ? 'animate-spin' : ''}`} />
               {isReloading ? 'Recargando...' : 'Recargar'}
             </Button>
+            {/* Input oculto para selección de archivo / Hidden input for file selection */}
             <input
               ref={fileInputRef}
               type="file"
@@ -187,10 +297,12 @@ For best results, use the format: [number] {TITLE} text content`;
           </div>
         </div>
 
-        {/* Formatting Toolbar */}
+        {/* ===== BARRA DE FORMATEO / FORMATTING TOOLBAR ===== */}
+        {/* Controles completos de formato de texto similares a MS Word / Complete text formatting controls similar to MS Word */}
         <div className="px-3 py-2 bg-gray-300 border-t border-gray-400">
           <div className="flex items-center gap-1">
-            {/* Font Family */}
+            {/* ===== SELECTOR DE FUENTE / FONT FAMILY SELECTOR ===== */}
+            {/* 4 familias de fuente disponibles / 4 font families available */}
             <Select value={fontFamily} onValueChange={setFontFamily}>
               <SelectTrigger className="w-24 h-7 text-xs bg-white border-gray-400">
                 <SelectValue />
@@ -203,7 +315,8 @@ For best results, use the format: [number] {TITLE} text content`;
               </SelectContent>
             </Select>
 
-            {/* Font Size */}
+            {/* ===== SELECTOR DE TAMAÑO / FONT SIZE SELECTOR ===== */}
+            {/* 18 tamaños predefinidos de 8px a 500px / 18 predefined sizes from 8px to 500px */}
             <Select value={fontSize} onValueChange={setFontSize}>
               <SelectTrigger className="w-12 h-7 text-xs bg-white border-gray-400">
                 <SelectValue />
@@ -230,10 +343,11 @@ For best results, use the format: [number] {TITLE} text content`;
               </SelectContent>
             </Select>
 
-            {/* Separator */}
+            {/* Separador visual / Visual separator */}
             <div className="w-px h-5 bg-gray-500 mx-1" />
 
-            {/* Text Color */}
+            {/* ===== SELECTOR DE COLOR / TEXT COLOR SELECTOR ===== */}
+            {/* Botón con indicador de color actual / Button with current color indicator */}
             <Button 
               size="sm" 
               variant="ghost" 
@@ -242,7 +356,8 @@ For best results, use the format: [number] {TITLE} text content`;
               <div className="w-4 h-1 bg-black" />
             </Button>
 
-            {/* Format Buttons */}
+            {/* ===== BOTONES DE FORMATO / FORMAT BUTTONS ===== */}
+            {/* Negrita, cursiva, subrayado / Bold, italic, underline */}
             <Button 
               size="sm" 
               variant="ghost" 
@@ -268,10 +383,11 @@ For best results, use the format: [number] {TITLE} text content`;
               U
             </Button>
 
-            {/* Separator */}
+            {/* Separador visual / Visual separator */}
             <div className="w-px h-5 bg-gray-500 mx-1" />
 
-            {/* Alignment Buttons */}
+            {/* ===== BOTONES DE ALINEACIÓN / ALIGNMENT BUTTONS ===== */}
+            {/* Izquierda, centro, derecha / Left, center, right */}
             <Button 
               size="sm" 
               variant="ghost" 
@@ -297,10 +413,11 @@ For best results, use the format: [number] {TITLE} text content`;
               <AlignRight className="h-3 w-3" />
             </Button>
 
-            {/* Separator */}
+            {/* Separador visual / Visual separator */}
             <div className="w-px h-5 bg-gray-500 mx-1" />
 
-            {/* Case Toggle */}
+            {/* ===== BOTÓN DE MAYÚSCULAS / CASE TOGGLE BUTTON ===== */}
+            {/* Alterna entre mayúsculas y minúsculas / Toggles between uppercase and lowercase */}
             <Button 
               size="sm" 
               variant="ghost" 
@@ -311,10 +428,11 @@ For best results, use the format: [number] {TITLE} text content`;
               <Type className="h-3 w-3" />
             </Button>
 
-            {/* Separator */}
+            {/* Separador visual / Visual separator */}
             <div className="w-px h-5 bg-gray-500 mx-1" />
 
-            {/* Additional Tools */}
+            {/* ===== HERRAMIENTAS ADICIONALES / ADDITIONAL TOOLS ===== */}
+            {/* Botones para funciones extra: color de fondo, zoom, caso, menú / Buttons for extra functions: background color, zoom, case, menu */}
             <Button size="sm" variant="ghost" className="h-7 w-7 p-1 bg-white border border-gray-500 hover:bg-gray-100">
               <div className="w-3 h-3 bg-blue-600 rounded-sm" />
             </Button>
@@ -334,10 +452,11 @@ For best results, use the format: [number] {TITLE} text content`;
               <div className="text-xs text-gray-600">≡</div>
             </Button>
 
-            {/* Separator */}
+            {/* Separador visual / Visual separator */}
             <div className="w-px h-5 bg-gray-500 mx-1" />
 
-            {/* Number Shortcuts */}
+            {/* ===== ATAJOS NUMÉRICOS / NUMBER SHORTCUTS ===== */}
+            {/* Botones 1-0 para funciones rápidas personalizables / Buttons 1-0 for customizable quick functions */}
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((num) => (
               <Button 
                 key={num}
@@ -352,11 +471,14 @@ For best results, use the format: [number] {TITLE} text content`;
         </div>
       </div>
 
-      {/* Jump Markers Bar */}
+      {/* ===== BARRA DE MARCADORES DE SALTO / JUMP MARKERS BAR ===== */}
+      {/* Solo se muestra si hay marcadores definidos / Only shown if markers are defined */}
+      {/* Permite navegación rápida a secciones específicas del script / Allows quick navigation to specific script sections */}
       {Object.keys(jumpMarkers).length > 0 && (
         <div className="px-3 py-2 bg-gray-50 border-t border-gray-300">
           <div className="text-xs text-gray-600 mb-2">🎯 Marcadores de Salto:</div>
           <div className="flex flex-wrap gap-1">
+            {/* Botón por cada marcador / Button for each marker */}
             {Object.entries(jumpMarkers).map(([label, position]) => (
               <Button
                 key={position}
@@ -367,6 +489,7 @@ For best results, use the format: [number] {TITLE} text content`;
                 title={`Saltar a: ${label}`}
               >
                 <Target className="h-3 w-3" />
+                {/* Truncar etiquetas largas / Truncate long labels */}
                 {label.length > 15 ? label.substring(0, 15) + '...' : label}
               </Button>
             ))}
@@ -374,10 +497,11 @@ For best results, use the format: [number] {TITLE} text content`;
         </div>
       )}
 
-      {/* Editor */}
+      {/* ===== ÁREA DE EDICIÓN / EDITOR AREA ===== */}
       <div className="p-3 flex-1 overflow-hidden">
         <div className="w-full h-full relative">
-          {/* Toggle for Jump Icons */}
+          {/* ===== BOTÓN DE ALTERNANCIA DE ICONOS DE SALTO / JUMP ICONS TOGGLE BUTTON ===== */}
+          {/* Permite mostrar/ocultar los iconos de salto integrados en el texto / Allows showing/hiding jump icons embedded in text */}
           <div className="absolute top-0 right-0 z-10">
             <Button
               size="sm"
@@ -390,8 +514,11 @@ For best results, use the format: [number] {TITLE} text content`;
             </Button>
           </div>
 
-          {/* Text Editor with embedded jump markers */}
+          {/* ===== EDITOR DE TEXTO CON MARCADORES INTEGRADOS / TEXT EDITOR WITH EMBEDDED MARKERS ===== */}
           {showJumpIcons ? (
+            // **MODO CON ICONOS DE SALTO** / **MODE WITH JUMP ICONS**
+            // Usa componente personalizado para renderizar texto con iconos de salto clickeables
+            // Uses custom component to render text with clickable jump icons
             <div 
               className="w-full h-full border border-gray-300 bg-white p-3 overflow-auto rounded"
               style={{ 
@@ -403,14 +530,16 @@ For best results, use the format: [number] {TITLE} text content`;
                 textAlign: alignment as 'left' | 'center' | 'right'
               }}
             >
+              {/* Componente que renderiza texto con iconos de salto / Component that renders text with jump icons */}
               <TextWithJumpMarkers
                 text={text}
                 onJumpToPosition={onJumpToPosition}
-                fontSize={parseInt(fontSize) * 0.2}
+                fontSize={parseInt(fontSize) * 0.2} // Escala del tamaño de fuente / Font size scaling
                 showJumpIcons={true}
               />
               
-              {/* Invisible textarea for editing */}
+              {/* Textarea invisible para edición / Invisible textarea for editing */}
+              {/* Permite editar mientras se visualizan los iconos / Allows editing while viewing icons */}
               <Textarea
                 value={text}
                 onChange={(e) => onTextChange(e.target.value)}
@@ -423,14 +552,16 @@ For best results, use the format: [number] {TITLE} text content`;
                   fontStyle: isItalic ? 'italic' : 'normal',
                   textDecoration: isUnderline ? 'underline' : 'none',
                   textAlign: alignment as 'left' | 'center' | 'right',
-                  whiteSpace: 'pre-wrap',
-                  wordWrap: 'break-word',
-                  overflowWrap: 'break-word',
-                  zIndex: 1
+                  whiteSpace: 'pre-wrap', // Preservar saltos de línea / Preserve line breaks
+                  wordWrap: 'break-word', // Romper palabras largas / Break long words
+                  overflowWrap: 'break-word', // Wrap overflow / Envolver overflow
+                  zIndex: 1 // Por encima del texto decorado / Above decorated text
                 }}
               />
             </div>
           ) : (
+            // **MODO TEXTO SIMPLE** / **PLAIN TEXT MODE**
+            // Textarea estándar sin iconos de salto / Standard textarea without jump icons
             <Textarea
               value={text}
               onChange={(e) => onTextChange(e.target.value)}
@@ -439,21 +570,22 @@ For best results, use the format: [number] {TITLE} text content`;
               style={{ 
                 minHeight: 'calc(100vh - 240px)',
                 fontFamily: fontFamily,
-                fontSize: `${parseInt(fontSize) * 0.2}px`,
+                fontSize: `${parseInt(fontSize) * 0.2}px`, // Escala 0.2x del valor seleccionado / 0.2x scale of selected value
                 fontWeight: isBold ? 'bold' : 'normal',
                 fontStyle: isItalic ? 'italic' : 'normal',
                 textDecoration: isUnderline ? 'underline' : 'none',
                 textAlign: alignment as 'left' | 'center' | 'right',
-                whiteSpace: 'pre-wrap',
-                wordWrap: 'break-word',
-                overflowWrap: 'break-word'
+                whiteSpace: 'pre-wrap', // Preservar saltos de línea / Preserve line breaks
+                wordWrap: 'break-word', // Romper palabras largas / Break long words
+                overflowWrap: 'break-word' // Wrap overflow / Envolver overflow
               }}
             />
           )}
         </div>
       </div>
 
-      {/* Footer */}
+      {/* ===== PIE DE PÁGINA / FOOTER ===== */}
+      {/* Muestra información del script actual y contador de caracteres / Shows current script info and character counter */}
       <div className="p-2 border-t border-gray-300 bg-gray-200">
         <div className="text-xs text-gray-600">
           Script: {currentScript} | Caracteres: {text.length}
