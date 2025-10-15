@@ -143,7 +143,9 @@ package "Servicios (Services)" {
   }
   
   class PersistenceService {
-    - db: IDBDatabase
+    - fs: typeof import('fs')
+    - path: typeof import('path')
+    - userDataPath: string
     - autoSaveInterval: number = 30000
     - lastSaveTime: number
     --
@@ -152,24 +154,57 @@ package "Servicios (Services)" {
     + loadScripts(): Promise<RunOrderItem[]>
     + saveConfig(config: Configuration): Promise<void>
     + loadConfig(): Promise<Configuration>
-    + exportSession(): Promise<SessionData>
-    + importSession(data: SessionData): Promise<void>
+    + loadTextFile(filePath: string): Promise<string>
+    + saveTextFile(filePath: string, content: string): Promise<void>
+    + exportSession(outputPath: string): Promise<void>
+    + importSession(filePath: string): Promise<void>
     + enableAutoSave(): void
     + disableAutoSave(): void
     --
-    - compressData(data: any): Blob
-    - decompressData(blob: Blob): any
+    - ensureDirectory(dirPath: string): Promise<void>
+    - getConfigPath(): string
+    - getScriptsPath(): string
   }
   
+  note right of PersistenceService
+    <b>Electron Local Storage</b>
+    Usa fs (file system) de Node.js
+    No IndexedDB (eso es para web)
+    
+    Rutas típicas:
+    - Windows: C:\\Users\\[user]\\AppData\\Roaming\\Teleprompter Pro\\
+    - macOS: ~/Library/Application Support/Teleprompter Pro/
+    - Linux: ~/.config/Teleprompter Pro/
+    
+    Archivos:
+    - config.json (configuración)
+    - scripts.json (run order)
+    - [nombre].txt (scripts individuales)
+  end note
+  
   class ExcelImportService {
-    + importFromFile(file: File): Promise<RunOrderItem[]>
+    - fs: typeof import('fs')
+    --
+    + importFromFile(filePath: string): Promise<RunOrderItem[]>
+    + importFromBuffer(buffer: ArrayBuffer): Promise<RunOrderItem[]>
     + validateExcelData(data: any[][]): ValidationResult
     + mapExcelToRunOrder(data: any[][]): RunOrderItem[]
-    + previewImport(file: File): Promise<PreviewData>
+    + previewImport(filePath: string): Promise<PreviewData>
     --
     - detectColumns(headers: string[]): ColumnMapping
     - parseRowToItem(row: any[], mapping: ColumnMapping): RunOrderItem
   }
+  
+  note right of ExcelImportService
+    <b>Lectura de Excel Local</b>
+    Lee archivos .xlsx del sistema de archivos
+    usando biblioteca 'xlsx' (SheetJS)
+    
+    Soporta:
+    - Ruta absoluta: C:\\path\\to\\file.xlsx
+    - Diálogo de Electron para seleccionar archivo
+    - Buffer directo desde fs.readFile()
+  end note
 }
 
 package "Interfaces de Datos" {

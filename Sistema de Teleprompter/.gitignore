@@ -53,3 +53,11 @@ builder-effective-config.yaml
 # Electron specific
 electron-builder.yml
 out/
+
+# Office temporary files
+~$*.xlsx
+~$*.xls
+~$*.doc
+~$*.docx
+~$*.ppt
+~$*.pptx

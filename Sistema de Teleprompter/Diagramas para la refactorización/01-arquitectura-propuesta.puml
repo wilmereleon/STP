@@ -86,11 +86,32 @@ package "Hooks Personalizados" <<hook>> {
   [usePersistence] <<hook>>
 }
 
-package "Almacenamiento" {
-  database "IndexedDB\n(Scripts, Config)" as IDB
-  database "localStorage\n(Macros)" as LS
-  file "Excel Files\n(.xlsx)" as Excel
-  file ".awn Files" as AWN
+package "Almacenamiento Local (Electron)" {
+  folder "app.getPath('userData')" as UserData {
+    file "config.json\n(Configuración)" as ConfigFile
+    file "scripts.json\n(Run Order)" as ScriptsFile
+    folder "scripts/" {
+      file "Script_01.txt" as TXT1
+      file "Script_02.txt" as TXT2
+      file "..." as TXTMore
+    }
+  }
+  
+  folder "Documentos Usuario" as UserDocs {
+    file "prompter_intro.xlsx\n(Excel importado)" as Excel
+    file "Guion_Noticias.awn\n(Formato nativo)" as AWN
+  }
+  
+  note right of UserData
+    <b>Rutas típicas Electron:</b>
+    Windows: C:\\Users\\[user]\\AppData\\Roaming\\Teleprompter Pro\\
+    macOS: ~/Library/Application Support/Teleprompter Pro/
+    Linux: ~/.config/Teleprompter Pro/
+    
+    <b>Acceso:</b>
+    const { app } = require('electron');
+    const userDataPath = app.getPath('userData');
+  end note
 }
 
 ' Relaciones principales
@@ -110,10 +131,11 @@ package "Almacenamiento" {
 [AutoScrollService] ..> [PreviewPanel] : scroll sincronizado
 [AutoScrollService] ..> [TeleprompterWindow] : scroll sincronizado
 
-[PersistenceService] --> IDB : guarda/carga
-[PersistenceService] --> LS : macros
-[ExcelImportService] --> Excel : importa
-[RunOrderStore] --> AWN : exporta/importa
+[PersistenceService] --> ConfigFile : fs.writeFile/readFile
+[PersistenceService] --> ScriptsFile : guarda run order
+[PersistenceService] --> TXT1 : lee/escribe .txt
+[ExcelImportService] --> Excel : lee .xlsx
+[RunOrderStore] --> AWN : exporta/importa .awn
 
 ' Hooks
 [RunOrderPanel] ..> [useRunOrderStore] : usa
