@@ -102,6 +102,11 @@ export function ScriptEditor({ text, onTextChange, currentScript, onFileLoad, ju
    * Formato esperado: [número] {TÍTULO} contenido del texto
    * Expected format: [number] {TITLE} text content
    * 
+   * Soporta múltiples formatos / Supports multiple formats:
+   * - [1] {INTRO} texto...
+   * - [2] {MAIN CONTENT} texto...
+   * - [3] texto sin título (título por defecto)
+   * 
    * Ejemplo / Example:
    * [1] {INTRO} Este es el primer script...
    * [2] {MAIN CONTENT} Este es el segundo script...
@@ -113,16 +118,21 @@ export function ScriptEditor({ text, onTextChange, currentScript, onFileLoad, ju
     const scripts: Array<{id: string, title: string, text: string}> = [];
     
     // Buscar todos los bloques de script usando regex / Find all script blocks using regex
-    // Patrón: [número] {título} texto hasta el próximo [número] o final / Pattern: [number] {title} text until next [number] or end
-    const scriptRegex = /\[(\d+)\]\s*\{([^}]+)\}([\s\S]*?)(?=\[\d+\]\s*\{[^}]+\}|$)/g;
+    // Patrón flexible: [número] seguido opcionalmente de {título} y luego el texto
+    // Flexible pattern: [number] followed optionally by {title} and then the text
+    // Captura: [1] {TITLE} texto o [1] texto
+    const scriptRegex = /\[(\d+)\]\s*(?:\{([^}]+)\})?\s*([\s\S]*?)(?=\n\s*\[\d+\]|$)/g;
     let match;
     
     while ((match = scriptRegex.exec(content)) !== null) {
       const [, number, title, text] = match;
       
+      // Si no hay título entre {}, usar uno por defecto / If no title in {}, use default
+      const scriptTitle = title ? title.trim() : `Script ${number}`;
+      
       scripts.push({
         id: number.trim(),
-        title: title.trim(),
+        title: scriptTitle,
         text: text.trim()
       });
     }

@@ -295,5 +295,3 @@ export function getPersistenceService(): PersistenceService {
   }
   return persistenceServiceInstance;
 }
-
-export default PersistenceService;

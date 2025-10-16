@@ -86,29 +86,32 @@ export function MainToolbar({
 }: MainToolbarProps) {
   return (
     // Contenedor principal con fondo semi-transparente y borde inferior
-    <div className="bg-muted/30 border-b px-4 py-2">
-      <div className="flex items-center justify-between">
+    // Responsive: padding reducido en móviles, flex-wrap para ajustar elementos
+    <div className="bg-muted/30 border-b px-2 sm:px-4 py-1 sm:py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         
         {/* ===== SECCIÓN IZQUIERDA: OPERACIONES DE ARCHIVO ===== */}
-        <div className="flex items-center gap-2">
+        {/* Responsive: ocultar texto en móviles (sm:mr-2), solo mostrar íconos */}
+        <div className="flex items-center gap-1 sm:gap-2">
           {/* Botón Abrir archivo */}
-          <Button variant="outline" size="sm" onClick={onOpen}>
-            <FolderOpen className="w-4 h-4 mr-2" />
-            Open
+          <Button variant="outline" size="sm" onClick={onOpen} className="px-2 sm:px-3">
+            <FolderOpen className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Open</span>
           </Button>
           
           {/* Botón Guardar */}
-          <Button variant="outline" size="sm" onClick={onSave}>
-            <Save className="w-4 h-4 mr-2" />
-            Save
+          <Button variant="outline" size="sm" onClick={onSave} className="px-2 sm:px-3">
+            <Save className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Save</span>
           </Button>
           
-          {/* Separador vertical */}
-          <Separator orientation="vertical" className="h-6" />
+          {/* Separador vertical - ocultar en móviles */}
+          <Separator orientation="vertical" className="h-6 hidden sm:block" />
         </div>
 
         {/* ===== SECCIÓN CENTRAL: CONTROLES DE TRANSPORTE ===== */}
-        <div className="flex items-center gap-2">
+        {/* Responsive: gap reducido en móviles, prioridad central */}
+        <div className="flex items-center gap-1 sm:gap-2">
           {/* Botón Script Anterior */}
           <Button variant="outline" size="sm" onClick={onPrevious}>
             <SkipBack className="w-4 h-4" />
@@ -137,28 +140,29 @@ export function MainToolbar({
             <SkipForward className="w-4 h-4" />
           </Button>
           
-          {/* Separador vertical */}
-          <Separator orientation="vertical" className="h-6" />
+          {/* Separador vertical - ocultar en móviles */}
+          <Separator orientation="vertical" className="h-6 hidden sm:block" />
           
           {/* Indicador de tiempo con ícono de volumen */}
-          <div className="flex items-center gap-2">
-            <Volume2 className="w-4 h-4 text-muted-foreground" />
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Volume2 className="w-4 h-4 text-muted-foreground hidden sm:block" />
             {/* Tiempo en formato monoespaciado con ancho mínimo para evitar saltos */}
-            <span className="text-sm font-mono min-w-[60px]">{currentTime}</span>
+            <span className="text-xs sm:text-sm font-mono min-w-[50px] sm:min-w-[60px]">{currentTime}</span>
           </div>
         </div>
 
         {/* ===== SECCIÓN DERECHA: ESTADO Y CONFIGURACIÓN ===== */}
-        <div className="flex items-center gap-2">
+        {/* Responsive: gap reducido, badge más pequeño en móviles */}
+        <div className="flex items-center gap-1 sm:gap-2">
           {/* Badge PROMPTING (solo visible cuando isPrompting=true) */}
           {isPrompting && (
-            <Badge variant="destructive" className="animate-pulse">
+            <Badge variant="destructive" className="animate-pulse text-xs">
               PROMPTING
             </Badge>
           )}
           
-          {/* Separador vertical */}
-          <Separator orientation="vertical" className="h-6" />
+          {/* Separador vertical - ocultar en móviles */}
+          <Separator orientation="vertical" className="h-6 hidden sm:block" />
           
           {/* Botón Pantalla Completa */}
           <Button variant="outline" size="sm" onClick={onFullscreen}>

@@ -32,7 +32,7 @@
 import { useEffect, useRef, useState } from 'react';
 // Componentes del teleprompter / Teleprompter components
 import { TeleprompterScreen } from './TeleprompterScreen';
-import { TeleprompterControls } from './TeleprompterControls.v2';
+import { TeleprompterControls } from './TeleprompterControls';
 // Hooks del Store / Store hooks
 import { useTeleprompterStore, useRunOrderStore } from '../hooks';
 // Servicio de sincronización / Synchronization service
@@ -322,6 +322,17 @@ export function TeleprompterWindow() {
   }, [isPlaying, speed, fontSize]);
   
   // ===== RENDER / RENDERIZADO =====
+  
+  // Debug: Log del texto para verificar que llega / Debug: Log text to verify it arrives
+  useEffect(() => {
+    console.log('📄 TeleprompterWindow: text updated', { 
+      textLength: text?.length || 0, 
+      textPreview: text?.substring(0, 100) || 'NO TEXT',
+      fontSize,
+      isPlaying,
+      scrollPosition
+    });
+  }, [text, fontSize, isPlaying, scrollPosition]);
   
   return (
     <div 

@@ -357,10 +357,12 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
       {/* ===== LAYOUT DE 3 PANELES / 3-PANEL LAYOUT ===== */}
-      <div className="flex-1 flex gap-2 p-2 overflow-hidden">
+      {/* Responsive: flex-wrap en pantallas pequeñas, gap reducido en móviles */}
+      <div className="flex-1 flex flex-wrap lg:flex-nowrap gap-1 sm:gap-2 p-1 sm:p-2 overflow-auto lg:overflow-hidden">
         
         {/* ===== PANEL IZQUIERDO: RUN ORDER / LEFT PANEL: RUN ORDER ===== */}
-        <div className="w-80 flex-shrink-0">
+        {/* Responsive: w-full en móvil, w-80 en tablet+, min-w-0 para prevenir overflow */}
+        <div className="w-full sm:w-72 lg:w-80 flex-shrink-0 min-w-0">
           <RunOrderPanel
             onAddItem={handleAddItem}
             onEditItem={handleEditItem}
@@ -368,7 +370,8 @@ export default function App() {
         </div>
         
         {/* ===== PANEL CENTRAL: EDITOR / CENTER PANEL: EDITOR ===== */}
-        <div className="flex-1 flex flex-col min-w-0">
+        {/* Responsive: flex-1 para crecer, min-w-0 para prevenir overflow, w-full en móvil */}
+        <div className="w-full lg:flex-1 flex flex-col min-w-0">
           <ScriptEditor
             text={text}
             onTextChange={handleTextChange}
@@ -377,7 +380,8 @@ export default function App() {
         </div>
         
         {/* ===== PANEL DERECHO: PREVIEW / RIGHT PANEL: PREVIEW ===== */}
-        <div className="w-96 flex-shrink-0">
+        {/* Responsive: w-full en móvil, w-80 en tablet+, ocultar en xs con hidden sm:block */}
+        <div className="w-full sm:w-80 lg:w-96 flex-shrink-0 min-w-0">
           <TeleprompterPreview
             onOpenTeleprompter={handleOpenTeleprompter}
             onOpenTeleprompterModal={handleOpenTeleprompterModal}
