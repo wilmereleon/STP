@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react';
 // Componente para renderizar texto con marcadores de salto / Component to render text with jump markers
 import { TextWithJumpMarkers } from './TextWithJumpMarkers';
+// Estilos personalizados para ocultar scrollbar / Custom styles to hide scrollbar
+import './TeleprompterScreen.css';
 
 /**
  * Propiedades del componente TeleprompterScreen
@@ -262,12 +264,17 @@ export function TeleprompterScreen({
 
   return (
     // ===== CONTENEDOR PRINCIPAL / MAIN CONTAINER =====
-    // Contenedor con fondo negro y scroll oculto (overflow-hidden)
-    // Container with black background and hidden scroll (overflow-hidden)
+    // Contenedor con fondo negro y scroll automático pero barra oculta
+    // Container with black background and automatic scroll but hidden scrollbar
     <div 
       ref={containerRef}
-      className="h-full w-full bg-black text-white overflow-hidden relative"
-      style={{ fontSize: `${fontSize}px` }} // Tamaño de fuente dinámico / Dynamic font size
+      className="teleprompter-screen h-full w-full bg-black text-white overflow-y-auto overflow-x-hidden relative"
+      style={{ 
+        fontSize: `${fontSize}px`, // Tamaño de fuente dinámico / Dynamic font size
+        scrollBehavior: 'smooth', // Scroll suave nativo / Smooth native scroll
+        scrollbarWidth: 'none', // Firefox: ocultar scrollbar / Firefox: hide scrollbar
+        msOverflowStyle: 'none' // IE/Edge: ocultar scrollbar / IE/Edge: hide scrollbar
+      }}
       onWheel={handleWheel} // Capturar eventos de rueda del mouse / Capture mouse wheel events
     >
       {/* ===== CONTENIDO DE TEXTO / TEXT CONTENT ===== */}

@@ -27,8 +27,8 @@
 import { useEffect, useState } from 'react';
 
 // Componentes refactorizados v2 / Refactored v2 components
-import { RunOrderPanel } from './components/RunOrderPanel.v2';
-import { TeleprompterPreview } from './components/TeleprompterPreview.v2';
+import { RunOrderPanel } from './components/RunOrderPanel';
+import { TeleprompterPreview } from './components/TeleprompterPreview';
 import { TeleprompterWindow } from './components/TeleprompterWindow';
 import { TeleprompterModal } from './components/TeleprompterModal';
 
@@ -398,15 +398,14 @@ export default function App() {
   
   // ===== RENDER PRINCIPAL / MAIN RENDER =====
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-background">
+    <div className="h-screen flex flex-col bg-background">
       {/* ===== LAYOUT DE 3 PANELES HORIZONTAL / 3-PANEL HORIZONTAL LAYOUT ===== */}
-      {/* Layout horizontal FORZADO en pantallas md+ (≥768px) */}
-      {/* Vertical solo en móviles <768px */}
-      <div className="flex-1 flex flex-col md:flex-row md:flex-nowrap gap-2 p-2 overflow-hidden">
+      {/* Layout horizontal en desktop (≥768px), vertical en móvil */}
+      <div className="flex-1 flex flex-col md:flex-row gap-2 p-2 min-h-0">
         
         {/* ===== PANEL IZQUIERDO: RUN ORDER / LEFT PANEL: RUN ORDER ===== */}
-        {/* Móvil: altura limitada | Desktop: altura completa */}
-        <div className="w-full h-64 md:h-full md:w-72 lg:w-80 flex-shrink-0 overflow-hidden">
+        {/* Desktop: ancho fijo 320px | Móvil: altura 256px */}
+        <div className="w-full h-64 md:h-auto md:w-80 md:flex-shrink-0">
           <RunOrderPanel
             onAddItem={handleAddItem}
             onEditItem={handleEditItem}
@@ -414,8 +413,8 @@ export default function App() {
         </div>
         
         {/* ===== PANEL CENTRAL: EDITOR / CENTER PANEL: EDITOR ===== */}
-        {/* Flex-1 para ocupar todo el espacio disponible */}
-        <div className="flex-1 w-full md:w-0 flex flex-col min-w-0 overflow-hidden">
+        {/* Flex-1 para ocupar espacio restante */}
+        <div className="flex-1 min-w-0 min-h-0">
           <ScriptEditor
             text={text}
             onTextChange={handleTextChange}
@@ -425,8 +424,8 @@ export default function App() {
         </div>
         
         {/* ===== PANEL DERECHO: PREVIEW / RIGHT PANEL: PREVIEW ===== */}
-        {/* Móvil: altura limitada | Desktop: altura completa */}
-        <div className="w-full h-64 md:h-full md:w-80 lg:w-96 flex-shrink-0 overflow-hidden">
+        {/* Desktop: ancho fijo 384px | Móvil: altura 256px */}
+        <div className="w-full h-64 md:h-auto md:w-96 md:flex-shrink-0">
           <TeleprompterPreview
             onOpenTeleprompter={handleOpenTeleprompter}
             onOpenTeleprompterModal={handleOpenTeleprompterModal}
