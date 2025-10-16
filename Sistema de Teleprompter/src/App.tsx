@@ -240,6 +240,49 @@ export default function App() {
   };
   
   /**
+   * Carga múltiples scripts desde un archivo TXT estructurado
+   * Loads multiple scripts from a structured TXT file
+   * 
+   * Formato esperado / Expected format:
+   * [1] {TITULO} texto del script
+   * [2] {OTRO TITULO} más texto
+   * 
+   * @param scripts - Array de scripts parseados del archivo
+   * @param fileName - Nombre del archivo (usado como prefijo)
+   */
+  const handleFileLoad = (
+    scripts: Array<{id: string, title: string, text: string}>, 
+    fileName: string
+  ) => {
+    console.log(`📄 App: loading ${scripts.length} scripts from "${fileName}"`);
+    
+    // Agregar cada script como un item del Run Order
+    scripts.forEach((script, index) => {
+      const newItem = {
+        id: `${Date.now()}-${index}`,
+        title: script.title,
+        duration: '00:00',
+        status: 'ready' as const,
+        text: script.text,
+        sourceFile: fileName // Opcional: guardar referencia al archivo fuente
+      };
+      
+      addItem(newItem);
+    });
+    
+    // Activar el primer script cargado
+    if (scripts.length > 0) {
+      const firstItemId = `${Date.now()}-0`;
+      setTimeout(() => {
+        setActiveItem(firstItemId);
+        setText(scripts[0].text);
+      }, 100);
+    }
+    
+    console.log(`✅ App: ${scripts.length} scripts added to Run Order`);
+  };
+  
+  /**
    * Edita un item del run order (cambia al editor)
    * Edits a run order item (switches to editor)
    */
@@ -376,6 +419,7 @@ export default function App() {
             text={text}
             onTextChange={handleTextChange}
             currentScript={activeItem?.title || 'Sin título'}
+            onFileLoad={handleFileLoad}
           />
         </div>
         

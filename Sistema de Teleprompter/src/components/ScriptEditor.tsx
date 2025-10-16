@@ -117,25 +117,46 @@ export function ScriptEditor({ text, onTextChange, currentScript, onFileLoad, ju
   const parseScriptFile = (content: string) => {
     const scripts: Array<{id: string, title: string, text: string}> = [];
     
-    // Buscar todos los bloques de script usando regex / Find all script blocks using regex
-    // Patrón flexible: [número] seguido opcionalmente de {título} y luego el texto
-    // Flexible pattern: [number] followed optionally by {title} and then the text
-    // Captura: [1] {TITLE} texto o [1] texto
-    const scriptRegex = /\[(\d+)\]\s*(?:\{([^}]+)\})?\s*([\s\S]*?)(?=\n\s*\[\d+\]|$)/g;
-    let match;
+    // Primero, dividir el contenido por bloques que empiezan con [número]
+    // First, split content by blocks starting with [number]
+    const blockRegex = /\[(\d+)\]/g;
+    const matches = Array.from(content.matchAll(blockRegex));
     
-    while ((match = scriptRegex.exec(content)) !== null) {
-      const [, number, title, text] = match;
+    if (matches.length === 0) {
+      // No se encontró formato estructurado
+      return scripts;
+    }
+    
+    // Procesar cada bloque
+    matches.forEach((match, index) => {
+      const number = match[1];
+      const startPos = match.index!;
+      const endPos = index < matches.length - 1 
+        ? matches[index + 1].index! 
+        : content.length;
       
-      // Si no hay título entre {}, usar uno por defecto / If no title in {}, use default
-      const scriptTitle = title ? title.trim() : `Script ${number}`;
+      // Extraer el bloque completo
+      let block = content.substring(startPos, endPos).trim();
+      
+      // Remover el [número] del inicio
+      block = block.replace(/^\[\d+\]\s*/, '');
+      
+      // Intentar extraer título entre {}
+      let title = `Script ${number}`;
+      let text = block;
+      
+      const titleMatch = block.match(/^\{([^}]+)\}\s*/);
+      if (titleMatch) {
+        title = titleMatch[1].trim();
+        text = block.substring(titleMatch[0].length).trim();
+      }
       
       scripts.push({
-        id: number.trim(),
-        title: scriptTitle,
-        text: text.trim()
+        id: number,
+        title: title,
+        text: text
       });
-    }
+    });
     
     return scripts;
   };
