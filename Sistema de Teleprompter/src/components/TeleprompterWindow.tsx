@@ -126,6 +126,13 @@ export function TeleprompterWindow() {
     setTimeout(() => {
       setIsConnected(true);
       console.log('✅ TeleprompterWindow: connected to master');
+      
+      // AUTO-START: Iniciar reproducción automáticamente si hay texto
+      // AUTO-START: Start playback automatically if there's text
+      if (text && !isPlaying) {
+        console.log('▶️ TeleprompterWindow: auto-starting playback');
+        play();
+      }
     }, 500);
     
     // Cleanup: Dispose service on unmount
@@ -134,6 +141,19 @@ export function TeleprompterWindow() {
       syncService.dispose();
     };
   }, []);
+  
+  // ===== EFECTO: AUTO-START CUANDO LLEGA TEXTO NUEVO / EFFECT: AUTO-START WHEN NEW TEXT ARRIVES =====
+  /**
+   * Inicia automáticamente la reproducción cuando llega texto nuevo
+   * Automatically starts playback when new text arrives
+   */
+  useEffect(() => {
+    // Solo auto-start si hay texto y NO está reproduciendo
+    if (text && text.length > 0 && !isPlaying && isConnected) {
+      console.log('▶️ TeleprompterWindow: auto-starting on new text');
+      play();
+    }
+  }, [text, isConnected, isPlaying, play]);
   
   // ===== EFECTO: MOUSE WHEEL CONTROLS / EFFECT: MOUSE WHEEL CONTROLS =====
   /**

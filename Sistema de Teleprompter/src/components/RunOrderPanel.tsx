@@ -13,6 +13,8 @@ import { Plus, Trash2, Edit, FileSpreadsheet, Upload } from "lucide-react";
 import { useRunOrderStore } from "../hooks";
 // Servicio de importación Excel / Excel import service
 import { excelImportService } from "../services/ExcelImportService";
+// Toast notifications
+import { toast } from "sonner";
 
 /**
  * Propiedades del componente RunOrderPanel v2
@@ -83,13 +85,18 @@ export function RunOrderPanel({
     activeItemId,
     setActiveItem,
     deleteItem,
-    setItems
+    setItems,
+    updateItem
   } = useRunOrderStore();
   
   // ===== ESTADO LOCAL / LOCAL STATE =====
   const [isImporting, setIsImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Estado para edición inline de título / State for inline title editing
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
   
   // ===== HANDLERS / MANEJADORES =====
   
@@ -109,6 +116,60 @@ export function RunOrderPanel({
   const handleDeleteItem = (id: string) => {
     console.log('🗑️ RunOrderPanel: deleting item', id);
     deleteItem(id);
+  };
+  
+  /**
+   * Inicia la edición del título de un item
+   * Starts editing an item's title
+   */
+  const handleStartEdit = (id: string, currentTitle: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log('✏️ RunOrderPanel: starting edit for item', id);
+    setEditingItemId(id);
+    setEditingTitle(currentTitle);
+  };
+  
+  /**
+   * Guarda el nuevo título del item
+   * Saves the new item title
+   */
+  const handleSaveTitle = () => {
+    if (editingItemId && editingTitle.trim()) {
+      const success = updateItem(editingItemId, { title: editingTitle.trim() });
+      if (success) {
+        console.log('✅ RunOrderPanel: title updated for item', editingItemId);
+        toast.success('Script renombrado');
+      } else {
+        console.error('❌ RunOrderPanel: failed to update title');
+        toast.error('Error al renombrar script');
+      }
+    }
+    setEditingItemId(null);
+    setEditingTitle('');
+  };
+  
+  /**
+   * Cancela la edición del título
+   * Cancels title editing
+   */
+  const handleCancelEdit = () => {
+    console.log('🚫 RunOrderPanel: canceling edit');
+    setEditingItemId(null);
+    setEditingTitle('');
+  };
+  
+  /**
+   * Maneja el teclado durante la edición
+   * Handles keyboard during editing
+   */
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveTitle();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancelEdit();
+    }
   };
   
   /**
@@ -261,21 +322,41 @@ export function RunOrderPanel({
                         {item.duration || '00:00'}
                       </Badge>
                     </div>
-                    {/* Título del item / Item title */}
-                    <div className="text-xs font-medium truncate">{item.title}</div>
+                    {/* Título del item (editable inline) / Item title (inline editable) */}
+                    {editingItemId === item.id ? (
+                      <input
+                        type="text"
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onBlur={handleSaveTitle}
+                        onKeyDown={handleKeyDown}
+                        onClick={(e) => e.stopPropagation()}
+                        autoFocus
+                        className="text-xs font-medium w-full px-1 py-0.5 border rounded bg-background"
+                      />
+                    ) : (
+                      <div 
+                        className="text-xs font-medium truncate cursor-text hover:text-primary/80 transition-colors"
+                        onDoubleClick={(e) => handleStartEdit(item.id, item.title, e)}
+                        title="Doble-clic para editar / Double-click to edit"
+                      >
+                        {item.title}
+                      </div>
+                    )}
                   </div>
                   
                   {/* ===== BOTONES DE ACCIÓN / ACTION BUTTONS ===== */}
                   <div className="flex gap-1">
-                    {/* Botón de editar / Edit button */}
+                    {/* Botón de editar título / Edit title button */}
                     <Button
                       size="sm"
                       variant="ghost"
                       className="h-6 w-6 p-0"
                       onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                         e.stopPropagation();
-                        onEditItem(item.id);
+                        handleStartEdit(item.id, item.title, e);
                       }}
+                      title="Editar nombre / Edit name"
                     >
                       <Edit className="w-3 h-3" />
                     </Button>

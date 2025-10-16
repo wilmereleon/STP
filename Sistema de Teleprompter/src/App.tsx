@@ -399,13 +399,14 @@ export default function App() {
   // ===== RENDER PRINCIPAL / MAIN RENDER =====
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
-      {/* ===== LAYOUT DE 3 PANELES / 3-PANEL LAYOUT ===== */}
-      {/* Responsive: flex-wrap en pantallas pequeñas, gap reducido en móviles */}
-      <div className="flex-1 flex flex-wrap lg:flex-nowrap gap-1 sm:gap-2 p-1 sm:p-2 overflow-auto lg:overflow-hidden">
+      {/* ===== LAYOUT DE 3 PANELES HORIZONTAL / 3-PANEL HORIZONTAL LAYOUT ===== */}
+      {/* Layout horizontal FORZADO en pantallas md+ (≥768px) */}
+      {/* Vertical solo en móviles <768px */}
+      <div className="flex-1 flex flex-col md:flex-row md:flex-nowrap gap-2 p-2 overflow-hidden">
         
         {/* ===== PANEL IZQUIERDO: RUN ORDER / LEFT PANEL: RUN ORDER ===== */}
-        {/* Responsive: w-full en móvil, w-80 en tablet+, min-w-0 para prevenir overflow */}
-        <div className="w-full sm:w-72 lg:w-80 flex-shrink-0 min-w-0">
+        {/* Móvil: altura limitada | Desktop: altura completa */}
+        <div className="w-full h-64 md:h-full md:w-72 lg:w-80 flex-shrink-0 overflow-hidden">
           <RunOrderPanel
             onAddItem={handleAddItem}
             onEditItem={handleEditItem}
@@ -413,8 +414,8 @@ export default function App() {
         </div>
         
         {/* ===== PANEL CENTRAL: EDITOR / CENTER PANEL: EDITOR ===== */}
-        {/* Responsive: flex-1 para crecer, min-w-0 para prevenir overflow, w-full en móvil */}
-        <div className="w-full lg:flex-1 flex flex-col min-w-0">
+        {/* Flex-1 para ocupar todo el espacio disponible */}
+        <div className="flex-1 w-full md:w-0 flex flex-col min-w-0 overflow-hidden">
           <ScriptEditor
             text={text}
             onTextChange={handleTextChange}
@@ -424,8 +425,8 @@ export default function App() {
         </div>
         
         {/* ===== PANEL DERECHO: PREVIEW / RIGHT PANEL: PREVIEW ===== */}
-        {/* Responsive: w-full en móvil, w-80 en tablet+, ocultar en xs con hidden sm:block */}
-        <div className="w-full sm:w-80 lg:w-96 flex-shrink-0 min-w-0">
+        {/* Móvil: altura limitada | Desktop: altura completa */}
+        <div className="w-full h-64 md:h-full md:w-80 lg:w-96 flex-shrink-0 overflow-hidden">
           <TeleprompterPreview
             onOpenTeleprompter={handleOpenTeleprompter}
             onOpenTeleprompterModal={handleOpenTeleprompterModal}
