@@ -2,7 +2,7 @@
  * ExcelImportService - Servicio de importación desde Excel
  * 
  * Permite importar scripts desde archivos Excel (.xlsx) usando SheetJS (xlsx).
- * Compatible con Electron: lee archivos desde el sistema de archivos local.
+ * Compatible con navegador: usa FileReader API para leer archivos.
  * 
  * Formato esperado del Excel:
  * - Columna "Número de Guion" / "Numero" / "ID" → id
@@ -16,7 +16,6 @@
  */
 
 import * as XLSX from 'xlsx';
-import { promises as fs } from 'fs';
 import type { RunOrderItem, ItemStatus } from '../stores/RunOrderStore';
 
 /**
@@ -64,9 +63,20 @@ export class ExcelImportService {
   
   /**
    * Importa scripts desde un archivo Excel local
+   * NOTA: Este método requiere Node.js/Electron y no funciona en navegador
+   * Use importFromBuffer() con FileReader API en navegador
    * @param filePath - Ruta absoluta del archivo .xlsx
    */
   async importFromFile(filePath: string): Promise<ImportResult> {
+    console.error('❌ ExcelImportService.importFromFile(): Not available in browser. Use importFromBuffer() with FileReader API instead.');
+    return {
+      success: false,
+      items: [],
+      errors: ['importFromFile() no disponible en navegador. Use FileReader API con importFromBuffer()'],
+      warnings: []
+    };
+    
+    /* COMMENTED OUT - Requires Node.js fs module
     try {
       if (process.env.NODE_ENV === 'development') {
         console.log(`📊 ExcelImportService: importing from ${filePath}`);
@@ -86,6 +96,7 @@ export class ExcelImportService {
         warnings: []
       };
     }
+    */
   }
   
   /**
@@ -190,9 +201,14 @@ export class ExcelImportService {
   
   /**
    * Genera un preview de la importación (primeras 5 filas)
+   * NOTA: Este método requiere Node.js/Electron y no funciona en navegador
    * @param filePath - Ruta del archivo Excel
    */
   async previewImport(filePath: string): Promise<ImportPreview | null> {
+    console.error('❌ ExcelImportService.previewImport(): Not available in browser.');
+    return null;
+    
+    /* COMMENTED OUT - Requires Node.js fs module
     try {
       const buffer = await fs.readFile(filePath);
       const workbook = XLSX.read(buffer, { type: 'buffer' });
@@ -221,6 +237,7 @@ export class ExcelImportService {
       console.error('❌ ExcelImportService: error en preview', error);
       return null;
     }
+    */
   }
   
   /**
@@ -380,8 +397,12 @@ export class ExcelImportService {
   
   /**
    * Valida que el archivo sea un Excel válido
+   * NOTA: Este método requiere Node.js/Electron y no funciona en navegador
    */
   async validateExcelFile(filePath: string): Promise<{ valid: boolean, error?: string }> {
+    return { valid: false, error: 'validateExcelFile() no disponible en navegador' };
+    
+    /* COMMENTED OUT - Requires Node.js fs module
     try {
       const buffer = await fs.readFile(filePath);
       const workbook = XLSX.read(buffer, { type: 'buffer' });
@@ -401,6 +422,7 @@ export class ExcelImportService {
     } catch (error: any) {
       return { valid: false, error: `Error al validar: ${error.message}` };
     }
+    */
   }
   
   /**

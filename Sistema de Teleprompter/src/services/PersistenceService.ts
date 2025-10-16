@@ -1,23 +1,17 @@
 /**
- * PersistenceService - Servicio de persistencia con fs (Electron)
+ * PersistenceService - Servicio de persistencia con localStorage
  * 
- * Maneja el almacenamiento local de datos usando el sistema de archivos.
- * Compatible con Electron usando app.getPath('userData').
+ * Maneja el almacenamiento local de datos usando localStorage.
+ * Compatible con navegador y Electron.
  * 
- * NO usa IndexedDB (eso es para navegadores web).
- * USA fs.promises para operaciones asíncronas de archivos.
- * 
- * Estructura de archivos:
- * - userData/config.json (configuración)
- * - userData/scripts.json (run order)
- * - userData/scripts/ (scripts individuales .txt)
+ * Estructura de datos:
+ * - localStorage.getItem('teleprompter-config') (configuración)
+ * - localStorage.getItem('teleprompter-scripts') (run order)
  * 
  * @version 2.0.0
  * @pattern Service Layer
  */
 
-import { promises as fs } from 'fs';
-import * as path from 'path';
 import type { RunOrderItem } from '../stores/RunOrderStore';
 import type { ConfigurationState } from '../stores/ConfigurationStore';
 
@@ -32,404 +26,274 @@ export interface SessionData {
 }
 
 export class PersistenceService {
-  private userDataPath: string = '';
   private autoSaveInterval: NodeJS.Timeout | null = null;
   private readonly autoSavePeriod = 30000; // 30 segundos
   private isInitialized = false;
+  private readonly storagePrefix = 'teleprompter-';
   
   /**
-   * Inicializa el servicio obteniendo el userDataPath de Electron
+   * Inicializa el servicio
    */
   async initialize(): Promise<void> {
-    if (this.isInitialized) return;
-    
+    if (this.isInitialized) {
+      console.log('💾 PersistenceService: already initialized');
+      return;
+    }
+
     try {
-      // En Electron, obtener userDataPath desde main process
-      if (typeof window !== 'undefined' && (window as any).electron) {
-        this.userDataPath = await (window as any).electron.getUserDataPath();
-      } else {
-        // Fallback para desarrollo (sin Electron)
-        this.userDataPath = path.join(process.cwd(), 'user-data');
+      // Verificar disponibilidad de localStorage
+      if (typeof window === 'undefined' || !window.localStorage) {
+        throw new Error('localStorage not available');
       }
-      
-      // Crear directorios necesarios
-      await this.ensureDirectories();
-      
+
       this.isInitialized = true;
-      
-      console.log(`💾 PersistenceService: initialized @ ${this.userDataPath}`);
+      console.log('💾 PersistenceService: initialized with localStorage');
     } catch (error) {
-      console.error('❌ PersistenceService: error en initialize', error);
+      console.error('❌ PersistenceService: initialization failed:', error);
       throw error;
     }
   }
-  
+
   /**
-   * Asegura que existan los directorios necesarios
+   * Verifica si el servicio está listo
    */
-  private async ensureDirectories(): Promise<void> {
-    const scriptsDir = path.join(this.userDataPath, 'scripts');
-    
-    await fs.mkdir(this.userDataPath, { recursive: true });
-    await fs.mkdir(scriptsDir, { recursive: true });
+  isReady(): boolean {
+    return this.isInitialized;
   }
-  
-  // ============================================================================
-  // SCRIPTS (RUN ORDER)
-  // ============================================================================
-  
+
   /**
-   * Guarda la lista de scripts del Run Order
-   */
-  async saveScripts(items: RunOrderItem[]): Promise<void> {
-    this.ensureInitialized();
-    
-    const filePath = this.getScriptsPath();
-    
-    try {
-      const data = JSON.stringify(items, null, 2);
-      await fs.writeFile(filePath, data, 'utf-8');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`💾 PersistenceService: saved ${items.length} scripts`);
-      }
-    } catch (error) {
-      console.error('❌ PersistenceService: error saving scripts', error);
-      throw error;
-    }
-  }
-  
-  /**
-   * Carga la lista de scripts del Run Order
-   */
-  async loadScripts(): Promise<RunOrderItem[]> {
-    this.ensureInitialized();
-    
-    const filePath = this.getScriptsPath();
-    
-    try {
-      const data = await fs.readFile(filePath, 'utf-8');
-      const items: RunOrderItem[] = JSON.parse(data);
-      
-      // Convertir strings de fecha a Date objects
-      items.forEach(item => {
-        item.createdAt = new Date(item.createdAt);
-        item.updatedAt = new Date(item.updatedAt);
-      });
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`💾 PersistenceService: loaded ${items.length} scripts`);
-      }
-      
-      return items;
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        // Archivo no existe, retornar array vacío
-        return [];
-      }
-      
-      console.error('❌ PersistenceService: error loading scripts', error);
-      throw error;
-    }
-  }
-  
-  // ============================================================================
-  // CONFIGURACIÓN
-  // ============================================================================
-  
-  /**
-   * Guarda la configuración completa
+   * Guarda configuración
    */
   async saveConfig(config: ConfigurationState): Promise<void> {
-    this.ensureInitialized();
-    
-    const filePath = this.getConfigPath();
-    
     try {
+      const key = `${this.storagePrefix}config`;
       const data = JSON.stringify(config, null, 2);
-      await fs.writeFile(filePath, data, 'utf-8');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log('💾 PersistenceService: saved config');
-      }
+      localStorage.setItem(key, data);
+      console.log('💾 PersistenceService: config saved');
     } catch (error) {
-      console.error('❌ PersistenceService: error saving config', error);
+      console.error('❌ PersistenceService: error saving config:', error);
       throw error;
     }
   }
-  
+
   /**
-   * Carga la configuración completa
+   * Carga configuración
    */
   async loadConfig(): Promise<ConfigurationState | null> {
-    this.ensureInitialized();
-    
-    const filePath = this.getConfigPath();
-    
     try {
-      const data = await fs.readFile(filePath, 'utf-8');
-      const config: ConfigurationState = JSON.parse(data);
+      const key = `${this.storagePrefix}config`;
+      const data = localStorage.getItem(key);
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('💾 PersistenceService: loaded config');
-      }
-      
-      return config;
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        // Archivo no existe
+      if (!data) {
+        console.log('💾 PersistenceService: no config found');
         return null;
       }
-      
-      console.error('❌ PersistenceService: error loading config', error);
+
+      const config = JSON.parse(data) as ConfigurationState;
+      console.log('💾 PersistenceService: config loaded');
+      return config;
+    } catch (error) {
+      console.error('❌ PersistenceService: error loading config:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Guarda run order
+   */
+  async saveScripts(scripts: RunOrderItem[]): Promise<void> {
+    try {
+      const key = `${this.storagePrefix}scripts`;
+      const data = JSON.stringify(scripts, null, 2);
+      localStorage.setItem(key, data);
+      console.log(`💾 PersistenceService: ${scripts.length} scripts saved`);
+    } catch (error) {
+      console.error('❌ PersistenceService: error saving scripts:', error);
       throw error;
     }
   }
-  
-  // ============================================================================
-  // ARCHIVOS DE TEXTO (.txt)
-  // ============================================================================
-  
+
   /**
-   * Lee un archivo de texto desde el sistema de archivos
-   * @param filePath - Ruta absoluta o relativa al userDataPath
+   * Carga run order
    */
-  async loadTextFile(filePath: string): Promise<string> {
-    this.ensureInitialized();
-    
+  async loadScripts(): Promise<RunOrderItem[]> {
     try {
-      const content = await fs.readFile(filePath, 'utf-8');
+      const key = `${this.storagePrefix}scripts`;
+      const data = localStorage.getItem(key);
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`📄 PersistenceService: loaded text file (${content.length} chars)`);
+      if (!data) {
+        console.log('💾 PersistenceService: no scripts found');
+        return [];
       }
+
+      const scripts = JSON.parse(data) as RunOrderItem[];
+      console.log(`💾 PersistenceService: ${scripts.length} scripts loaded`);
+      return scripts;
+    } catch (error) {
+      console.error('❌ PersistenceService: error loading scripts:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Lee contenido de un script
+   */
+  async readScriptContent(scriptId: string): Promise<string> {
+    try {
+      const key = `${this.storagePrefix}script-${scriptId}`;
+      const content = localStorage.getItem(key);
       
+      if (!content) {
+        console.log(`💾 PersistenceService: script ${scriptId} not found`);
+        return '';
+      }
+
+      console.log(`💾 PersistenceService: script ${scriptId} loaded (${content.length} chars)`);
       return content;
     } catch (error) {
-      console.error(`❌ PersistenceService: error loading ${filePath}`, error);
-      throw error;
+      console.error(`❌ PersistenceService: error reading script ${scriptId}:`, error);
+      return '';
     }
   }
-  
+
   /**
-   * Guarda un archivo de texto en el sistema de archivos
-   * @param filePath - Ruta absoluta o relativa al userDataPath
-   * @param content - Contenido a guardar
+   * Guarda contenido de un script
    */
-  async saveTextFile(filePath: string, content: string): Promise<void> {
-    this.ensureInitialized();
-    
+  async saveScriptContent(scriptId: string, content: string): Promise<void> {
     try {
-      await fs.writeFile(filePath, content, 'utf-8');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`📄 PersistenceService: saved text file (${content.length} chars)`);
-      }
+      const key = `${this.storagePrefix}script-${scriptId}`;
+      localStorage.setItem(key, content);
+      console.log(`💾 PersistenceService: script ${scriptId} saved (${content.length} chars)`);
     } catch (error) {
-      console.error(`❌ PersistenceService: error saving ${filePath}`, error);
+      console.error(`❌ PersistenceService: error saving script ${scriptId}:`, error);
       throw error;
     }
   }
-  
-  // ============================================================================
-  // SESIÓN COMPLETA
-  // ============================================================================
-  
+
   /**
-   * Exporta sesión completa (scripts + config) a un archivo
-   * @param outputPath - Ruta donde guardar el archivo de sesión
+   * Exporta todo como JSON
    */
-  async exportSession(
-    scripts: RunOrderItem[],
-    config: ConfigurationState,
-    outputPath: string
-  ): Promise<void> {
-    this.ensureInitialized();
-    
+  async exportSession(): Promise<SessionData> {
+    const config = await this.loadConfig();
+    const scripts = await this.loadScripts();
+
     const sessionData: SessionData = {
       version: '2.0.0',
       timestamp: Date.now(),
       scripts,
-      config
+      config: config || {} as ConfigurationState
     };
-    
-    try {
-      const data = JSON.stringify(sessionData, null, 2);
-      await fs.writeFile(outputPath, data, 'utf-8');
-      
-      console.log(`💾 PersistenceService: exported session to ${outputPath}`);
-    } catch (error) {
-      console.error('❌ PersistenceService: error exporting session', error);
-      throw error;
-    }
+
+    console.log('💾 PersistenceService: session exported');
+    return sessionData;
   }
-  
+
   /**
-   * Importa sesión completa desde un archivo
-   * @param filePath - Ruta del archivo de sesión
+   * Importa desde JSON
    */
-  async importSession(filePath: string): Promise<SessionData> {
-    this.ensureInitialized();
-    
+  async importSession(sessionData: SessionData): Promise<void> {
     try {
-      const data = await fs.readFile(filePath, 'utf-8');
-      const sessionData: SessionData = JSON.parse(data);
-      
-      // Validar versión
-      if (!sessionData.version) {
-        throw new Error('Archivo de sesión inválido: falta versión');
+      if (sessionData.config) {
+        await this.saveConfig(sessionData.config);
       }
-      
-      // Convertir fechas
-      sessionData.scripts.forEach(item => {
-        item.createdAt = new Date(item.createdAt);
-        item.updatedAt = new Date(item.updatedAt);
-      });
-      
-      console.log(`💾 PersistenceService: imported session from ${filePath}`);
-      
-      return sessionData;
+
+      if (sessionData.scripts && Array.isArray(sessionData.scripts)) {
+        await this.saveScripts(sessionData.scripts);
+      }
+
+      console.log('💾 PersistenceService: session imported');
     } catch (error) {
-      console.error('❌ PersistenceService: error importing session', error);
+      console.error('❌ PersistenceService: error importing session:', error);
       throw error;
     }
   }
-  
-  // ============================================================================
-  // AUTO-SAVE
-  // ============================================================================
-  
+
   /**
-   * Habilita el auto-guardado periódico
-   * @param callback - Función que retorna los datos a guardar
+   * Inicia auto-guardado
    */
-  enableAutoSave(callback: () => { scripts: RunOrderItem[], config: ConfigurationState }): void {
-    if (this.autoSaveInterval !== null) {
-      console.warn('⚠️ PersistenceService: auto-save ya está habilitado');
+  startAutoSave(callback: () => Promise<void>): void {
+    if (this.autoSaveInterval) {
+      console.log('💾 PersistenceService: auto-save already running');
       return;
     }
-    
+
     this.autoSaveInterval = setInterval(async () => {
       try {
-        const { scripts, config } = callback();
-        
-        await this.saveScripts(scripts);
-        await this.saveConfig(config);
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log('💾 PersistenceService: auto-save completed');
-        }
+        console.log('💾 PersistenceService: auto-save triggered');
+        await callback();
       } catch (error) {
-        console.error('❌ PersistenceService: error en auto-save', error);
+        console.error('❌ PersistenceService: auto-save error:', error);
       }
     }, this.autoSavePeriod);
-    
-    console.log(`💾 PersistenceService: auto-save enabled (every ${this.autoSavePeriod/1000}s)`);
+
+    console.log(`💾 PersistenceService: auto-save started (every ${this.autoSavePeriod / 1000}s)`);
   }
-  
+
   /**
-   * Deshabilita el auto-guardado
+   * Detiene auto-guardado
    */
-  disableAutoSave(): void {
-    if (this.autoSaveInterval !== null) {
+  stopAutoSave(): void {
+    if (this.autoSaveInterval) {
       clearInterval(this.autoSaveInterval);
       this.autoSaveInterval = null;
-      
-      console.log('💾 PersistenceService: auto-save disabled');
+      console.log('💾 PersistenceService: auto-save stopped');
     }
   }
-  
-  // ============================================================================
-  // UTILIDADES
-  // ============================================================================
-  
+
   /**
    * Verifica si existe un archivo
    */
-  async fileExists(filePath: string): Promise<boolean> {
-    try {
-      await fs.access(filePath);
-      return true;
-    } catch {
-      return false;
-    }
+  async fileExists(key: string): Promise<boolean> {
+    const fullKey = `${this.storagePrefix}${key}`;
+    return localStorage.getItem(fullKey) !== null;
   }
-  
-  /**
-   * Lista archivos en un directorio
-   */
-  async listFiles(dirPath: string): Promise<string[]> {
-    this.ensureInitialized();
-    
-    try {
-      const files = await fs.readdir(dirPath);
-      return files;
-    } catch (error) {
-      console.error(`❌ PersistenceService: error listing ${dirPath}`, error);
-      return [];
-    }
-  }
-  
+
   /**
    * Elimina un archivo
    */
-  async deleteFile(filePath: string): Promise<void> {
+  async deleteFile(key: string): Promise<void> {
     try {
-      await fs.unlink(filePath);
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`🗑️ PersistenceService: deleted ${filePath}`);
-      }
+      const fullKey = `${this.storagePrefix}${key}`;
+      localStorage.removeItem(fullKey);
+      console.log(`💾 PersistenceService: ${key} deleted`);
     } catch (error) {
-      console.error(`❌ PersistenceService: error deleting ${filePath}`, error);
+      console.error(`❌ PersistenceService: error deleting ${key}:`, error);
       throw error;
     }
   }
-  
-  // ============================================================================
-  // PATHS
-  // ============================================================================
-  
-  private getConfigPath(): string {
-    return path.join(this.userDataPath, 'config.json');
-  }
-  
-  private getScriptsPath(): string {
-    return path.join(this.userDataPath, 'scripts.json');
-  }
-  
+
   /**
-   * Obtiene la carpeta de scripts individuales
+   * Limpia todos los datos
    */
-  getScriptsDirectory(): string {
-    return path.join(this.userDataPath, 'scripts');
-  }
-  
-  /**
-   * Obtiene el userDataPath actual
-   */
-  getUserDataPath(): string {
-    return this.userDataPath;
-  }
-  
-  // ============================================================================
-  // VALIDACIONES
-  // ============================================================================
-  
-  private ensureInitialized(): void {
-    if (!this.isInitialized) {
-      throw new Error('PersistenceService no inicializado. Llamar initialize() primero.');
+  async clearAll(): Promise<void> {
+    try {
+      const keys = Object.keys(localStorage).filter(key => key.startsWith(this.storagePrefix));
+      keys.forEach(key => localStorage.removeItem(key));
+      console.log(`💾 PersistenceService: cleared ${keys.length} items`);
+    } catch (error) {
+      console.error('❌ PersistenceService: error clearing data:', error);
+      throw error;
     }
   }
+
+  /**
+   * Dispose (cleanup)
+   */
+  dispose(): void {
+    this.stopAutoSave();
+    this.isInitialized = false;
+    console.log('💾 PersistenceService: disposed');
+  }
 }
 
-// ============================================================================
-// SINGLETON EXPORT
-// ============================================================================
+// Singleton
+let persistenceServiceInstance: PersistenceService | null = null;
 
-export const persistenceService = new PersistenceService();
-
-if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-  (window as any).__PERSISTENCE_SERVICE__ = persistenceService;
-  console.log('🔧 PersistenceService expuesto en window.__PERSISTENCE_SERVICE__');
+export function getPersistenceService(): PersistenceService {
+  if (!persistenceServiceInstance) {
+    persistenceServiceInstance = new PersistenceService();
+  }
+  return persistenceServiceInstance;
 }
+
+export default PersistenceService;

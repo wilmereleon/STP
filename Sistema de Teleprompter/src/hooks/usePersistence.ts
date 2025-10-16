@@ -9,9 +9,12 @@
  */
 
 import { useEffect, useState } from 'react';
-import { persistenceService } from '../services';
+import { getPersistenceService } from '../services';
 import { runOrderStore } from '../stores/RunOrderStore';
 import { configurationStore } from '../stores/ConfigurationStore';
+
+// Get singleton instance
+const persistenceService = getPersistenceService();
 
 interface UsePersistenceReturn {
   isInitialized: boolean;

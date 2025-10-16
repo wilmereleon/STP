@@ -334,18 +334,7 @@ export function TeleprompterModal({
           {/* Panel derecho con controles / Right panel with controls */}
           <div className="flex items-center gap-2">
             {/* Componente de controles de transporte / Transport controls component */}
-            <TeleprompterControls
-              isPlaying={isPlaying}
-              speed={speed}
-              fontSize={fontSize}
-              onPlayPause={handlePlayPause}
-              onReset={handleReset}
-              onStop={handleStop}
-              onForward={handleForward}
-              onBackward={handleBackward}
-              onSpeedChange={setSpeed}
-              onFontSizeChange={setFontSize}
-            />
+            <TeleprompterControls />
             
             {/* Botones de pantalla completa y cerrar / Fullscreen and close buttons */}
             <div className="bg-black/50 backdrop-blur rounded-lg p-1 flex gap-1">

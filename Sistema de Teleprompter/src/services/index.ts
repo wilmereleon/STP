@@ -9,7 +9,7 @@
 
 export { autoScrollService, AutoScrollService } from './AutoScrollService';
 export { syncService, SyncService, SyncMessageType } from './SyncService';
-export { persistenceService, PersistenceService } from './PersistenceService';
+export { getPersistenceService, PersistenceService } from './PersistenceService';
 export { excelImportService, ExcelImportService } from './ExcelImportService';
 
 export type { SyncMessage } from './SyncService';

@@ -1,39 +1,32 @@
 // ===== IMPORTACIONES / IMPORTS =====
-// Iconos de Lucide React para controles de transporte / Lucide React icons for transport controls
 import { Play, Pause, RotateCcw, Square, SkipBack, SkipForward } from 'lucide-react';
+import { useTeleprompterStore } from '../hooks';
+import { useRunOrderStore } from '../hooks';
 
 /**
- * Propiedades del componente TeleprompterControls
- * TeleprompterControls component properties
- * 
- * @interface TeleprompterControlsProps
- * @property {boolean} isPlaying - Estado de reproducción (reproduciendo/pausado) / Playback state (playing/paused)
- * @property {number} speed - Velocidad de scroll actual (0.1-5x) / Current scroll speed (0.1-5x)
- * @property {number} fontSize - Tamaño de fuente actual (12-500px) / Current font size (12-500px)
- * @property {() => void} onPlayPause - Callback para alternar play/pausa / Callback to toggle play/pause
- * @property {() => void} onReset - Callback para reiniciar al inicio / Callback to reset to beginning
- * @property {() => void} onStop - Callback para detener completamente / Callback to stop completely
- * @property {() => void} onForward - Callback para avanzar al siguiente guion / Callback to advance to next script
- * @property {() => void} onBackward - Callback para retroceder al guion anterior / Callback to go back to previous script
- * @property {(speed: number) => void} onSpeedChange - Callback al cambiar velocidad / Callback when speed changes
- * @property {(size: number) => void} onFontSizeChange - Callback al cambiar tamaño de fuente / Callback when font size changes
+ * Propiedades opcionales para callbacks externos
+ * Optional properties for external callbacks
  */
 interface TeleprompterControlsProps {
-  isPlaying: boolean;
-  speed: number;
-  fontSize: number;
-  onPlayPause: () => void;
-  onReset: () => void;
-  onStop: () => void;
-  onForward: () => void;
-  onBackward: () => void;
-  onSpeedChange: (speed: number) => void;
-  onFontSizeChange: (size: number) => void;
+  /**
+   * Callback opcional para navegación a script anterior
+   * Optional callback for navigating to previous script
+   */
+  onBackward?: () => void;
+  
+  /**
+   * Callback opcional para navegación a script siguiente
+   * Optional callback for navigating to next script
+   */
+  onForward?: () => void;
 }
 
 /**
- * TeleprompterControls - Controles de transporte del teleprompter
- * TeleprompterControls - Teleprompter transport controls
+ * TeleprompterControls - Controles de transporte del teleprompter (REFACTORIZADO)
+ * TeleprompterControls - Teleprompter transport controls (REFACTORED)
+ * 
+ * Versión 2.0 usando Stores directamente (sin props drilling).
+ * Version 2.0 using Stores directly (no props drilling).
  * 
  * Barra de controles compacta similar a un reproductor multimedia con:
  * - Controles principales: Retroceder, Play/Pause, Avanzar, Detener, Reiniciar
@@ -49,90 +42,144 @@ interface TeleprompterControlsProps {
  * - Event propagation prevention to avoid conflicts
  * - Debug logs for troubleshooting
  * 
+ * CAMBIOS EN v2.0:
+ * - ✅ Eliminados 7 props (isPlaying, speed, fontSize, onPlayPause, onReset, onStop, onSpeedChange, onFontSizeChange)
+ * - ✅ Usa useTeleprompterStore() directamente
+ * - ✅ Usa useRunOrderStore() para navegación
+ * - ✅ Callbacks externos opcionales para backwards compatibility
+ * 
  * @component
- * @param {TeleprompterControlsProps} props - Propiedades del componente / Component properties
+ * @param {TeleprompterControlsProps} props - Propiedades opcionales / Optional properties
  * @returns {JSX.Element} Barra de controles / Control bar
+ * 
+ * @example
+ * ```tsx
+ * // Uso simple sin props
+ * <TeleprompterControls />
+ * 
+ * // Con callbacks personalizados para navegación
+ * <TeleprompterControls
+ *   onBackward={handleCustomBackward}
+ *   onForward={handleCustomForward}
+ * />
+ * ```
  */
 export function TeleprompterControls({
-  isPlaying,
-  speed,
-  fontSize,
-  onPlayPause,
-  onReset,
-  onStop,
-  onForward,
   onBackward,
-  onSpeedChange,
-  onFontSizeChange
-}: TeleprompterControlsProps) {
+  onForward
+}: TeleprompterControlsProps = {}) {
   
-  // ===== MANEJADORES DE EVENTOS CON DEBUG / EVENT HANDLERS WITH DEBUG =====
-  // Todos los handlers previenen propagación para evitar conflictos con otros eventos
-  // All handlers prevent propagation to avoid conflicts with other events
+  // ===== HOOKS / HOOKS =====
+  const {
+    isPlaying,
+    speed,
+    fontSize,
+    play,
+    pause,
+    reset,
+    setSpeed,
+    setFontSize
+  } = useTeleprompterStore();
+  
+  const runOrder = useRunOrderStore();
+  
+  // ===== MANEJADORES DE EVENTOS / EVENT HANDLERS =====
   
   /**
-   * Maneja el click en Play/Pause con prevención de propagación
-   * Handles Play/Pause click with propagation prevention
+   * Maneja Play/Pause
    */
-  const handlePlayPauseClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevenir comportamiento por defecto / Prevent default behavior
-    e.stopPropagation(); // Evitar que el evento suba / Stop event bubbling
+  const handlePlayPause = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     console.log('🔴 TeleprompterControls PLAY/PAUSE clicked - isPlaying:', isPlaying);
-    onPlayPause();
+    
+    if (isPlaying) {
+      pause();
+    } else {
+      play();
+    }
   };
 
   /**
-   * Maneja el click en Retroceder (script anterior)
-   * Handles Backward click (previous script)
+   * Maneja Retroceder (script anterior)
    */
-  const handleBackwardClick = (e: React.MouseEvent) => {
+  const handleBackward = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     console.log('🔴 TeleprompterControls BACKWARD clicked');
-    onBackward();
+    
+    if (onBackward) {
+      onBackward();
+    } else {
+      // Default: usar RunOrderStore
+      runOrder.previousItem();
+    }
   };
 
   /**
-   * Maneja el click en Avanzar (script siguiente)
-   * Handles Forward click (next script)
+   * Maneja Avanzar (script siguiente)
    */
-  const handleForwardClick = (e: React.MouseEvent) => {
+  const handleForward = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     console.log('🔴 TeleprompterControls FORWARD clicked');
-    onForward();
+    
+    if (onForward) {
+      onForward();
+    } else {
+      // Default: usar RunOrderStore
+      runOrder.nextItem();
+    }
   };
 
   /**
-   * Maneja el click en Detener
-   * Handles Stop click
+   * Maneja Detener (pause + reset)
    */
-  const handleStopClick = (e: React.MouseEvent) => {
+  const handleStop = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     console.log('🔴 TeleprompterControls STOP clicked');
-    onStop();
+    
+    pause();
+    reset();
   };
 
   /**
-   * Maneja el click en Reiniciar (volver al inicio)
-   * Handles Reset click (return to beginning)
+   * Maneja Reiniciar
    */
-  const handleResetClick = (e: React.MouseEvent) => {
+  const handleReset = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     console.log('🔴 TeleprompterControls RESET clicked');
-    onReset();
+    
+    reset();
+  };
+
+  /**
+   * Ajusta velocidad
+   */
+  const handleSpeedChange = (delta: number) => {
+    const newSpeed = Math.max(0.1, Math.min(5.0, speed + delta));
+    console.log('🔴 Speed change:', speed, '→', newSpeed);
+    setSpeed(newSpeed);
+  };
+
+  /**
+   * Ajusta tamaño de fuente
+   */
+  const handleFontSizeChange = (delta: number) => {
+    const newSize = Math.max(12, Math.min(500, fontSize + delta));
+    console.log('🔴 Font size change:', fontSize, '→', newSize);
+    setFontSize(newSize);
   };
 
   return (
     <div className="flex items-center gap-1 bg-gray-800 px-2 py-1 rounded">
       {/* ===== CONTROLES PRINCIPALES / MAIN CONTROLS ===== */}
-      {/* Botones de transporte estilo reproductor multimedia / Media player style transport buttons */}
       
-      {/* Botón Retroceder - Script anterior / Backward button - Previous script */}
+      {/* Botón Retroceder */}
       <button
-        onClick={handleBackwardClick}
+        onClick={handleBackward}
         className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700 rounded flex items-center justify-center"
         title="Retroceder"
         type="button"
@@ -140,10 +187,9 @@ export function TeleprompterControls({
         <SkipBack className="h-4 w-4" />
       </button>
       
-      {/* Botón Play/Pause - Alterna entre reproducción y pausa / Play/Pause button - Toggles between play and pause */}
-      {/* Icono cambia dinámicamente según estado / Icon changes dynamically based on state */}
+      {/* Botón Play/Pause */}
       <button
-        onClick={handlePlayPauseClick}
+        onClick={handlePlayPause}
         className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700 rounded flex items-center justify-center"
         title={isPlaying ? "Pausar" : "Reproducir"}
         type="button"
@@ -151,9 +197,9 @@ export function TeleprompterControls({
         {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
       </button>
 
-      {/* Botón Avanzar - Script siguiente / Forward button - Next script */}
+      {/* Botón Avanzar */}
       <button
-        onClick={handleForwardClick}
+        onClick={handleForward}
         className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700 rounded flex items-center justify-center"
         title="Avanzar"
         type="button"
@@ -161,9 +207,9 @@ export function TeleprompterControls({
         <SkipForward className="h-4 w-4" />
       </button>
 
-      {/* Botón Detener - Detiene reproducción / Stop button - Stops playback */}
+      {/* Botón Detener */}
       <button
-        onClick={handleStopClick}
+        onClick={handleStop}
         className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700 rounded flex items-center justify-center"
         title="Detener"
         type="button"
@@ -171,10 +217,9 @@ export function TeleprompterControls({
         <Square className="h-4 w-4" />
       </button>
       
-      {/* Botón Reiniciar - Vuelve al inicio del script / Reset button - Returns to script beginning */}
-      {/* Color verde cuando está pausado como indicador visual / Green color when paused as visual indicator */}
+      {/* Botón Reiniciar */}
       <button
-        onClick={handleResetClick}
+        onClick={handleReset}
         className={`h-8 w-8 hover:text-white hover:bg-gray-700 rounded flex items-center justify-center transition-colors ${
           isPlaying ? 'text-gray-400' : 'text-green-400'
         }`}
@@ -185,19 +230,14 @@ export function TeleprompterControls({
       </button>
 
       {/* ===== CONTROLES DE VELOCIDAD / SPEED CONTROLS ===== */}
-      {/* Sección separada con borde izquierdo / Separated section with left border */}
       <div className="flex items-center gap-1 mx-2 border-l border-gray-600 pl-2">
-        {/* Etiqueta "V:" (Velocidad) / Label "V:" (Velocity) */}
         <span className="text-gray-400 text-xs">V:</span>
         
-        {/* Botón reducir velocidad / Decrease speed button */}
-        {/* Decremento de 0.1x, mínimo 0.1x / 0.1x decrement, minimum 0.1x */}
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('🔴 Speed DOWN clicked, current:', speed);
-            onSpeedChange(Math.max(0.1, speed - 0.1)); // Incrementos más pequeños / Smaller increments
+            handleSpeedChange(-0.1);
           }}
           className="h-6 w-6 text-gray-400 hover:text-white hover:bg-gray-700 rounded flex items-center justify-center"
           title="Reducir velocidad"
@@ -206,18 +246,13 @@ export function TeleprompterControls({
           <span className="text-xs">-</span>
         </button>
         
-        {/* Display de velocidad actual con fuente monoespaciada / Current speed display with monospace font */}
-        {/* toFixed(1) muestra un decimal / toFixed(1) shows one decimal */}
         <span className="text-white text-xs font-mono w-8 text-center">{speed.toFixed(1)}</span>
         
-        {/* Botón aumentar velocidad / Increase speed button */}
-        {/* Incremento de 0.1x, máximo 5x / 0.1x increment, maximum 5x */}
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('🔴 Speed UP clicked, current:', speed);
-            onSpeedChange(Math.min(5, speed + 0.1)); // Máximo más bajo, incrementos más pequeños / Lower maximum, smaller increments
+            handleSpeedChange(0.1);
           }}
           className="h-6 w-6 text-gray-400 hover:text-white hover:bg-gray-700 rounded flex items-center justify-center"
           title="Aumentar velocidad"
@@ -228,20 +263,14 @@ export function TeleprompterControls({
       </div>
 
       {/* ===== CONTROLES DE TAMAÑO DE FUENTE / FONT SIZE CONTROLS ===== */}
-      {/* Sección separada con borde izquierdo / Separated section with left border */}
       <div className="flex items-center gap-1 mx-2 border-l border-gray-600 pl-2">
-        {/* Etiqueta "F:" (Font/Fuente) / Label "F:" (Font) */}
         <span className="text-gray-400 text-xs">F:</span>
         
-        {/* Botón reducir tamaño de fuente / Decrease font size button */}
-        {/* Decremento de 8px, mínimo 12px / 8px decrement, minimum 12px */}
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            const newSize = Math.max(12, fontSize - 8);
-            console.log('🔴 TELEPROMPTER CONTROLS - Font SIZE DOWN clicked, current:', fontSize, 'new:', newSize);
-            onFontSizeChange(newSize);
+            handleFontSizeChange(-8);
           }}
           className="h-6 w-6 text-gray-400 hover:text-white hover:bg-gray-700 rounded flex items-center justify-center"
           title="Reducir tamaño de fuente"
@@ -250,19 +279,13 @@ export function TeleprompterControls({
           <span className="text-xs">-</span>
         </button>
         
-        {/* Display de tamaño de fuente actual con fuente monoespaciada / Current font size display with monospace font */}
-        {/* Ancho fijo (w-12) para estabilidad visual / Fixed width (w-12) for visual stability */}
         <span className="text-white text-xs font-mono w-12 text-center">{fontSize}px</span>
         
-        {/* Botón aumentar tamaño de fuente / Increase font size button */}
-        {/* Incremento de 8px, máximo 500px / 8px increment, maximum 500px */}
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            const newSize = Math.min(500, fontSize + 8);
-            console.log('🔴 TELEPROMPTER CONTROLS - Font SIZE UP clicked, current:', fontSize, 'new:', newSize);
-            onFontSizeChange(newSize);
+            handleFontSizeChange(8);
           }}
           className="h-6 w-6 text-gray-400 hover:text-white hover:bg-gray-700 rounded flex items-center justify-center"
           title="Aumentar tamaño de fuente"
