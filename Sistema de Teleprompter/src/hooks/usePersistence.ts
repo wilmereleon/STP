@@ -79,10 +79,12 @@ export function usePersistence(): UsePersistenceReturn {
         }
         
         // 4. Habilitar auto-save
-        persistenceService.enableAutoSave(() => ({
-          scripts: runOrderStore.getState().items,
-          config: configurationStore.getState()
-        }));
+        persistenceService.startAutoSave(async () => {
+          const scripts = runOrderStore.getState().items;
+          const config = configurationStore.getState();
+          await persistenceService.saveScripts(scripts);
+          await persistenceService.saveConfig(config);
+        });
         console.log('💾 Auto-save habilitado (cada 30s)');
         
         setIsInitialized(true);
@@ -98,7 +100,7 @@ export function usePersistence(): UsePersistenceReturn {
     
     // Cleanup: deshabilitar auto-save
     return () => {
-      persistenceService.disableAutoSave();
+      persistenceService.stopAutoSave();
       console.log('🛑 Persistencia deshabilitada');
     };
   }, []);
