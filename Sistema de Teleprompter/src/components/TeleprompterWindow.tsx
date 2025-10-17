@@ -120,6 +120,7 @@ export function TeleprompterWindow() {
     console.log('🔵 TeleprompterWindow: initializing SyncService in SLAVE mode');
     
     // Inicializar en modo slave
+    // SyncService automatically registers with master via registerWithMaster()
     syncService.initialize('slave');
     
     // Marcar como conectado después de inicialización
@@ -148,6 +149,8 @@ export function TeleprompterWindow() {
    * Automatically starts playback when new text arrives
    */
   useEffect(() => {
+    console.log('🔵 TeleprompterWindow: text changed. Length:', text?.length || 0, 'First 50 chars:', text?.substring(0, 50));
+    
     // Solo auto-start si hay texto y NO está reproduciendo
     if (text && text.length > 0 && !isPlaying && isConnected) {
       console.log('▶️ TeleprompterWindow: auto-starting on new text');

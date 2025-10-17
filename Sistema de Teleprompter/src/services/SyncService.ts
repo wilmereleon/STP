@@ -178,10 +178,13 @@ export class SyncService {
       payload: state
     };
     
+    console.log('📡 SyncService: Broadcasting to', this.slaves.size, 'slaves. Text length:', state.text?.length || 0);
+    
     // Enviar a todos los slaves
     this.slaves.forEach(slave => {
       try {
         slave.window.postMessage(message, '*');
+        console.log('  ✅ Sent to slave:', slave.id);
       } catch (error) {
         console.error(`❌ SyncService: error broadcasting to slave "${slave.id}"`, error);
         // Slave probablemente cerrado, desregistrar
@@ -372,8 +375,11 @@ export class SyncService {
     
     if (!message || !message.type) return;
     
+    console.log('📨 SyncService (Slave): Received message from master', message.type);
+    
     switch (message.type) {
       case SyncMessageType.SYNC_STATE:
+        console.log('  📦 SYNC_STATE received. Text length:', message.payload?.text?.length || 0);
         this.applyStateFromMaster(message.payload);
         break;
         
@@ -395,12 +401,14 @@ export class SyncService {
   private applyStateFromMaster(state: TeleprompterState): void {
     if (!state) return;
     
+    console.log('🔧 SyncService (Slave): Applying state from master. Text length:', state.text?.length || 0);
+    
     // Aplicar al store local
     // IMPORTANTE: No disparar notificaciones para evitar loop
     (teleprompterStore as any).state = state;
     
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔄 SyncService: applied state from master');
+      console.log('✅ SyncService: applied state from master');
     }
   }
   
