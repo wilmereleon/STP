@@ -31,6 +31,7 @@ import { RunOrderPanel } from './components/RunOrderPanel';
 import { TeleprompterPreview } from './components/TeleprompterPreview';
 import { TeleprompterWindow } from './components/TeleprompterWindow';
 import { TeleprompterModal } from './components/TeleprompterModal';
+import { MainToolbar } from './components/MainToolbar';
 
 // Componentes v1 que aún no tienen v2 / v1 components that don't have v2 yet
 import { ScriptEditor } from './components/ScriptEditor';
@@ -112,7 +113,9 @@ export default function App() {
     activeItemId,
     setActiveItem,
     addItem,
-    updateItem
+    updateItem,
+    nextItem,
+    previousItem
   } = useRunOrderStore();
   
   const {
@@ -399,13 +402,32 @@ export default function App() {
   // ===== RENDER PRINCIPAL / MAIN RENDER =====
   return (
     <div className="h-screen flex flex-col bg-background">
+      {/* ===== TOOLBAR SUPERIOR / TOP TOOLBAR ===== */}
+      {/* Barra de herramientas principal estilo WinPlus */}
+      <div className="flex-shrink-0 border-b">
+        <MainToolbar
+          isPlaying={isPlaying}
+          currentTime="00:00"
+          onPlay={play}
+          onPause={pause}
+          onStop={() => { pause(); reset(); }}
+          onPrevious={previousItem}
+          onNext={nextItem}
+          onSettings={() => {/* TODO: Abrir settings */}}
+          onFullscreen={handleOpenTeleprompter}
+          onSave={() => {/* TODO: Guardar */}}
+          onOpen={() => {/* TODO: Abrir archivo */}}
+          isPrompting={isPlaying}
+        />
+      </div>
+
       {/* ===== LAYOUT DE 3 PANELES HORIZONTAL / 3-PANEL HORIZONTAL LAYOUT ===== */}
-      {/* Layout horizontal en desktop (≥768px), vertical en móvil */}
-      <div className="flex-1 flex flex-col md:flex-row gap-2 p-2 min-h-0">
+      {/* Layout horizontal estilo WinPlus: RunOrder | Editor | Preview */}
+      <div className="flex-1 flex flex-row gap-0 min-h-0 overflow-hidden">
         
         {/* ===== PANEL IZQUIERDO: RUN ORDER / LEFT PANEL: RUN ORDER ===== */}
-        {/* Desktop: ancho fijo 320px | Móvil: altura 256px */}
-        <div className="w-full h-64 md:h-auto md:w-80 md:flex-shrink-0">
+        {/* Ancho fijo 280px según diseño WinPlus */}
+        <div className="w-[280px] flex-shrink-0 border-r h-full overflow-hidden">
           <RunOrderPanel
             onAddItem={handleAddItem}
             onEditItem={handleEditItem}
@@ -414,7 +436,7 @@ export default function App() {
         
         {/* ===== PANEL CENTRAL: EDITOR / CENTER PANEL: EDITOR ===== */}
         {/* Flex-1 para ocupar espacio restante */}
-        <div className="flex-1 min-w-0 min-h-0">
+        <div className="flex-1 min-w-0 h-full overflow-hidden border-r">
           <ScriptEditor
             text={text}
             onTextChange={handleTextChange}
@@ -424,8 +446,8 @@ export default function App() {
         </div>
         
         {/* ===== PANEL DERECHO: PREVIEW / RIGHT PANEL: PREVIEW ===== */}
-        {/* Desktop: ancho fijo 384px | Móvil: altura 256px */}
-        <div className="w-full h-64 md:h-auto md:w-96 md:flex-shrink-0">
+        {/* Ancho fijo 400px según diseño WinPlus */}
+        <div className="w-[400px] flex-shrink-0 h-full overflow-hidden">
           <TeleprompterPreview
             onOpenTeleprompter={handleOpenTeleprompter}
             onOpenTeleprompterModal={handleOpenTeleprompterModal}
