@@ -2,7 +2,7 @@
  * ConfigurationStore - Gestión de configuración y macros
  * 
  * Maneja la configuración global de la aplicación incluyendo:
- * - Macros de teclado
+ * - Macros de teclado (controlSettings y jumpMarkerMacros)
  * - Preferencias de usuario
  * - Configuración de ventanas
  * 
@@ -10,7 +10,10 @@
  * @pattern Observer (Publish-Subscribe)
  */
 
-export interface MacroSettings {
+// Import MacroSettings from useMacros for control keys
+import { MacroSettings } from '../components/useMacros';
+
+export interface JumpMarkerMacros {
   /** Macro 1: Saltar al marcador [1] */
   macro1: string;
   
@@ -480,16 +483,16 @@ class ConfigurationStore {
   
   private getDefaultMacros(): MacroSettings {
     return {
-      macro1: 'F1',
-      macro2: 'F2',
-      macro3: 'F3',
-      macro4: 'F4',
-      macro5: 'F5',
-      macro6: 'F6',
-      macro7: 'F7',
-      macro8: 'F8',
-      macro9: 'F9',
-      macro10: 'F10'
+      playStop: 'F10',
+      pause: 'F9',
+      previousScript: 'F11',
+      nextScript: 'F12',
+      increaseSpeed: 'F1',
+      decreaseSpeed: 'F2',
+      increaseFontSize: 'F3',
+      decreaseFontSize: 'F4',
+      nextCue: 'PageDown',
+      previousCue: 'PageUp'
     };
   }
   

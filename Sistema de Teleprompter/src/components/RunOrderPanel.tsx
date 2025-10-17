@@ -1,6 +1,6 @@
 // ===== IMPORTACIONES / IMPORTS =====
 // React core / React núcleo
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useCallback } from "react";
 // Componentes de tarjeta UI / Card UI components
 import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 // Componentes UI reutilizables / Reusable UI components
@@ -15,6 +15,11 @@ import { useRunOrderStore } from "../hooks";
 import { excelImportService } from "../services/ExcelImportService";
 // Toast notifications
 import { toast } from "sonner";
+// React DnD para drag & drop / React DnD for drag & drop
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+// Componente draggable / Draggable component
+import { DraggableRunOrderItem } from "./DraggableRunOrderItem";
 
 /**
  * Propiedades del componente RunOrderPanel v2
@@ -101,6 +106,18 @@ export function RunOrderPanel({
   // ===== HANDLERS / MANEJADORES =====
   
   /**
+   * Maneja el reordenamiento de items mediante drag & drop
+   * Handles item reordering via drag & drop
+   */
+  const moveItem = useCallback((dragIndex: number, hoverIndex: number) => {
+    console.log('🔀 RunOrderPanel: moving item from', dragIndex, 'to', hoverIndex);
+    const newItems = [...runOrder];
+    const [draggedItem] = newItems.splice(dragIndex, 1);
+    newItems.splice(hoverIndex, 0, draggedItem);
+    setItems(newItems);
+  }, [runOrder, setItems]);
+  
+  /**
    * Maneja la selección de un item
    * Handles selecting an item from the run order
    */
@@ -125,8 +142,7 @@ export function RunOrderPanel({
    * Inicia la edición del título de un item
    * Starts editing an item's title
    */
-  const handleStartEdit = (id: string, currentTitle: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleStartEdit = (id: string, currentTitle: string) => {
     console.log('✏️ RunOrderPanel: starting edit for item', id);
     setEditingItemId(id);
     setEditingTitle(currentTitle);
@@ -302,84 +318,32 @@ export function RunOrderPanel({
       <CardContent className="flex-1 p-0">
         <ScrollArea className="h-full">
           <div className="space-y-1 p-3 pt-0">
-            {/* ===== LISTA DE ITEMS / ITEMS LIST ===== */}
-            {runOrder.map((item, index) => (
-              <div
-                key={item.id}
-                className={`p-2 rounded cursor-pointer border transition-colors ${
-                  item.id === activeItemId
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "hover:bg-muted border-transparent"
-                }`}
-                onClick={() => handleSelectItem(item.id)}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  {/* ===== INFORMACIÓN DEL ITEM / ITEM INFORMATION ===== */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {/* Numeración / Numbering */}
-                      <span className="text-xs font-mono text-muted-foreground">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      {/* Badge con duración / Badge with duration */}
-                      <Badge variant="secondary" className="text-xs">
-                        {item.duration || '00:00'}
-                      </Badge>
-                    </div>
-                    {/* Título del item (editable inline) / Item title (inline editable) */}
-                    {editingItemId === item.id ? (
-                      <input
-                        type="text"
-                        value={editingTitle}
-                        onChange={(e) => setEditingTitle(e.target.value)}
-                        onBlur={handleSaveTitle}
-                        onKeyDown={handleKeyDown}
-                        onClick={(e) => e.stopPropagation()}
-                        autoFocus
-                        className="text-xs font-medium w-full px-1 py-0.5 border rounded bg-background"
-                      />
-                    ) : (
-                      <div 
-                        className="text-xs font-medium truncate cursor-text hover:text-primary/80 transition-colors"
-                        onDoubleClick={(e) => handleStartEdit(item.id, item.title, e)}
-                        title="Doble-clic para editar / Double-click to edit"
-                      >
-                        {item.title}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* ===== BOTONES DE ACCIÓN / ACTION BUTTONS ===== */}
-                  <div className="flex gap-1">
-                    {/* Botón de editar título / Edit title button */}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0"
-                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                        e.stopPropagation();
-                        handleStartEdit(item.id, item.title, e);
-                      }}
-                      title="Editar nombre / Edit name"
-                    >
-                      <Edit className="w-3 h-3" />
-                    </Button>
-                    {/* Botón de eliminar / Delete button */}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0"
-                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                        e.stopPropagation();
-                        handleDeleteItem(item.id);
-                      }}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
+            {/* ===== LISTA DE ITEMS CON DRAG & DROP / ITEMS LIST WITH DRAG & DROP ===== */}
+            <DndProvider backend={HTML5Backend}>
+              {runOrder.map((item, index) => (
+                <DraggableRunOrderItem
+                  key={item.id}
+                  item={{
+                    id: item.id,
+                    title: item.title,
+                    duration: item.duration || '00:00',
+                    script: item.text ? item.text.substring(0, 100) + (item.text.length > 100 ? '...' : '') : 'No script content',
+                    isActive: item.id === activeItemId
+                  }}
+                  index={index}
+                  isActive={item.id === activeItemId}
+                  isEditing={editingItemId === item.id}
+                  editingTitle={editingTitle}
+                  onSelect={handleSelectItem}
+                  onEdit={(id) => handleStartEdit(id, item.title)}
+                  onDelete={handleDeleteItem}
+                  onSaveEdit={handleSaveTitle}
+                  onCancelEdit={handleCancelEdit}
+                  onEditingTitleChange={setEditingTitle}
+                  moveItem={moveItem}
+                />
+              ))}
+            </DndProvider>
             
             {/* ===== ESTADO VACÍO / EMPTY STATE ===== */}
             {runOrder.length === 0 && !isImporting && (

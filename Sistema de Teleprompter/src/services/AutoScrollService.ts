@@ -107,9 +107,9 @@ export class AutoScrollService {
   /**
    * Calcula el incremento de scroll basado en velocidad y deltaTime
    * 
-   * Fórmula unificada:
-   * - speed=1.0 → 1 píxel por frame @ 60 FPS
-   * - speed=2.0 → 2 píxeles por frame
+   * Fórmula unificada (compatible con TeleprompterScreen):
+   * - speed=1.0 → 14 píxeles por segundo (velocidad base óptima para lectura)
+   * - speed=2.0 → 28 píxeles por segundo
    * - Ajustado por deltaTime para compensar variaciones de rendimiento
    * 
    * @param deltaTime - Tiempo transcurrido desde último frame (ms)
@@ -117,9 +117,9 @@ export class AutoScrollService {
    * @returns Incremento en píxeles
    */
   private calculateIncrement(deltaTime: number, speed: number): number {
-    // Píxeles por segundo = speed * targetFPS
-    // Ej: speed=1.0 @ 60 FPS = 60 px/s
-    const pixelsPerSecond = speed * this.targetFPS;
+    // Píxeles por segundo = speed * 14 (mismo factor que TeleprompterScreen)
+    // Ej: speed=1.0 = 14 px/s (velocidad base óptima para lectura)
+    const pixelsPerSecond = speed * 14;
     
     // Convertir a píxeles para este frame específico
     const increment = (pixelsPerSecond / 1000) * deltaTime;
@@ -162,7 +162,16 @@ export class AutoScrollService {
  */
 export const autoScrollService = new AutoScrollService();
 
-// Conectar con el store para auto-start/stop
+// ❌ DESHABILITADO: AutoScrollService auto-start/stop
+// ❌ DISABLED: AutoScrollService auto-start/stop
+/**
+ * Este subscribe causaba conflictos con el auto-scroll local de TeleprompterScreen.
+ * Ahora el auto-scroll es manejado SOLO por TeleprompterScreen.
+ * 
+ * This subscribe caused conflicts with TeleprompterScreen's local auto-scroll.
+ * Now auto-scroll is handled ONLY by TeleprompterScreen.
+ */
+/*
 teleprompterStore.subscribe((state) => {
   if (state.isPlaying && !autoScrollService.isActive()) {
     autoScrollService.start();
@@ -170,8 +179,9 @@ teleprompterStore.subscribe((state) => {
     autoScrollService.stop();
   }
 });
+*/
 
 if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
   (window as any).__AUTO_SCROLL_SERVICE__ = autoScrollService;
-  console.log('🔧 AutoScrollService expuesto en window.__AUTO_SCROLL_SERVICE__');
+  console.log('🔧 AutoScrollService expuesto en window.__AUTO_SCROLL_SERVICE__ (DESHABILITADO)');
 }

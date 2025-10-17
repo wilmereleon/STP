@@ -109,6 +109,12 @@ export function TeleprompterPreview({
   // ===== REFERENCIAS / REFERENCES =====
   const previewRef = useRef<HTMLDivElement>(null);
   const manualScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollPositionRef = useRef<number>(scrollPosition);
+  
+  // Actualizar ref cuando cambie scrollPosition
+  useEffect(() => {
+    scrollPositionRef.current = scrollPosition;
+  }, [scrollPosition]);
   
   // ===== EFECTOS DE DEBUG / DEBUG EFFECTS =====
   useEffect(() => {
@@ -118,6 +124,16 @@ export function TeleprompterPreview({
   useEffect(() => {
     console.log('🔵 TeleprompterPreview - isPlaying:', isPlaying);
   }, [isPlaying]);
+  
+  // ===== EFECTO: AUTO-SCROLL DESHABILITADO / EFFECT: AUTO-SCROLL DISABLED =====
+  /**
+   * ❌ AUTO-SCROLL DESHABILITADO EN PREVIEW
+   * ❌ AUTO-SCROLL DISABLED IN PREVIEW
+   * 
+   * El auto-scroll está activo en TeleprompterScreen (popup window).
+   * Preview solo muestra la posición sincronizada del store.
+   */
+  // DISABLED - Auto-scroll is handled by TeleprompterScreen in popup window
   
   // ===== EFECTO: SINCRONIZACIÓN DE SCROLL / EFFECT: SCROLL SYNC =====
   /**
@@ -166,7 +182,10 @@ export function TeleprompterPreview({
    * Control con rueda del mouse
    * - CTRL + WHEEL = Velocidad
    * - SHIFT + WHEEL = Tamaño de fuente
-   * - WHEEL = Scroll manual
+   * - WHEEL = Scroll manual (SOLO si NO está reproduciendo)
+   * 
+   * ⚠️ IMPORTANTE: Cuando isPlaying=true, solo se permiten controles CTRL/SHIFT
+   * para evitar interferencia con el auto-scroll de TeleprompterWindow
    */
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
@@ -176,23 +195,23 @@ export function TeleprompterPreview({
     const isAltPressed = e.altKey;
     const delta = e.deltaY > 0 ? 1 : -1;
     
-    console.log('🖱️ Mouse wheel:', { delta, ctrl: isCtrlPressed, shift: isShiftPressed, alt: isAltPressed });
+    console.log('🖱️ TeleprompterPreview wheel:', { delta, ctrl: isCtrlPressed, shift: isShiftPressed, alt: isAltPressed, isPlaying });
     
     if (isCtrlPressed) {
-      // CTRL + WHEEL = Velocidad
+      // CTRL + WHEEL = Velocidad (siempre permitido)
       const speedDelta = delta * 0.1;
       adjustSpeed(speedDelta);
       console.log('🖱️ Speed changed:', speed);
     } else if (isShiftPressed) {
-      // SHIFT + WHEEL = Tamaño de fuente
+      // SHIFT + WHEEL = Tamaño de fuente (siempre permitido)
       const fontDelta = delta * 8;
       adjustFontSize(fontDelta);
       console.log('🖱️ Font size changed:', fontSize);
-    } else {
-      // WHEEL = Scroll manual
+    } else if (!isPlaying) {
+      // WHEEL = Scroll manual (SOLO cuando NO está reproduciendo)
       const scrollDelta = delta * (isAltPressed ? 20 : 60);
       const newScrollPosition = Math.max(0, scrollPosition + scrollDelta);
-      console.log('🖱️ Manual scroll:', scrollPosition, '->', newScrollPosition);
+      console.log('🖱️ Manual scroll (preview paused):', scrollPosition, '->', newScrollPosition);
       
       setIsManualScrolling(true);
       setScrollPosition(newScrollPosition);
@@ -207,6 +226,9 @@ export function TeleprompterPreview({
         console.log('🖱️ Manual scroll timeout - resuming auto-scroll');
         setIsManualScrolling(false);
       }, 3000);
+    } else {
+      // Si está reproduciendo y no hay CTRL/SHIFT, ignorar scroll
+      console.log('⚠️ Preview: Scroll ignorado durante reproducción. Use CTRL+Wheel para velocidad o SHIFT+Wheel para fuente');
     }
   };
   

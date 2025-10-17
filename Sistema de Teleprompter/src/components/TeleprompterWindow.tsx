@@ -34,7 +34,11 @@ import { useEffect, useRef, useState } from 'react';
 import { TeleprompterScreen } from './TeleprompterScreen';
 import { TeleprompterControls } from './TeleprompterControls';
 // Hooks del Store / Store hooks
-import { useTeleprompterStore, useRunOrderStore } from '../hooks';
+import { useTeleprompterStore, useRunOrderStore, useConfigStore } from '../hooks';
+// Hook de macros / Macros hook
+import { useMacros } from './useMacros';
+// Store directo para debugging / Direct store for debugging
+import { teleprompterStore } from '../stores/TeleprompterStore';
 // Servicio de sincronización / Synchronization service
 import { syncService } from '../services/SyncService';
 
@@ -95,10 +99,19 @@ export function TeleprompterWindow() {
     previousItem
   } = useRunOrderStore();
   
+  const {
+    macros: macroSettings
+  } = useConfigStore();
+  
   // ===== ESTADO LOCAL DE UI / LOCAL UI STATE =====
   const [showControls, setShowControls] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const teleprompterAreaRef = useRef<HTMLDivElement>(null);
+  
+  // ===== EFECTO DEBUG: MONITOREAR isPlaying / DEBUG EFFECT: MONITOR isPlaying =====
+  useEffect(() => {
+    console.log('🔍 TeleprompterWindow: isPlaying changed to:', isPlaying);
+  }, [isPlaying]);
   
   // ===== EFECTO: INICIALIZAR SYNC SERVICE (SLAVE MODE) / EFFECT: INITIALIZE SYNC SERVICE (SLAVE MODE) =====
   /**
@@ -128,12 +141,12 @@ export function TeleprompterWindow() {
       setIsConnected(true);
       console.log('✅ TeleprompterWindow: connected to master');
       
-      // AUTO-START: Iniciar reproducción automáticamente si hay texto
-      // AUTO-START: Start playback automatically if there's text
-      if (text && !isPlaying) {
-        console.log('▶️ TeleprompterWindow: auto-starting playback');
-        play();
-      }
+      // ❌ AUTO-START DESHABILITADO - Esperar comando manual del usuario
+      // ❌ AUTO-START DISABLED - Wait for manual user command
+      // if (text && !isPlaying) {
+      //   console.log('▶️ TeleprompterWindow: auto-starting playback');
+      //   play();
+      // }
     }, 500);
     
     // Cleanup: Dispose service on unmount
@@ -143,20 +156,15 @@ export function TeleprompterWindow() {
     };
   }, []);
   
-  // ===== EFECTO: AUTO-START CUANDO LLEGA TEXTO NUEVO / EFFECT: AUTO-START WHEN NEW TEXT ARRIVES =====
+  // ===== EFECTO: AUTO-START DESHABILITADO / EFFECT: AUTO-START DISABLED =====
   /**
-   * Inicia automáticamente la reproducción cuando llega texto nuevo
-   * Automatically starts playback when new text arrives
+   * ❌ AUTO-START DESHABILITADO - Causar conflicto con controles manuales
+   * ❌ AUTO-START DISABLED - Causes conflict with manual controls
+   * 
+   * Usuario debe presionar Play manualmente (espacio o botón)
+   * User must press Play manually (space or button)
    */
-  useEffect(() => {
-    console.log('🔵 TeleprompterWindow: text changed. Length:', text?.length || 0, 'First 50 chars:', text?.substring(0, 50));
-    
-    // Solo auto-start si hay texto y NO está reproduciendo
-    if (text && text.length > 0 && !isPlaying && isConnected) {
-      console.log('▶️ TeleprompterWindow: auto-starting on new text');
-      play();
-    }
-  }, [text, isConnected, isPlaying, play]);
+  // DISABLED to avoid conflicts with manual play/pause
   
   // ===== EFECTO: MOUSE WHEEL CONTROLS / EFFECT: MOUSE WHEEL CONTROLS =====
   /**
@@ -170,10 +178,10 @@ export function TeleprompterWindow() {
    * Master decides whether to accept change and propagates it back
    * 
    * Comportamiento / Behavior:
-   * - CTRL + WHEEL: Cambiar velocidad / Change speed (±0.1x)
+   * - CTRL + WHEEL: Cambiar velocidad / Change speed (±0.1x) y auto-iniciar
    * - SHIFT + WHEEL: Cambiar tamaño de fuente / Change font size (±8px)
-   * - WHEEL: Scroll manual / Manual scroll (60px)
-   * - ALT + WHEEL: Scroll fino / Fine scroll (20px)
+   * - WHEEL: Scroll manual / Manual scroll (60px) - NO pausa, continúa auto-scroll
+   * - ALT + WHEEL: Scroll fino / Fine scroll (20px) - NO pausa, continúa auto-scroll
    */
   useEffect(() => {
     const area = teleprompterAreaRef.current;
@@ -217,10 +225,10 @@ export function TeleprompterWindow() {
         // Solicitar cambio al master / Request change to master
         syncService.requestChange('SET_SCROLL_POSITION', newScrollPosition);
         
-        // Pausar al hacer scroll manual / Pause on manual scroll
-        if (isPlaying) {
-          syncService.requestChange('PAUSE');
-        }
+        // ⚠️ NO PAUSAR - Permitir que auto-scroll continúe
+        // ⚠️ DO NOT PAUSE - Allow auto-scroll to continue
+        // El auto-scroll seguirá desde la nueva posición ajustada manualmente
+        // Auto-scroll will continue from the new manually adjusted position
       }
     };
     
@@ -241,8 +249,37 @@ export function TeleprompterWindow() {
    */
   
   const handlePlayPause = () => {
-    console.log('▶️ TeleprompterWindow: play/pause toggled');
-    isPlaying ? pause() : play();
+    console.log('═══════════════════════════════════════');
+    console.log('🎮 TeleprompterWindow: handlePlayPause INICIO');
+    
+    // Obtener estado DIRECTO del store para evitar closure
+    const currentState = teleprompterStore.getState();
+    
+    console.log('   📊 Estado ANTES de llamar play/pause:');
+    console.log('      store.isPlaying:', currentState.isPlaying);
+    console.log('      speed:', speed);
+    console.log('      scrollPosition:', scrollPosition);
+    console.log('      text length:', text?.length || 0);
+    
+    if (currentState.isPlaying) {
+      console.log('   🔴 Llamando pause()...');
+      pause();
+      console.log('   ✅ pause() ejecutado');
+    } else {
+      console.log('   🟢 Llamando play()...');
+      play();
+      console.log('   ✅ play() ejecutado');
+    }
+    
+    // Verificar estado inmediatamente después
+    setTimeout(() => {
+      const storeState = teleprompterStore.getState();
+      console.log('   📊 Estado DEL STORE después de 50ms:');
+      console.log('      store.isPlaying:', storeState.isPlaying);
+      console.log('      store.speed:', storeState.speed);
+      console.log('      store.scrollPosition:', storeState.scrollPosition);
+      console.log('═══════════════════════════════════════');
+    }, 50);
   };
   
   const handleReset = () => {
@@ -280,6 +317,22 @@ export function TeleprompterWindow() {
     console.log('⏮️ TeleprompterWindow: backward to previous script');
     previousItem();
   };
+  
+  // ===== HOOK DE MACROS / MACROS HOOK =====
+  /**
+   * Hook para manejar atajos de teclado personalizables
+   * Hook to handle customizable keyboard shortcuts
+   */
+  useMacros(macroSettings, {
+    onPlayStop: handlePlayPause,
+    onPause: pause,
+    onPrevious: handleBackward,
+    onNext: handleForward,
+    onIncreaseSpeed: () => adjustSpeed(0.1),
+    onDecreaseSpeed: () => adjustSpeed(-0.1),
+    onIncreaseFontSize: () => adjustFontSize(8),
+    onDecreaseFontSize: () => adjustFontSize(-8),
+  });
   
   // ===== MANEJADORES DE TECLADO / KEYBOARD HANDLERS =====
   /**
@@ -342,7 +395,7 @@ export function TeleprompterWindow() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isPlaying, speed, fontSize]);
+  }, [isPlaying, speed, fontSize, handlePlayPause, handleReset, adjustSpeed, adjustFontSize, setShowControls, handleForward, handleBackward]);
   
   // ===== RENDER / RENDERIZADO =====
   
@@ -427,9 +480,30 @@ export function TeleprompterWindow() {
           scrollPosition={scrollPosition}
           speed={speed}
           setScrollPosition={setScrollPosition}
+          guideLinePosition={guideLinePosition}
           onEnd={() => {
             console.log('📜 TeleprompterWindow: reached end of text');
             pause();
+            
+            // Auto-avance al siguiente script después de 2 segundos
+            // Auto-advance to next script after 2 seconds
+            setTimeout(() => {
+              const success = nextItem();
+              if (success) {
+                console.log('✅ TeleprompterWindow: auto-advanced to next script');
+                // Resetear posición de scroll para el nuevo script
+                // Reset scroll position for new script
+                reset();
+                // Esperar 500ms y reanudar reproducción automáticamente
+                // Wait 500ms and resume playback automatically
+                setTimeout(() => {
+                  play();
+                  console.log('▶️ TeleprompterWindow: auto-resuming playback for next script');
+                }, 500);
+              } else {
+                console.log('⚠️ TeleprompterWindow: reached last script, no more scripts to advance');
+              }
+            }, 2000);
           }}
           onJumpToPosition={setScrollPosition}
         />

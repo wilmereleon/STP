@@ -156,14 +156,18 @@ export default function App() {
     };
   }, []);
   
-  // ===== EFECTO: INICIALIZAR AUTO-SCROLL SERVICE / EFFECT: INITIALIZE AUTO-SCROLL SERVICE =====
+  // ===== EFECTO: AUTO-SCROLL SERVICE DESHABILITADO / EFFECT: AUTO-SCROLL SERVICE DISABLED =====
   /**
-   * Inicializa AutoScrollService para manejar scroll automático
-   * Initializes AutoScrollService to handle automatic scrolling
+   * ❌ AutoScrollService DESHABILITADO
+   * ❌ AutoScrollService DISABLED
    * 
-   * Nota: AutoScrollService se auto-inicia al observar cambios en TeleprompterStore
-   * Note: AutoScrollService auto-starts when observing TeleprompterStore changes
+   * El auto-scroll local de TeleprompterScreen está activo.
+   * AutoScrollService fue deshabilitado para evitar competencia.
+   * 
+   * Local auto-scroll in TeleprompterScreen is active.
+   * AutoScrollService was disabled to avoid competition.
    */
+  /* 
   useEffect(() => {
     console.log('🟢 App: AutoScrollService ready (auto-starts on play)');
     
@@ -172,6 +176,7 @@ export default function App() {
       autoScrollService.stop();
     };
   }, []);
+  */
   
   // ===== MANEJADORES DE VENTANAS / WINDOW HANDLERS =====
   
@@ -413,12 +418,14 @@ export default function App() {
         
         {/* ===== PANEL CENTRAL: EDITOR / CENTER PANEL: EDITOR ===== */}
         {/* Flex-1 para ocupar espacio restante */}
-        <div className="flex-1 min-w-0 h-full overflow-auto border-r">
+        <div className="flex-1 min-w-0 h-full overflow-auto border-r" style={{backgroundColor: '#f5f5f5', minWidth: '300px'}}>
           <ScriptEditor
             text={text}
             onTextChange={handleTextChange}
             currentScript={activeItem?.title || 'Sin título'}
             onFileLoad={handleFileLoad}
+            macros={macroSettings}
+            onMacrosChange={setMacros}
           />
         </div>
         

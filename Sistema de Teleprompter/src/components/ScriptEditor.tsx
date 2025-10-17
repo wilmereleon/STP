@@ -1,6 +1,6 @@
 // ===== IMPORTACIONES / IMPORTS =====
 // Iconos de Lucide React para UI / Lucide React icons for UI
-import { FileText, Upload, Save, Copy, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, ChevronDown, Type, RefreshCw, Target, SkipForward } from 'lucide-react';
+import { FileText, Upload, Save, Copy, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, ChevronDown, Type, RefreshCw, Target, SkipForward, Settings } from 'lucide-react';
 // Componentes UI reutilizables / Reusable UI components
 import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
@@ -11,6 +11,9 @@ import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 // Componente personalizado para marcadores de salto / Custom component for jump markers
 import { TextWithJumpMarkers } from './TextWithJumpMarkers';
+// Componente de configuración de macros / Macro configuration component
+import { ConfigurationPanel } from './ConfigurationPanel';
+import { MacroSettings } from './useMacros';
 
 /**
  * Propiedades del componente ScriptEditor
@@ -23,6 +26,8 @@ import { TextWithJumpMarkers } from './TextWithJumpMarkers';
  * @property {(scripts: Array<{id: string, title: string, text: string}>, fileName: string) => void} [onFileLoad] - Callback para cargar múltiples scripts desde archivo / Callback to load multiple scripts from file
  * @property {{[key: string]: number}} [jumpMarkers] - Mapa de marcadores de salto (etiqueta -> posición) / Map of jump markers (label -> position)
  * @property {(position: number) => void} [onJumpToPosition] - Callback para saltar a una posición específica / Callback to jump to specific position
+ * @property {MacroSettings} [macros] - Configuración de macros / Macro configuration
+ * @property {(macros: MacroSettings) => void} [onMacrosChange] - Callback para cambiar macros / Callback to change macros
  */
 interface ScriptEditorProps {
   text: string;
@@ -31,6 +36,8 @@ interface ScriptEditorProps {
   onFileLoad?: (scripts: Array<{id: string, title: string, text: string}>, fileName: string) => void;
   jumpMarkers?: {[key: string]: number};
   onJumpToPosition?: (position: number) => void;
+  macros?: MacroSettings;
+  onMacrosChange?: (macros: MacroSettings) => void;
 }
 
 /**
@@ -61,7 +68,7 @@ interface ScriptEditorProps {
  * @param {ScriptEditorProps} props - Propiedades del componente / Component properties
  * @returns {JSX.Element} Editor de scripts / Script editor
  */
-export function ScriptEditor({ text, onTextChange, currentScript, onFileLoad, jumpMarkers = {}, onJumpToPosition }: ScriptEditorProps) {
+export function ScriptEditor({ text, onTextChange, currentScript, onFileLoad, jumpMarkers = {}, onJumpToPosition, macros, onMacrosChange }: ScriptEditorProps) {
   // ===== REFERENCIAS / REFERENCES =====
   // Referencia al input oculto de archivo / Reference to hidden file input
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +89,7 @@ export function ScriptEditor({ text, onTextChange, currentScript, onFileLoad, ju
   
   // Estado de visualización / Display state
   const [showJumpIcons, setShowJumpIcons] = useState(true); // Mostrar iconos de salto / Show jump icons
+  const [showMacroConfig, setShowMacroConfig] = useState(false); // Mostrar configuración de macros / Show macro configuration
 
   /**
    * Alterna entre mayúsculas y minúsculas del texto completo
@@ -274,6 +282,18 @@ For best results, use the format: [number] {TITLE} text content`;
             {/* Título del editor con nombre del script actual / Editor title with current script name */}
             <h3 className="text-sm font-medium text-gray-800">Story Editor: {currentScript}</h3>
             <div className="flex gap-1">
+              {/* Botón de configuración de macros / Macro configuration button */}
+              {macros && onMacrosChange && (
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="text-gray-600 hover:bg-gray-300 p-1"
+                  onClick={() => setShowMacroConfig(!showMacroConfig)}
+                  title="Configuración de Macros"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              )}
               {/* Botón guardar / Save button */}
               <Button size="sm" variant="ghost" className="text-gray-600 hover:bg-gray-300 p-1">
                 <Save className="h-4 w-4" />
@@ -331,7 +351,7 @@ For best results, use the format: [number] {TITLE} text content`;
         {/* ===== BARRA DE FORMATEO / FORMATTING TOOLBAR ===== */}
         {/* Controles completos de formato de texto similares a MS Word / Complete text formatting controls similar to MS Word */}
         <div className="px-3 py-2 bg-gray-300 border-t border-gray-400">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
             {/* ===== SELECTOR DE FUENTE / FONT FAMILY SELECTOR ===== */}
             {/* 4 familias de fuente disponibles / 4 font families available */}
             <Select value={fontFamily} onValueChange={setFontFamily}>
@@ -375,7 +395,7 @@ For best results, use the format: [number] {TITLE} text content`;
             </Select>
 
             {/* Separador visual / Visual separator */}
-            <div className="w-px h-5 bg-gray-500 mx-1" />
+            <div className="w-px h-5 bg-gray-500 mx-1 hidden sm:block" />
 
             {/* ===== SELECTOR DE COLOR / TEXT COLOR SELECTOR ===== */}
             {/* Botón con indicador de color actual / Button with current color indicator */}
@@ -415,7 +435,7 @@ For best results, use the format: [number] {TITLE} text content`;
             </Button>
 
             {/* Separador visual / Visual separator */}
-            <div className="w-px h-5 bg-gray-500 mx-1" />
+            <div className="w-px h-5 bg-gray-500 mx-1 hidden sm:block" />
 
             {/* ===== BOTONES DE ALINEACIÓN / ALIGNMENT BUTTONS ===== */}
             {/* Izquierda, centro, derecha / Left, center, right */}
@@ -622,6 +642,16 @@ For best results, use the format: [number] {TITLE} text content`;
           Script: {currentScript} | Caracteres: {text.length}
         </div>
       </div>
+
+      {/* ===== PANEL DE CONFIGURACIÓN DE MACROS / MACRO CONFIGURATION PANEL ===== */}
+      {showMacroConfig && macros && onMacrosChange && (
+        <ConfigurationPanel
+          isOpen={showMacroConfig}
+          onClose={() => setShowMacroConfig(false)}
+          macros={macros}
+          onMacrosChange={onMacrosChange}
+        />
+      )}
     </div>
   );
 }

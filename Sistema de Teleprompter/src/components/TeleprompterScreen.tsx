@@ -18,8 +18,8 @@ import './TeleprompterScreen.css';
  * @property {() => void} onEnd - Callback cuando se llega al final del texto / Callback when reaching end of text
  * @property {number} scrollPosition - Posición actual de scroll en píxeles / Current scroll position in pixels
  * @property {(position: number) => void} setScrollPosition - Función para actualizar posición de scroll / Function to update scroll position
- * @property {boolean} [isManualScrolling=false] - true = usuario scrolleando manualmente / true = user manually scrolling
  * @property {(position: number) => void} [onJumpToPosition] - Callback para saltar a posición específica / Callback to jump to specific position
+ * @property {number} [guideLinePosition=50] - Posición de la línea guía (%) / Guide line position (%)
  */
 interface TeleprompterScreenProps {
   text: string;
@@ -31,6 +31,7 @@ interface TeleprompterScreenProps {
   setScrollPosition: (position: number) => void;
   isManualScrolling?: boolean;
   onJumpToPosition?: (position: number) => void;
+  guideLinePosition?: number;
 }
 
 /**
@@ -70,8 +71,9 @@ export function TeleprompterScreen({
   onEnd,
   scrollPosition,
   setScrollPosition,
-  isManualScrolling = false,
-  onJumpToPosition
+  isManualScrolling = false, // Mantenido por compatibilidad pero no usado / Kept for compatibility but not used
+  onJumpToPosition,
+  guideLinePosition = 50
 }: TeleprompterScreenProps) {
   // ===== REFERENCIAS / REFERENCES =====
   // Referencia al contenedor principal de scroll / Reference to main scroll container
@@ -80,9 +82,30 @@ export function TeleprompterScreen({
   const animationRef = useRef<number | undefined>(undefined);
   // Referencia a la inercia del scroll manual / Reference to manual scroll inertia
   const inertiaRef = useRef<number>(0);
+  // Referencia a scrollPosition para acceder al valor actual en animación
+  // Reference to scrollPosition to access current value in animation
+  const scrollPositionRef = useRef<number>(scrollPosition);
   // Factor de decaimiento de la inercia (0.92 = 92% por frame, suave y natural)
   // Inertia decay factor (0.92 = 92% per frame, smooth and natural)
   const inertiaDecay = 0.92;
+  
+  // Actualizar ref cuando cambie scrollPosition
+  // Update ref when scrollPosition changes
+  useEffect(() => {
+    scrollPositionRef.current = scrollPosition;
+  }, [scrollPosition]);
+
+  // ===== EFECTO DEBUG: LOG DE PROPS / DEBUG EFFECT: LOG PROPS =====
+  useEffect(() => {
+    console.log('🔵 TeleprompterScreen: Props received', {
+      isPlaying,
+      speed,
+      fontSize,
+      scrollPosition,
+      hasText: text?.length > 0,
+      textPreview: text?.substring(0, 50)
+    });
+  }, [isPlaying, speed, fontSize, scrollPosition, text]);
 
   // ===== EFECTO: AUTO-SCROLL FLUIDO / EFFECT: SMOOTH AUTO-SCROLL =====
   /**
@@ -98,9 +121,10 @@ export function TeleprompterScreen({
    * 
    * Se detiene si / Stops if:
    * - isPlaying = false
-   * - isManualScrolling = true
    */
   useEffect(() => {
+    console.log('🎬 TeleprompterScreen: auto-scroll effect triggered', { isPlaying, speed });
+    
     let animationFrame: number | null = null;
     let lastTimestamp: number | null = null;
 
@@ -111,9 +135,9 @@ export function TeleprompterScreen({
      * @param {number} timestamp - Timestamp actual del frame / Current frame timestamp
      */
     function animateScroll(timestamp: number) {
-      // **CONDICIÓN DE PARADA 1: No está reproduciendo o está en modo manual**
-      // **STOP CONDITION 1: Not playing or in manual mode**
-      if (!isPlaying || isManualScrolling) {
+      // **CONDICIÓN DE PARADA: No está reproduciendo**
+      // **STOP CONDITION: Not playing**
+      if (!isPlaying) {
         lastTimestamp = null;
         return;
       }
@@ -128,7 +152,7 @@ export function TeleprompterScreen({
       // **SPEED CALCULATION: Smoother and slower**
       const pixelsPerSecond = speed * 14; // 14 es más lento y suave / 14 is slower and smoother
       const increment = (pixelsPerSecond * elapsed) / 1000; // Convertir ms a segundos / Convert ms to seconds
-      const newPos = scrollPosition + increment;
+      const newPos = scrollPositionRef.current + increment; // Usar ref para obtener valor actual
 
       // **DETECCIÓN DE FINAL DEL TEXTO / END-OF-TEXT DETECTION**
       if (containerRef.current) {
@@ -136,9 +160,22 @@ export function TeleprompterScreen({
         const maxScroll = container.scrollHeight - container.clientHeight; // Scroll máximo posible / Maximum possible scroll
         const endThreshold = maxScroll - 100; // Umbral: 100px antes del final / Threshold: 100px before end
         
-        // Si llegó al umbral de fin (y ya scrolleó más de 100px)
-        // If reached end threshold (and already scrolled more than 100px)
-        if (newPos >= endThreshold && newPos > 100) {
+        // Log de debug para ver valores (solo una vez)
+        if (lastTimestamp === timestamp) {
+          console.log('📐 Scroll metrics:', {
+            scrollHeight: container.scrollHeight,
+            clientHeight: container.clientHeight,
+            maxScroll,
+            endThreshold,
+            currentPos: newPos,
+            reachedEnd: newPos >= endThreshold
+          });
+        }
+        
+        // Si llegó al umbral de fin (SOLO si realmente está cerca del final)
+        // If reached end threshold (ONLY if really close to the end)
+        if (newPos >= endThreshold && newPos >= maxScroll - 200) {
+          console.log('🏁 TeleprompterScreen: reached end threshold, calling onEnd() in 1s');
           setTimeout(() => onEnd(), 1000); // Esperar 1 segundo antes de notificar / Wait 1 second before notifying
           return;
         }
@@ -152,21 +189,27 @@ export function TeleprompterScreen({
       animationFrame = window.requestAnimationFrame(animateScroll);
     }
 
-    // Iniciar animación si está reproduciendo y no está en modo manual
-    // Start animation if playing and not in manual mode
-    if (isPlaying && !isManualScrolling) {
+    // Iniciar animación si está reproduciendo
+    // Start animation if playing
+    if (isPlaying) {
+      console.log('▶️ TeleprompterScreen: starting auto-scroll animation');
       animationFrame = window.requestAnimationFrame(animateScroll);
+    } else {
+      console.log('⏸️ TeleprompterScreen: auto-scroll NOT started', { isPlaying });
     }
 
     // Cleanup: Cancelar animación al desmontar o cambiar dependencias
     // Cleanup: Cancel animation on unmount or dependency change
     return () => {
       if (animationFrame !== null) {
+        console.log('🛑 TeleprompterScreen: canceling auto-scroll animation');
         window.cancelAnimationFrame(animationFrame);
       }
       lastTimestamp = null;
     };
-  }, [isPlaying, speed, onEnd, setScrollPosition, isManualScrolling, scrollPosition]);
+  }, [isPlaying, speed, onEnd, setScrollPosition]);
+  // ⚠️ NO incluir scrollPosition en dependencias - causaría loop infinito
+  // ⚠️ DO NOT include scrollPosition in dependencies - would cause infinite loop
 
   // ===== EFECTO: SCROLL MANUAL CON INERCIA / EFFECT: MANUAL SCROLL WITH INERTIA =====
   /**
@@ -222,14 +265,14 @@ export function TeleprompterScreen({
    * Sincroniza la posición de scroll lógica con el scroll visual del contenedor
    * Synchronizes logical scroll position with container's visual scroll
    * 
-   * Se ejecuta cada vez que cambia scrollPosition o isManualScrolling
-   * Runs whenever scrollPosition or isManualScrolling changes
+   * Se ejecuta cada vez que cambia scrollPosition
+   * Runs whenever scrollPosition changes
    */
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = scrollPosition;
     }
-  }, [scrollPosition, isManualScrolling]);
+  }, [scrollPosition]);
 
   // ===== MANEJADOR: RUEDA DEL MOUSE CON SUAVIDAD / HANDLER: MOUSE WHEEL WITH SMOOTHNESS =====
   /**
@@ -263,50 +306,68 @@ export function TeleprompterScreen({
   };
 
   return (
-    // ===== CONTENEDOR PRINCIPAL / MAIN CONTAINER =====
-    // Contenedor con fondo negro y scroll automático pero barra oculta
-    // Container with black background and automatic scroll but hidden scrollbar
-    <div 
-      ref={containerRef}
-      className="teleprompter-screen h-full w-full bg-black text-white overflow-y-auto overflow-x-hidden relative"
-      style={{ 
-        fontSize: `${fontSize}px`, // Tamaño de fuente dinámico / Dynamic font size
-        scrollBehavior: 'smooth', // Scroll suave nativo / Smooth native scroll
-        scrollbarWidth: 'none', // Firefox: ocultar scrollbar / Firefox: hide scrollbar
-        msOverflowStyle: 'none' // IE/Edge: ocultar scrollbar / IE/Edge: hide scrollbar
-      }}
-      onWheel={handleWheel} // Capturar eventos de rueda del mouse / Capture mouse wheel events
-    >
-      {/* ===== CONTENIDO DE TEXTO / TEXT CONTENT ===== */}
-      {/* Padding inferior grande (pb-96) para que el texto pueda scrollear hasta el final */}
-      {/* Large bottom padding (pb-96) so text can scroll to the end */}
-      <div className="p-8 pb-96">
-        {text ? (
-          // **Componente TextWithJumpMarkers: Renderiza texto con marcadores de salto**
-          // **TextWithJumpMarkers Component: Renders text with jump markers**
-          <TextWithJumpMarkers
-            text={text}
-            onJumpToPosition={onJumpToPosition}
-            fontSize={fontSize}
-            className=""
-            style={{ lineHeight: 1.6 }} // Espaciado entre líneas / Line spacing
-            showJumpIcons={true} // Mostrar iconos de salto / Show jump icons
-          />
-        ) : (
-          // **Mensaje cuando no hay texto / Message when there's no text**
-          <div className="text-center text-gray-500 mt-20">
-            <p>No hay texto para mostrar</p>
-            <p className="text-sm">Escribe texto en el editor principal</p>
-          </div>
-        )}
+    // ===== CONTENEDOR PRINCIPAL CON POSICIÓN RELATIVA / MAIN CONTAINER WITH RELATIVE POSITION =====
+    <div className="relative w-full" style={{ height: '100vh' }}>
+      {/* ===== CONTENEDOR DE SCROLL / SCROLL CONTAINER ===== */}
+      {/* Contenedor con fondo negro y scroll automático pero barra oculta */}
+      {/* Container with black background and automatic scroll but hidden scrollbar */}
+      <div 
+        ref={containerRef}
+        className="teleprompter-screen w-full h-full bg-black text-white overflow-y-auto overflow-x-hidden"
+        style={{ 
+          fontSize: `${fontSize}px`, // Tamaño de fuente dinámico / Dynamic font size
+          scrollBehavior: 'smooth', // Scroll suave nativo / Smooth native scroll
+          scrollbarWidth: 'none', // Firefox: ocultar scrollbar / Firefox: hide scrollbar
+          msOverflowStyle: 'none' // IE/Edge: ocultar scrollbar / IE/Edge: hide scrollbar
+        }}
+        onWheel={handleWheel} // Capturar eventos de rueda del mouse / Capture mouse wheel events
+      >
+        {/* ===== CONTENIDO DE TEXTO / TEXT CONTENT ===== */}
+        {/* Padding inferior grande (pb-96) para que el texto pueda scrollear hasta el final */}
+        {/* Large bottom padding (pb-96) so text can scroll to the end */}
+        <div className="p-8 pb-96">
+          {text ? (
+            // **Componente TextWithJumpMarkers: Renderiza texto con marcadores de salto**
+            // **TextWithJumpMarkers Component: Renders text with jump markers**
+            <TextWithJumpMarkers
+              text={text}
+              onJumpToPosition={onJumpToPosition}
+              fontSize={fontSize}
+              className=""
+              style={{ lineHeight: 1.6 }} // Espaciado entre líneas / Line spacing
+              showJumpIcons={true} // Mostrar iconos de salto / Show jump icons
+            />
+          ) : (
+            // **Mensaje cuando no hay texto / Message when there's no text**
+            <div className="text-center text-gray-500 mt-20">
+              <p>No hay texto para mostrar</p>
+              <p className="text-sm">Escribe texto en el editor principal</p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ===== OVERLAYS DE GRADIENTE / GRADIENT OVERLAYS ===== */}
+      {/* ===== LÍNEA GUÍA (APUNTADOR) - POSICIÓN FIJA / GUIDE LINE (POINTER) - FIXED POSITION ===== */}
+      {/* Línea amarilla horizontal que indica dónde leer - SIEMPRE VISIBLE */}
+      {/* Yellow horizontal line indicating where to read - ALWAYS VISIBLE */}
+      <div
+        className="absolute left-0 right-0 pointer-events-none"
+        style={{ 
+          top: `${guideLinePosition}%`,
+          borderTop: '4px solid #FBBF24',
+          opacity: 1,
+          zIndex: 100,
+          boxShadow: '0 0 20px rgba(251, 191, 36, 0.9), 0 0 40px rgba(251, 191, 36, 0.6)',
+          filter: 'drop-shadow(0 0 10px rgba(251, 191, 36, 0.8))'
+        }}
+      />
+
+      {/* ===== OVERLAYS DE GRADIENTE - POSICIÓN FIJA / GRADIENT OVERLAYS - FIXED POSITION ===== */}
       {/* Gradiente superior: Oculta el texto que entra suavemente / Top gradient: Hides entering text smoothly */}
-      <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-black to-transparent pointer-events-none" />
+      <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-black to-transparent pointer-events-none" style={{ zIndex: 50 }} />
       
       {/* Gradiente inferior: Oculta el texto que sale suavemente / Bottom gradient: Hides exiting text smoothly */}
-      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black to-transparent pointer-events-none" style={{ zIndex: 50 }} />
     </div>
   );
 }

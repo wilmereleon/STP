@@ -9,9 +9,10 @@ import type { Identifier } from "dnd-core";
 // Importaciones de componentes UI
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { Input } from "./ui/input";
 
 // Importaciones de íconos
-import { Play, Edit, Trash2, GripVertical } from "lucide-react";
+import { Play, Edit, Trash2, GripVertical, Check, X } from "lucide-react";
 
 /**
  * Interface que define la estructura de un item en el Run Order
@@ -36,18 +37,28 @@ interface RunOrderItem {
  * @property {RunOrderItem} item - Datos del item a mostrar
  * @property {number} index - Posición actual del item en la lista
  * @property {boolean} isActive - Si este item está actualmente seleccionado/activo
+ * @property {boolean} isEditing - Si este item está en modo edición
+ * @property {string} editingTitle - Título temporal durante la edición
  * @property {function} onSelect - Callback al seleccionar el item
  * @property {function} onEdit - Callback al editar el item
  * @property {function} onDelete - Callback al eliminar el item
+ * @property {function} onSaveEdit - Callback al guardar la edición
+ * @property {function} onCancelEdit - Callback al cancelar la edición
+ * @property {function} onEditingTitleChange - Callback al cambiar el título en edición
  * @property {function} moveItem - Callback para reordenar items (drag & drop)
  */
 interface DraggableRunOrderItemProps {
   item: RunOrderItem;
   index: number;
   isActive: boolean;
+  isEditing?: boolean;
+  editingTitle?: string;
   onSelect: (id: string) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  onSaveEdit?: () => void;
+  onCancelEdit?: () => void;
+  onEditingTitleChange?: (title: string) => void;
   moveItem: (dragIndex: number, hoverIndex: number) => void;
 }
 
@@ -85,9 +96,14 @@ export function DraggableRunOrderItem({
   item,
   index,
   isActive,
+  isEditing = false,
+  editingTitle = '',
   onSelect,
   onEdit,
   onDelete,
+  onSaveEdit,
+  onCancelEdit,
+  onEditingTitleChange,
   moveItem
 }: DraggableRunOrderItemProps) {
   /**
@@ -184,17 +200,17 @@ export function DraggableRunOrderItem({
       ref={ref}
       data-handler-id={handlerId ?? undefined} // Atributo para debugging de react-dnd
       className={`
-        border rounded-md p-3 mb-2 cursor-pointer transition-colors
+        border rounded-md p-2 mb-2 cursor-pointer transition-colors
         ${isActive ? "bg-primary/10 border-primary" : "bg-card border-border hover:bg-muted/50"}
         ${isDragging ? "opacity-50" : "opacity-100"}
       `}
       onClick={() => onSelect(item.id)} // Seleccionar item al hacer clic
     >
-      <div className="flex items-start gap-2">
+      <div className="flex items-center gap-2">
         {/* ===== ICONO DE ARRASTRE ===== */}
         {/* Handle visual para indicar que el item es arrastrable */}
         <div
-          className="mt-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
           onMouseDown={(e) => e.stopPropagation()} // Prevenir que el clic active onSelect
         >
           <GripVertical className="w-4 h-4" />
@@ -203,28 +219,70 @@ export function DraggableRunOrderItem({
         {/* ===== CONTENIDO PRINCIPAL DEL ITEM ===== */}
         <div className="flex-1 min-w-0">
           {/* Encabezado: Título y Duración */}
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between gap-2">
             {/* Título del script con truncamiento si es muy largo */}
-            <h4 className="text-sm font-medium truncate">{item.title}</h4>
+            {isEditing ? (
+              <Input
+                value={editingTitle}
+                onChange={(e) => onEditingTitleChange?.(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    onSaveEdit?.();
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    onCancelEdit?.();
+                  }
+                  e.stopPropagation();
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="h-7 text-sm flex-1"
+                autoFocus
+              />
+            ) : (
+              <h4 className="text-sm font-medium truncate flex-1">{item.title}</h4>
+            )}
             
             {/* Badge con la duración del script */}
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs flex-shrink-0">
               {item.duration}
             </Badge>
           </div>
+        </div>
 
-          {/* Vista previa del contenido del script (máximo 2 líneas) */}
-          <p className="text-xs text-muted-foreground line-clamp-2">
-            {item.script || "No script content"}
-          </p>
-
-          {/* ===== FOOTER: INDICADOR Y BOTONES DE ACCIÓN ===== */}
-          <div className="flex items-center gap-1 mt-2">
-            {/* Icono de Play si el script está activo/en reproducción */}
-            {isActive && <Play className="w-3 h-3 text-primary" />}
-            
-            {/* Botones de acción alineados a la derecha */}
-            <div className="flex gap-1 ml-auto">
+        {/* ===== BOTONES DE ACCIÓN ===== */}
+        <div className="flex items-center gap-1">
+          {/* Icono de Play si el script está activo/en reproducción */}
+          {isActive && !isEditing && <Play className="w-3 h-3 text-primary mr-1" />}
+          
+          {/* Botones de edición cuando está en modo edición */}
+          {isEditing ? (
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.stopPropagation();
+                  onSaveEdit?.();
+                }}
+                className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+              >
+                <Check className="w-3 h-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.stopPropagation();
+                  onCancelEdit?.();
+                }}
+                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </>
+          ) : (
+            <>
               {/* Botón de Editar */}
               <Button
                 size="sm"
@@ -250,8 +308,8 @@ export function DraggableRunOrderItem({
               >
                 <Trash2 className="w-3 h-3" />
               </Button>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>
