@@ -362,33 +362,48 @@ export function TeleprompterWindow() {
       ref={teleprompterAreaRef}
       className="h-screen w-screen bg-black text-white overflow-hidden flex flex-col"
     >
-      {/* ===== BARRA DE CONTROLES SUPERIOR / TOP CONTROLS BAR ===== */}
+      {/* ===== PANEL DE INFORMACIÓN Y ATAJOS (ABAJO IZQUIERDA) / INFO AND SHORTCUTS PANEL (BOTTOM LEFT) ===== */}
       {showControls && (
-        <div className="absolute top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm p-3 transition-opacity">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-            {/* Indicador de conexión / Connection indicator */}
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-              <span className="text-xs text-white/60">
-                {isConnected ? 'Conectado' : 'Desconectado'}
-              </span>
+        <div className="absolute bottom-4 left-4 z-50 bg-black/90 backdrop-blur-sm rounded-lg p-4 border border-white/20 text-sm">
+          <div className="space-y-2">
+            {/* Título */}
+            <div className="font-bold text-white mb-3 border-b border-white/30 pb-2">
+              Atajos
             </div>
             
-            {/* Controles de transporte / Transport controls */}
-            <div className="flex-1 flex justify-center">
-              <TeleprompterControls
-                onBackward={handleBackward}
-                onForward={handleForward}
-              />
+            {/* Atajos de teclado */}
+            <div className="space-y-1 text-white/80 text-xs">
+              <div>ESPACIO = Play/Pause</div>
+              <div>R = Reset</div>
+              <div>↑/↓ = Velocidad</div>
+              <div>+/- = Tamaño fuente</div>
+              <div>H = Mostrar/Ocultar controles</div>
+              <div>PageUp/PageDown = Script anterior/siguiente</div>
+              <div>CTRL + WHEEL = Velocidad</div>
+              <div>SHIFT + WHEEL = Tamaño fuente</div>
+              <div>WHEEL = Scroll manual</div>
             </div>
             
-            {/* Botón para ocultar controles / Button to hide controls */}
-            <button
-              onClick={() => setShowControls(false)}
-              className="text-xs text-white/60 hover:text-white transition-colors px-3 py-1 rounded hover:bg-white/10"
-            >
-              Ocultar (H)
-            </button>
+            {/* Separador */}
+            <div className="border-t border-white/30 my-3" />
+            
+            {/* Estado actual */}
+            <div className="space-y-1">
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-white/60">Velocidad:</span>
+                <span className="text-white font-mono">{speed.toFixed(1)}x</span>
+              </div>
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-white/60">Fuente:</span>
+                <span className="text-white font-mono">{fontSize}px</span>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <div className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`} />
+                <span className="text-xs text-white/80">
+                  {isPlaying ? '▶ Reproduciendo' : '⏸ Pausado'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -397,9 +412,9 @@ export function TeleprompterWindow() {
       {!showControls && (
         <button
           onClick={() => setShowControls(true)}
-          className="absolute top-4 right-4 z-50 text-xs text-white/40 hover:text-white transition-colors px-3 py-1 rounded bg-black/60 hover:bg-black/80"
+          className="absolute bottom-4 left-4 z-50 text-xs text-white/40 hover:text-white transition-colors px-3 py-1 rounded bg-black/60 hover:bg-black/80"
         >
-          Mostrar controles (H)
+          Mostrar (H)
         </button>
       )}
       

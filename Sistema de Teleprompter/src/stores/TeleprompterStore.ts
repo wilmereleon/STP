@@ -356,6 +356,36 @@ class TeleprompterStore {
   }
   
   /**
+   * Sincroniza el estado completo desde un master (usado por SyncService en modo slave)
+   * Este método NO notifica a los listeners para evitar loops de sincronización
+   */
+  syncFromMaster(newState: Partial<TeleprompterState>): void {
+    // Reemplazar estado completo sin notificar (para evitar loops)
+    this.state = {
+      ...this.state,
+      ...newState,
+      timestamp: Date.now()
+    };
+    
+    // Solo notificar a React para re-renderizar, pero no propagar a SyncService
+    const state = this.getState();
+    this.listeners.forEach(listener => {
+      try {
+        listener(state);
+      } catch (error) {
+        console.error('❌ TeleprompterStore: error in listener', error);
+      }
+    });
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 TeleprompterStore: synced from master', { 
+        text: newState.text?.substring(0, 50),
+        isPlaying: newState.isPlaying 
+      });
+    }
+  }
+  
+  /**
    * Valida y ajusta la velocidad al rango permitido
    */
   private validateSpeed(speed: number): number {

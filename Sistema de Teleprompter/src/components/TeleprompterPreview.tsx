@@ -382,9 +382,8 @@ export function TeleprompterPreview({
       {/* ===== VISTA PREVIA / PREVIEW ===== */}
       <div 
         ref={previewRef}
-        className="flex-1 overflow-y-auto bg-black text-white p-4 relative"
+        className="flex-1 overflow-y-auto bg-black text-white p-4 relative min-h-0"
         style={{
-          height: 'calc(100vh - 200px)',
           fontSize: `${previewFontSize}px`,
           lineHeight: '1.5'
         }}

@@ -403,9 +403,9 @@ export class SyncService {
     
     console.log('🔧 SyncService (Slave): Applying state from master. Text length:', state.text?.length || 0);
     
-    // Aplicar al store local
-    // IMPORTANTE: No disparar notificaciones para evitar loop
-    (teleprompterStore as any).state = state;
+    // Aplicar al store local usando el método syncFromMaster
+    // Este método notifica a React sin causar loops de sincronización
+    teleprompterStore.syncFromMaster(state);
     
     if (process.env.NODE_ENV === 'development') {
       console.log('✅ SyncService: applied state from master');
