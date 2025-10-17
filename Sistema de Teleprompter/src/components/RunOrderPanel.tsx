@@ -101,12 +101,15 @@ export function RunOrderPanel({
   // ===== HANDLERS / MANEJADORES =====
   
   /**
-   * Maneja la selección de un item del run order
+   * Maneja la selección de un item
    * Handles selecting an item from the run order
    */
   const handleSelectItem = (id: string) => {
     console.log('📋 RunOrderPanel: selecting item', id);
     setActiveItem(id);
+    // Llamar a onEditItem para cargar el texto en el editor
+    // Call onEditItem to load text in editor
+    onEditItem(id);
   };
   
   /**
