@@ -245,12 +245,12 @@ export function RunOrderPanel({
   // ===== RENDER / RENDERIZADO =====
   
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col overflow-hidden">
       {/* ===== ENCABEZADO / HEADER ===== */}
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">Run Order</CardTitle>
-          <div className="flex items-center gap-2">
+      <CardHeader className="pb-3 flex-shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-sm flex-shrink-0">Run Order</CardTitle>
+          <div className="flex items-center gap-1 flex-shrink-0">
             {/* Botón de importar Excel / Import Excel button */}
             <Button 
               size="sm" 
@@ -258,18 +258,19 @@ export function RunOrderPanel({
               onClick={handleImportClick}
               disabled={isImporting}
               title="Importar desde Excel (.xlsx, .xls)"
+              className="flex-shrink-0"
             >
               {isImporting ? (
-                <Upload className="w-3 h-3 mr-1 animate-pulse" />
+                <Upload className="w-3 h-3 sm:mr-1 animate-pulse" />
               ) : (
-                <FileSpreadsheet className="w-3 h-3 mr-1" />
+                <FileSpreadsheet className="w-3 h-3 sm:mr-1" />
               )}
-              {isImporting ? 'Importando...' : 'Import Excel'}
+              <span className="hidden sm:inline">{isImporting ? 'Importando...' : 'Import Excel'}</span>
             </Button>
             {/* Botón para agregar nuevo item / Button to add new item */}
-            <Button size="sm" variant="outline" onClick={onAddItem}>
-              <Plus className="w-3 h-3 mr-1" />
-              Add
+            <Button size="sm" variant="outline" onClick={onAddItem} className="flex-shrink-0">
+              <Plus className="w-3 h-3 sm:mr-1" />
+              <span className="hidden sm:inline">Add</span>
             </Button>
           </div>
         </div>

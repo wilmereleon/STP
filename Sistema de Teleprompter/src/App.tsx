@@ -30,7 +30,6 @@ import { useEffect, useState } from 'react';
 import { RunOrderPanel } from './components/RunOrderPanel';
 import { TeleprompterPreview } from './components/TeleprompterPreview';
 import { TeleprompterWindow } from './components/TeleprompterWindow';
-import { TeleprompterModal } from './components/TeleprompterModal';
 import { MainToolbar } from './components/MainToolbar';
 
 // Componentes v1 que aún no tienen v2 / v1 components that don't have v2 yet
@@ -135,7 +134,6 @@ export default function App() {
    * Solo estados de UI que no necesitan persistencia ni sincronización
    * Only UI states that don't need persistence or synchronization
    */
-  const [isTeleprompterModalOpen, setIsTeleprompterModalOpen] = useState(false);
   const [showMacroMenu, setShowMacroMenu] = useState(false);
   const [showMacroConfig, setShowMacroConfig] = useState(false);
   const [teleprompterWindowRef, setTeleprompterWindowRef] = useState<Window | null>(null);
@@ -202,24 +200,6 @@ export default function App() {
     } else {
       console.error('❌ App: failed to open teleprompter window (popup blocked?)');
     }
-  };
-  
-  /**
-   * Abre modal de teleprompter en pantalla completa
-   * Opens fullscreen teleprompter modal
-   */
-  const handleOpenTeleprompterModal = () => {
-    console.log('🖥️ App: opening teleprompter modal');
-    setIsTeleprompterModalOpen(true);
-  };
-  
-  /**
-   * Cierra modal de teleprompter
-   * Closes teleprompter modal
-   */
-  const handleCloseTeleprompterModal = () => {
-    console.log('🖥️ App: closing teleprompter modal');
-    setIsTeleprompterModalOpen(false);
   };
   
   // ===== MANEJADORES DE RUN ORDER / RUN ORDER HANDLERS =====
@@ -355,9 +335,6 @@ export default function App() {
       // ESC = Cerrar menús / Close menus
       if (e.key === 'Escape') {
         setShowMacroMenu(false);
-        if (isTeleprompterModalOpen) {
-          handleCloseTeleprompterModal();
-        }
       }
     };
     
@@ -366,7 +343,7 @@ export default function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isTeleprompterModalOpen]);
+  }, []);
   
   // ===== PANTALLA DE CARGA / LOADING SCREEN =====
   if (isLoading) {
@@ -427,7 +404,7 @@ export default function App() {
         
         {/* ===== PANEL IZQUIERDO: RUN ORDER / LEFT PANEL: RUN ORDER ===== */}
         {/* Ancho fijo 280px según diseño WinPlus */}
-        <div className="w-[280px] flex-shrink-0 border-r h-full overflow-hidden">
+        <div className="w-[280px] flex-shrink-0 border-r h-full overflow-auto">
           <RunOrderPanel
             onAddItem={handleAddItem}
             onEditItem={handleEditItem}
@@ -436,7 +413,7 @@ export default function App() {
         
         {/* ===== PANEL CENTRAL: EDITOR / CENTER PANEL: EDITOR ===== */}
         {/* Flex-1 para ocupar espacio restante */}
-        <div className="flex-1 min-w-0 h-full overflow-hidden border-r">
+        <div className="flex-1 min-w-0 h-full overflow-auto border-r">
           <ScriptEditor
             text={text}
             onTextChange={handleTextChange}
@@ -447,22 +424,12 @@ export default function App() {
         
         {/* ===== PANEL DERECHO: PREVIEW / RIGHT PANEL: PREVIEW ===== */}
         {/* Ancho fijo 400px según diseño WinPlus */}
-        <div className="w-[400px] flex-shrink-0 h-full overflow-hidden">
+        <div className="preview-panel-wrapper w-[400px] h-full flex-shrink-0 border-r" style={{ maxWidth: '400px', minWidth: '400px', width: '400px', overflow: 'hidden' }}>
           <TeleprompterPreview
             onOpenTeleprompter={handleOpenTeleprompter}
-            onOpenTeleprompterModal={handleOpenTeleprompterModal}
           />
         </div>
       </div>
-      
-      {/* ===== MODAL DE TELEPROMPTER / TELEPROMPTER MODAL ===== */}
-      {isTeleprompterModalOpen && (
-        <TeleprompterModal
-          isOpen={isTeleprompterModalOpen}
-          onClose={handleCloseTeleprompterModal}
-          text={text}
-        />
-      )}
       
       {/* ===== MENÚ DE MACROS / MACRO MENU ===== */}
       {showMacroMenu && (

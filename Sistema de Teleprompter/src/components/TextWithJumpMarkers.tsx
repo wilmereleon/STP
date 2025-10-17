@@ -137,7 +137,7 @@ export function TextWithJumpMarkers({
                 <Zap className="h-2.5 w-2.5" /> {/* Icono de rayo / Lightning icon */}
               </Button>
             </span>
-            <span className="flex-1">{restOfLine}</span>
+            <span className="flex-1 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{restOfLine}</span>
           </div>
         );
       }
@@ -160,8 +160,8 @@ export function TextWithJumpMarkers({
       
       if (titleMatch && line.trim().length > 0) {
         return (
-          <div key={`title-${lineIndex}`} className="leading-relaxed mb-4 transition-all duration-200 flex items-start gap-1 group">
-            <span className="flex-1">{line}</span>
+          <div key={`title-${lineIndex}`} className="leading-relaxed mb-4 transition-all duration-200 flex items-start gap-1 group" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+            <span className="flex-1 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{line}</span>
             {/* Icono Target azul / Blue Target icon */}
             <Button
               size="sm"
@@ -184,7 +184,7 @@ export function TextWithJumpMarkers({
       // ===== LÍNEA REGULAR SIN MARCADOR / REGULAR LINE WITHOUT MARKER =====
       // Mantener estructura original / Maintain original structure
       return (
-        <div key={`line-${lineIndex}`} className="leading-relaxed mb-4 transition-all duration-200">
+        <div key={`line-${lineIndex}`} className="leading-relaxed mb-4 transition-all duration-200 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
           {line.trim() || '\u00A0'} {/* \u00A0 preserva líneas vacías / \u00A0 preserves empty lines */}
         </div>
       );
@@ -195,8 +195,11 @@ export function TextWithJumpMarkers({
   return (
     // Contenedor con clases y estilos personalizables / Container with customizable classes and styles
     <div 
-      className={`${className}`}
+      className={`w-full max-w-full ${className}`}
       style={{ 
+        wordWrap: 'break-word',
+        overflowWrap: 'break-word',
+        wordBreak: 'break-word',
         ...style // Spread de estilos personalizados / Spread custom styles
       }}
     >

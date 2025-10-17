@@ -434,42 +434,6 @@ export function TeleprompterWindow() {
           onJumpToPosition={setScrollPosition}
         />
       </div>
-      
-      {/* ===== INDICADORES DE ESTADO / STATUS INDICATORS ===== */}
-      <div className="absolute bottom-4 right-4 z-40 flex flex-col items-end gap-2">
-        {/* Velocidad / Speed */}
-        <div className="bg-black/60 backdrop-blur-sm px-3 py-1 rounded text-xs text-white/80">
-          Velocidad: {speed.toFixed(1)}x
-        </div>
-        
-        {/* Tamaño de fuente / Font size */}
-        <div className="bg-black/60 backdrop-blur-sm px-3 py-1 rounded text-xs text-white/80">
-          Fuente: {fontSize}px
-        </div>
-        
-        {/* Estado de reproducción / Playback state */}
-        <div className={`backdrop-blur-sm px-3 py-1 rounded text-xs ${
-          isPlaying ? 'bg-green-500/60 text-white' : 'bg-red-500/60 text-white'
-        }`}>
-          {isPlaying ? '▶ Reproduciendo' : '⏸ Pausado'}
-        </div>
-      </div>
-      
-      {/* ===== ATAJOS DE TECLADO / KEYBOARD SHORTCUTS ===== */}
-      <div className="absolute bottom-4 left-4 z-40 bg-black/60 backdrop-blur-sm px-3 py-2 rounded text-xs text-white/60">
-        <div className="font-semibold mb-1">Atajos:</div>
-        <div>ESPACIO = Play/Pause</div>
-        <div>R = Reset</div>
-        <div>↑/↓ = Velocidad</div>
-        <div>+/- = Tamaño fuente</div>
-        <div>H = Mostrar/Ocultar controles</div>
-        <div>PageUp/PageDown = Script anterior/siguiente</div>
-        <div className="mt-1 pt-1 border-t border-white/20">
-          <div>CTRL + WHEEL = Velocidad</div>
-          <div>SHIFT + WHEEL = Tamaño fuente</div>
-          <div>WHEEL = Scroll manual</div>
-        </div>
-      </div>
     </div>
   );
 }

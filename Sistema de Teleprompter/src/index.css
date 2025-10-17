@@ -2908,3 +2908,33 @@ textarea {
     transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0) scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1)) rotate(var(--tw-exit-rotate, 0));
   }
 }
+
+/* ===== CUSTOM STYLES: PREVIEW PANEL WORD BREAK ===== */
+/* Asegurar que el texto largo se rompa correctamente en el preview */
+.preview-container,
+.preview-container * {
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+  max-width: 100% !important;
+}
+
+.preview-container {
+  overflow-x: hidden !important;
+}
+
+/* Forzar ancho máximo en el contenedor padre del Preview */
+.preview-panel-wrapper {
+  max-width: 400px !important;
+  min-width: 400px !important;
+  width: 400px !important;
+  overflow: hidden !important;
+}
+
+/* Asegurar que los botones sean visibles con texto truncado */
+.toolbar-button {
+  min-width: fit-content !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}

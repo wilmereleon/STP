@@ -216,11 +216,20 @@ export function TeleprompterPreview({
   const previewFontSize = Math.max(12, Math.min(60, fontSize * 0.12));
   
   return (
-    <div className="h-full flex flex-col bg-gray-100 border-l border-gray-300 overflow-hidden">
+    <div 
+      className="w-full h-full flex flex-col bg-gray-100 border-l border-gray-300" 
+      style={{ 
+        maxWidth: '400px',
+        minWidth: '400px', 
+        width: '400px',
+        overflow: 'hidden',
+        boxSizing: 'border-box'
+      }}
+    >
       {/* ===== ENCABEZADO / HEADER ===== */}
       <div className="p-3 border-b border-gray-300 bg-gray-200 flex-shrink-0">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-gray-800">
+        <div className="flex items-center justify-between mb-2" style={{ maxWidth: '100%' }}>
+          <h3 className="text-sm font-medium text-gray-800 truncate flex-1" style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             Prompter Preview: {fileName || 'How To Script'}
           </h3>
           <div className="flex gap-1">
@@ -382,23 +391,40 @@ export function TeleprompterPreview({
       {/* ===== VISTA PREVIA / PREVIEW ===== */}
       <div 
         ref={previewRef}
-        className="flex-1 overflow-y-auto bg-black text-white p-4 relative min-h-0"
+        className="preview-container flex-1 overflow-y-auto overflow-x-hidden bg-black text-white p-4 relative min-h-0"
         style={{
           fontSize: `${previewFontSize}px`,
-          lineHeight: '1.5'
+          lineHeight: '1.5',
+          wordWrap: 'break-word',
+          overflowWrap: 'break-word',
+          wordBreak: 'break-word',
+          maxWidth: '400px',
+          width: '100%',
+          boxSizing: 'border-box'
         }}
         onWheel={handleWheel}
       >
         {/* Línea Guía */}
         <div
           className="absolute left-0 right-0 border-t-2 border-yellow-400 opacity-50 pointer-events-none"
-          style={{ top: `${guideLinePosition}%` }}
+          style={{ top: `${guideLinePosition}%`, maxWidth: '400px' }}
         />
         
         {/* Texto con Marcadores */}
-        <TextWithJumpMarkers
-          text={text}
-        />
+        <div 
+          className="w-full max-w-full" 
+          style={{ 
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word', 
+            wordBreak: 'break-word',
+            maxWidth: '100%',
+            boxSizing: 'border-box'
+          }}
+        >
+          <TextWithJumpMarkers
+            text={text}
+          />
+        </div>
       </div>
       
       {/* ===== BOTONES DE APERTURA / OPEN BUTTONS ===== */}
@@ -406,24 +432,12 @@ export function TeleprompterPreview({
         {onOpenTeleprompter && (
           <Button
             size="sm"
-            variant="outline"
+            variant="default"
             onClick={onOpenTeleprompter}
             className="w-full"
           >
             <Monitor className="h-4 w-4 mr-2" />
-            Abrir en Nueva Ventana
-          </Button>
-        )}
-        
-        {onOpenTeleprompterModal && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onOpenTeleprompterModal}
-            className="w-full"
-          >
-            <Maximize className="h-4 w-4 mr-2" />
-            Pantalla Completa
+            Desplegar Teleprómpter
           </Button>
         )}
         
