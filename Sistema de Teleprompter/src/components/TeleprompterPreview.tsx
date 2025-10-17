@@ -216,9 +216,9 @@ export function TeleprompterPreview({
   const previewFontSize = Math.max(12, Math.min(60, fontSize * 0.12));
   
   return (
-    <div className="h-full bg-gray-100 border-l border-gray-300">
+    <div className="h-full flex flex-col bg-gray-100 border-l border-gray-300 overflow-hidden">
       {/* ===== ENCABEZADO / HEADER ===== */}
-      <div className="p-3 border-b border-gray-300 bg-gray-200">
+      <div className="p-3 border-b border-gray-300 bg-gray-200 flex-shrink-0">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-medium text-gray-800">
             Prompter Preview: {fileName || 'How To Script'}
@@ -301,7 +301,7 @@ export function TeleprompterPreview({
       
       {/* Panel de Configuración de Macros */}
       {showMacroConfig && macros && onMacrosChange && (
-        <div className="p-3 border-b border-gray-300 bg-gray-50">
+        <div className="p-3 border-b border-gray-300 bg-gray-50 flex-shrink-0">
           <ConfigurationPanel
             isOpen={showMacroConfig}
             macros={macros}
@@ -313,7 +313,7 @@ export function TeleprompterPreview({
       
       {/* Panel de Línea Guía */}
       {showGuideSettings && (
-        <div className="p-3 border-b border-gray-300 bg-gray-50">
+        <div className="p-3 border-b border-gray-300 bg-gray-50 flex-shrink-0">
           <GuideLineSettings
             isOpen={showGuideSettings}
             guideLinePosition={guideLinePosition}
@@ -325,7 +325,7 @@ export function TeleprompterPreview({
       
       {/* Panel de Controles de Fuente */}
       {showFontControls && (
-        <div className="p-3 border-b border-gray-300 bg-gray-50">
+        <div className="p-3 border-b border-gray-300 bg-gray-50 flex-shrink-0">
           <div className="space-y-3">
             <div>
               <label className="text-xs text-gray-600 mb-1 block">
@@ -402,7 +402,7 @@ export function TeleprompterPreview({
       </div>
       
       {/* ===== BOTONES DE APERTURA / OPEN BUTTONS ===== */}
-      <div className="p-3 border-t border-gray-300 bg-gray-200 space-y-2">
+      <div className="p-3 border-t border-gray-300 bg-gray-200 space-y-2 flex-shrink-0">
         {onOpenTeleprompter && (
           <Button
             size="sm"
