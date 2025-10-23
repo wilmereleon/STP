@@ -20,7 +20,8 @@ services:
       - /app/node_modules  # Evitar sobreescribir node_modules
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=http://localhost:3000
+      - VITE_API_URL=http://localhost:3000/api
+      - VITE_WS_URL=http://localhost:3000
     networks:
       - teleprompter-network
     depends_on:
@@ -46,9 +47,13 @@ services:
       - NODE_ENV=development
       - PORT=3000
       - WS_PORT=3001
-      - DATABASE_URL=mongodb://mongo:27017/teleprompter
-      - JWT_SECRET=teleprompter_secret_key_2025
-      - CORS_ORIGIN=http://localhost:5173
+      - DATABASE_URL=mongodb://admin:admin123@mongo:27017/teleprompter?authSource=admin
+      - MONGODB_URI=mongodb://admin:admin123@mongo:27017/teleprompter?authSource=admin
+      - JWT_SECRET=teleprompter_secret_key_2025_super_secure
+      - JWT_REFRESH_SECRET=teleprompter_refresh_secret_2025_super_secure
+      - JWT_EXPIRES_IN=1h
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - CORS_ORIGIN=http://localhost:5173,http://localhost
     networks:
       - teleprompter-network
     depends_on:

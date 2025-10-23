@@ -17,13 +17,13 @@
 
 // ===== IMPORTACIONES / IMPORTS =====
 import { createRoot } from "react-dom/client"; // API de React 18+ para renderizado / React 18+ rendering API
-import App from "./App.tsx"; // Componente raíz de la aplicación / Application root component
+import { AppWithRouter } from "./AppWithRouter.tsx"; // App con Router / App with Router
 import "./index.css"; // Estilos globales (Tailwind CSS) / Global styles (Tailwind CSS)
 
 // ===== INICIALIZACIÓN DE LA APLICACIÓN / APPLICATION INITIALIZATION =====
 /**
- * Crea la raíz de React y renderiza el componente principal App
- * Creates React root and renders the main App component
+ * Crea la raíz de React y renderiza el componente principal con Router
+ * Creates React root and renders the main component with Router
  * 
  * El operador ! (non-null assertion) asegura a TypeScript que getElementById('root')
  * no será null, ya que el elemento existe en index.html
@@ -31,5 +31,5 @@ import "./index.css"; // Estilos globales (Tailwind CSS) / Global styles (Tailwi
  * The ! operator (non-null assertion) assures TypeScript that getElementById('root')
  * won't be null, since the element exists in index.html
  */
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(<AppWithRouter />);
   

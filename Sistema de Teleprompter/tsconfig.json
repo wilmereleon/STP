@@ -21,7 +21,13 @@
     "noFallthroughCasesInSwitch": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    
+    /* Path Mapping */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src", "electron"],
   "references": [{ "path": "./tsconfig.node.json" }]
