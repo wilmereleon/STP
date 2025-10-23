@@ -1,0 +1,43 @@
+US-002: Funcionalidad de Pause en Teleprompter
+==============================================
+
+CATEGORÍA: Teleprompter - Control de Reproducción
+PRIORIDAD: CRÍTICA
+ORIGEN: Reporte de Pruebas - TP-2
+
+COMO: Operador de teleprompter
+QUIERO: Poder pausar el desplazamiento automático del texto presionando el botón Pause
+PARA: Detener temporalmente la lectura cuando el talento necesite hacer una pausa
+
+CRITERIOS DE ACEPTACIÓN:
+------------------------
+✓ Al presionar el botón "Pause" (⏸), el texto se detiene inmediatamente
+✓ La posición actual del scroll se mantiene exacta (sin rebote ni desplazamiento adicional)
+✓ El botón "Pause" cambia visualmente a "Play" (▶) después de presionarlo
+✓ La función también debe activarse con el atajo de teclado F12
+✓ Al reanudar con Play, el texto continúa desde la posición exacta donde se pausó
+✓ La velocidad configurada se mantiene al reanudar
+
+NOTAS TÉCNICAS:
+---------------
+- Bug identificado: Botón Pause no detiene el desplazamiento
+- Verificar que cancelAnimationFrame() se ejecuta correctamente
+- Asegurar que isPlaying se actualiza a false inmediatamente
+- Prevenir race conditions entre Play/Pause rápidos
+- Guardar posición exacta de scrollTop al pausar
+
+CASOS DE PRUEBA:
+----------------
+1. Texto en movimiento → Clic en Pause → Debe detenerse instantáneamente
+2. Presionar F12 con texto en movimiento → Debe detenerse
+3. Pause → Play → Pause → Play (alternar rápido) → Sin errores, responde correctamente
+4. Pausar, esperar 30 segundos, reanudar → Debe continuar desde misma posición
+
+DEPENDENCIAS:
+-------------
+- Requiere US-001 (Play) completado primero
+
+ESTADO: Pendiente
+ESTIMACIÓN: 2 Story Points
+SPRINT: Sprint 1 (Entrega 1 - Nov 4)
+ASIGNADO A: Frontend Lead

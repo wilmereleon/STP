@@ -1,17 +1,83 @@
-@startuml Secuencia Play - Arquitectura Refactorizada
+@startuml Secuencia Play - Arquitectura Completa v2.0
 !theme plain
 skinparam sequenceMessageAlign center
 skinparam backgroundColor #FEFEFE
 
-title Sistema Refactorizado - Flujo Play con Sincronización Maestro-Esclavo\n**SOLUCIÓN a BUG TP-1**
+title Sistema Completo - Flujo Play con Backend + WebSocket\n**Frontend (Flux) + Backend (REST + WebSocket)**
 
 actor Usuario
 participant "TransportControls\n(UI)" as Controls
 participant "TeleprompterStore\n(MAESTRO)" as Store
 participant "AutoScrollService" as Scroll
 participant "SyncService" as Sync
+participant "WebSocketClient\n(Socket.IO)" as WSClient
+participant "ApiClient\n(HTTP)" as API
+participant "WebSocketServer\n(Backend)" as WSServer
+participant "MongoDB\n(Database)" as DB
 participant "PreviewPanel\n(ESCLAVO)" as Preview
 participant "TeleprompterWindow\n(ESCLAVO)" as Window
+
+== Inicialización y Carga de Datos ==
+
+Usuario -> Controls : App inicia
+activate Controls
+
+Controls -> API : GET /api/auth/me
+activate API
+API -> WSServer : HTTP Request
+activate WSServer
+WSServer -> DB : findById(userId)
+activate DB
+DB --> WSServer : User data
+deactivate DB
+WSServer --> API : 200 OK {user}
+deactivate WSServer
+API --> Controls : User authenticated
+deactivate API
+
+Controls -> API : GET /api/config
+activate API
+API -> WSServer : HTTP Request
+activate WSServer
+WSServer -> DB : Configuration.findOne({userId})
+activate DB
+DB --> WSServer : Config or create default
+deactivate DB
+WSServer --> API : 200 OK {config}
+deactivate WSServer
+API --> Store : Apply config to state
+deactivate API
+
+Controls -> API : GET /api/scripts?page=1&limit=20
+activate API
+API -> WSServer : HTTP Request
+activate WSServer
+WSServer -> DB : Script.find({userId, deletedAt: null})
+activate DB
+DB --> WSServer : Scripts array
+deactivate DB
+WSServer --> API : 200 OK {scripts, pagination}
+deactivate WSServer
+API --> Controls : Scripts loaded
+deactivate API
+
+' Conectar WebSocket
+Controls -> WSClient : connect()
+activate WSClient
+WSClient -> WSServer : Socket.IO handshake
+activate WSServer
+WSServer -> WSServer : activeConnections.set(socketId)
+WSServer --> WSClient : Connected (socketId)
+deactivate WSServer
+
+WSClient -> WSServer : emit('identify', {userId, role})
+activate WSServer
+WSServer -> WSServer : activeConnections.set(socketId, {userId, role})
+WSServer --> WSClient : ACK
+deactivate WSServer
+deactivate WSClient
+
+deactivate Controls
 
 == Usuario Presiona Play ==
 
@@ -36,7 +102,7 @@ Store -> Scroll : start()
 activate Scroll
 Scroll -> Scroll : intervalId = setInterval(tick, 16ms)\n**60 FPS**
 
-' Broadcast a esclavos
+' Broadcast local (main window → popup)
 Store -> Sync : broadcastState(state)
 activate Sync
 
@@ -49,8 +115,23 @@ Window -> Window : setState({isPlaying: true})
 Window -> Window : **NO inicia auto-scroll local**\n(solo escucha a maestro)
 deactivate Window
 
-Sync --> Store : ACK received
 deactivate Sync
+
+' Broadcast WebSocket (a otros usuarios/dispositivos)
+Store -> WSClient : emit('sync:teleprompter', state)
+activate WSClient
+WSClient -> WSServer : WebSocket message
+activate WSServer
+WSServer -> WSServer : broadcast.emit('sync:teleprompter', state)
+note right of WSServer
+  Broadcast a todos los clientes
+  del mismo usuario/proyecto
+  (usando Socket.IO rooms)
+end note
+WSServer --> WSClient : ACK
+deactivate WSServer
+deactivate WSClient
+
 deactivate Store
 
 == Auto-Scroll Loop (60 FPS) ==
@@ -83,7 +164,7 @@ loop Cada 16ms (60 FPS)
   Preview -> Preview : **FUNCIONA ✓**
   deactivate Preview
   
-  ' Broadcast a esclavos (throttled cada 50ms)
+  ' Broadcast a esclavos locales (throttled cada 50ms)
   alt cada 50ms (throttle)
     Store -> Sync : broadcastState(state)
     activate Sync
@@ -94,10 +175,129 @@ loop Cada 16ms (60 FPS)
     Window -> Window : **Sincronizado ✓**
     deactivate Window
     deactivate Sync
+    
+    ' Broadcast WebSocket (throttled cada 100ms)
+    alt cada 100ms (throttle WebSocket)
+      Store -> WSClient : emit('sync:teleprompter', {scrollPosition})
+      activate WSClient
+      WSClient -> WSServer : WebSocket update
+      activate WSServer
+      WSServer -> WSServer : broadcast to room
+      deactivate WSServer
+      deactivate WSClient
+    end
   end
   
   deactivate Store
 end
+
+== Usuario Guarda Script (API Call) ==
+
+Usuario -> Controls : Ctrl+S (save script)
+activate Controls
+Controls -> API : PUT /api/scripts/:id
+activate API
+API -> API : Add JWT token to headers\nAuthorization: Bearer <token>
+
+API -> WSServer : HTTP PUT /api/scripts/:id\nBody: {title, content}
+activate WSServer
+
+WSServer -> WSServer : authenticateToken middleware
+WSServer -> DB : Session.findOne({token, isActive: true})
+activate DB
+DB --> WSServer : Session valid
+deactivate DB
+
+WSServer -> DB : Script.findOneAndUpdate(\n  {_id, userId},\n  {title, content}\n)
+activate DB
+DB --> WSServer : Updated script
+deactivate DB
+
+WSServer -> DB : AuditLog.create({\n  entityType: 'Script',\n  action: 'update',\n  userId, changes\n})
+activate DB
+DB --> WSServer : Log created
+deactivate DB
+
+WSServer -> WSServer : io.emit('script:updated', script)
+note right of WSServer
+  Notifica a todos los clientes
+  conectados que el script cambió
+end note
+
+WSServer --> API : 200 OK {script}
+deactivate WSServer
+API --> Controls : Script saved
+deactivate API
+
+' WebSocket notification recibida
+WSClient <- WSServer : on('script:updated', script)
+activate WSClient
+WSClient -> Store : dispatch(updateScript(script))
+activate Store
+Store -> Store : Update script in state
+Store -> Store : notifyListeners()
+Store --> Preview : notify(newState)
+activate Preview
+Preview -> Preview : Refresh script in UI
+deactivate Preview
+deactivate Store
+deactivate WSClient
+
+Controls -> Controls : Show toast: "Script guardado"
+deactivate Controls
+
+== Cambio de Velocidad desde Popup (ESCLAVO → MAESTRO → API) ==
+
+Window <- Usuario : Mouse wheel
+activate Window
+Window -> Window : newSpeed = speed ± 0.1
+Window -> Sync : sendRequest({\n  type: 'REQUEST_SPEED_CHANGE',\n  payload: {speed: newSpeed},\n  sourceId: 'popup-123'\n})
+deactivate Window
+
+activate Sync
+Sync -> Store : dispatch(setSpeed(newSpeed))
+activate Store
+Store -> Store : state.speed = validateSpeed(newSpeed)
+Store -> Store : notifyListeners()
+
+' Guardar en backend
+Store -> API : PUT /api/config\nBody: {scrollSpeed: newSpeed}
+activate API
+API -> WSServer : HTTP PUT /api/config
+activate WSServer
+WSServer -> DB : Configuration.findOneAndUpdate(\n  {userId},\n  {scrollSpeed: newSpeed}\n)
+activate DB
+DB --> WSServer : Updated config
+deactivate DB
+WSServer --> API : 200 OK {config}
+deactivate WSServer
+API --> Store : Config saved
+deactivate API
+
+Store --> Preview : notify(newState)
+activate Preview
+Preview -> Preview : Actualiza UI (slider)
+deactivate Preview
+
+Store -> Sync : broadcastState(state)
+Sync -> Window : postMessage({\n  type: 'SET_SPEED',\n  payload: {speed: newSpeed},\n  requestId: 'req-123',\n  ack: true\n})
+activate Window
+Window -> Window : setState({speed: newSpeed})
+Window -> Window : **Confirmado ✓**
+Window -> Sync : sendAck('req-123')
+deactivate Window
+
+' Broadcast WebSocket
+Store -> WSClient : emit('sync:teleprompter', {speed: newSpeed})
+activate WSClient
+WSClient -> WSServer : WebSocket message
+activate WSServer
+WSServer -> WSServer : broadcast to room
+deactivate WSServer
+deactivate WSClient
+
+deactivate Store
+deactivate Sync
 
 == Detección de Fin de Texto ==
 
@@ -123,6 +323,15 @@ Window -> Window : setState({isPlaying: false})
 deactivate Window
 deactivate Sync
 
+' Broadcast WebSocket
+Store -> WSClient : emit('sync:teleprompter', {isPlaying: false})
+activate WSClient
+WSClient -> WSServer : WebSocket message
+activate WSServer
+WSServer -> WSServer : broadcast to room
+deactivate WSServer
+deactivate WSClient
+
 ' Auto-advance
 Store -> Store : handleAutoAdvance()
 Store -> Store : Busca siguiente script
@@ -131,47 +340,20 @@ Store -> Store : if (nextScript exists)\n  loadNextScript()\n  play()
 deactivate Store
 deactivate Scroll
 
-== Cambio de Velocidad desde Popup (ESCLAVO → MAESTRO) ==
-
-Window <- Usuario : Mouse wheel
-activate Window
-Window -> Window : newSpeed = speed ± 0.1
-Window -> Sync : sendRequest({\n  type: 'REQUEST_SPEED_CHANGE',\n  payload: {speed: newSpeed},\n  sourceId: 'popup-123'\n})
-deactivate Window
-
-activate Sync
-Sync -> Store : dispatch(setSpeed(newSpeed))
-activate Store
-Store -> Store : state.speed = validateSpeed(newSpeed)
-Store -> Store : notifyListeners()
-
-Store --> Preview : notify(newState)
-activate Preview
-Preview -> Preview : Actualiza UI (slider)
-deactivate Preview
-
-Store -> Sync : broadcastState(state)
-Sync -> Window : postMessage({\n  type: 'SET_SPEED',\n  payload: {speed: newSpeed},\n  requestId: 'req-123',\n  ack: true\n})
-activate Window
-Window -> Window : setState({speed: newSpeed})
-Window -> Window : **Confirmado ✓**
-Window -> Sync : sendAck('req-123')
-deactivate Window
-
-deactivate Store
-deactivate Sync
-
-note over Store, Window
-  **VENTAJAS DE MAESTRO-ESCLAVO:**
+note over Store, WSServer
+  **VENTAJAS DE ARQUITECTURA COMPLETA:**
   
-  ✓ Sin loops infinitos
-  ✓ Estado siempre consistente
-  ✓ Esclavo no modifica directamente
-  ✓ Todas las vistas sincronizadas
-  ✓ Throttling inteligente
-  ✓ ACK para confirmación
-  ✓ Fácil agregar más esclavos
-  ✓ Debugging simplificado
+  ✓ Frontend: Flux pattern con stores centralizados
+  ✓ Backend: RESTful API + WebSocket real-time
+  ✓ Base de datos: Persistencia en MongoDB
+  ✓ Sincronización multi-nivel:
+    - Local: Main window ↔ Popup (postMessage)
+    - Red: WebSocket para multi-usuario
+    - Persistencia: API REST para CRUD
+  ✓ Autenticación: JWT con refresh token
+  ✓ Audit log: Todas las operaciones registradas
+  ✓ Escalable: Agregar más clientes fácilmente
+  ✓ Seguro: Rate limiting + validación + roles
 end note
 
 == Pausa desde Preview ==
@@ -200,6 +382,15 @@ Window -> Window : setState({isPlaying: false})
 Window -> Window : **Todos sincronizados ✓**
 deactivate Window
 deactivate Sync
+
+Store -> WSClient : emit('sync:teleprompter', {isPlaying: false})
+activate WSClient
+WSClient -> WSServer : WebSocket message
+activate WSServer
+WSServer -> WSServer : broadcast to room
+deactivate WSServer
+deactivate WSClient
+
 deactivate Store
 
 @enduml

@@ -1,0 +1,118 @@
+US-004: Control de Velocidad de Scroll
+=======================================
+
+**ID:** US-004
+**Categoría:** Teleprompter - Configuración
+**Prioridad:** ALTA
+**Origen:** Reporte de Pruebas - TP-4
+**Epic:** Control de Teleprompter
+
+---
+
+## Historia de Usuario
+
+**Como:** Operador de teleprompter  
+**Quiero:** Ajustar la velocidad de desplazamiento del texto en tiempo real  
+**Para:** Adaptarme al ritmo de lectura del talento durante la transmisión
+
+---
+
+## Criterios de Aceptación
+
+- [ ] Slider de velocidad funcional (rango 1-100)
+- [ ] Cambios de velocidad se aplican inmediatamente (sin reiniciar scroll)
+- [ ] Velocidad persiste en base de datos (configuración del usuario)
+- [ ] Atajos de teclado: Ctrl++ (aumentar), Ctrl+- (disminuir)
+- [ ] Indicador visual muestra velocidad actual (número + %)
+- [ ] Velocidad sincronizada entre Preview y FloatingWindow
+- [ ] Valor por defecto: 50
+
+---
+
+## Tareas Técnicas
+
+- [ ] Implementar Slider component con rango 1-100
+- [ ] Actualizar `scrollSpeed` en ConfigStore
+- [ ] Modificar cálculo de delta en scroll animation loop
+- [ ] Persistir en backend: `PUT /api/config` con nuevo scrollSpeed
+- [ ] Implementar shortcuts Ctrl++/Ctrl+- en useMacros
+- [ ] Sincronizar velocidad via WebSocket (evento `config:updated`)
+- [ ] Tests de velocidad (verificar diferentes valores)
+
+---
+
+## Dependencias
+
+- Requiere: US-001 (Play funcional)
+- Requiere: US-032 (Backend para persistencia)
+- Bloquea: Ninguna
+
+---
+
+## Casos de Prueba
+
+1. **CP-004.1:** Cambiar velocidad con texto en movimiento → Cambio inmediato
+2. **CP-004.2:** Establecer velocidad en 1 → Scroll muy lento
+3. **CP-004.3:** Establecer velocidad en 100 → Scroll muy rápido
+4. **CP-004.4:** Presionar Ctrl++ → Velocidad aumenta en 5
+5. **CP-004.5:** Presionar Ctrl+- → Velocidad disminuye en 5
+6. **CP-004.6:** Cambiar velocidad → Recargar página → Velocidad persiste
+7. **CP-004.7:** Cambiar en Preview → FloatingWindow actualiza automáticamente
+
+---
+
+## Estimación
+
+**Story Points:** 3  
+**Tiempo estimado:** 6 horas
+
+---
+
+## Sprint
+
+**Sprint 1** - Entrega 1 (4 Nov 2025)
+
+---
+
+## Asignado a
+
+**Frontend Lead** + **Full Stack Developer**
+
+---
+
+## Labels
+
+`bug`, `priority:high`, `area:frontend`, `area:backend`, `sprint-1`, `configuration`
+
+---
+
+## Notas Adicionales
+
+- Bug reportado: Slider de velocidad no responde
+- Validar que velocidad 0 no cause división por cero
+- Considerar aceleración/desaceleración suave (ease-in/out)
+- Notificación toast al cambiar velocidad (opcional)
+
+---
+
+## Fórmula de Velocidad
+
+```javascript
+// Pixels por frame a 60 FPS
+const pixelsPerFrame = (scrollSpeed / 50) * baseSpeed;
+// baseSpeed = 2 pixels/frame a velocidad 50
+```
+
+---
+
+## Definition of Done
+
+- [ ] Código implementado y funcional
+- [ ] Tests unitarios (coverage > 80%)
+- [ ] Tests de integración con backend
+- [ ] Code review aprobado
+- [ ] Velocidad persiste en BD correctamente
+- [ ] Sincronización WebSocket verificada
+- [ ] Documentación actualizada
+- [ ] Demo en Sprint Review
+- [ ] Merge a `develop`

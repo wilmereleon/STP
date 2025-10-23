@@ -1,0 +1,199 @@
+# US-009: Estado Persistente en Ventana Flotante | Epic: Vista Flotante | 🟡 ALTA | 3 pts | Sprint 1
+
+## 📋 Descripción
+
+**Como** operador del teleprompter  
+**Quiero** que la Ventana Flotante mantenga su estado (posición, tamaño, configuración) entre sesiones  
+**Para** no tener que reconfigurarla cada vez que la abro
+
+**Origen:** Bug VF-4 del Reporte de Pruebas (23 Oct 2025)  
+**Problema:** Al cerrar y reabrir la Ventana Flotante, se pierden posición, tamaño y configuraciones
+
+---
+
+## ✅ Criterios de Aceptación
+
+- [ ] Posición (x, y) de la ventana se guarda y restaura
+- [ ] Tamaño (width, height) de la ventana se guarda y restaura
+- [ ] Estado de maximización (fullscreen) se guarda y restaura
+- [ ] Configuraciones locales (zoom, transparencia) se guardan
+- [ ] Persistencia en localStorage o backend (según US-032)
+- [ ] Restauración automática al abrir la ventana
+- [ ] Defaults razonables si no hay estado guardado
+- [ ] Validación de bounds (no fuera de pantalla)
+
+---
+
+## 🔧 Tareas Técnicas
+
+- [ ] **FloatingWindowStore (nuevo Zustand store):**
+  - [ ] State: `position: {x, y}`, `size: {width, height}`, `isMaximized: boolean`
+  - [ ] Actions: `setPosition()`, `setSize()`, `setMaximized()`, `loadState()`, `saveState()`
+- [ ] **FloatingTeleprompter Component:**
+  - [ ] onMount → `loadState()` desde localStorage/backend
+  - [ ] onResize → `saveState()` (debounced 500ms)
+  - [ ] onMove → `saveState()` (debounced 500ms)
+  - [ ] onClose → `saveState()` final
+- [ ] **LocalStorage Service:**
+  - [ ] Key: `teleprompter:floating:window:state`
+  - [ ] Formato JSON: `{position, size, isMaximized, timestamp}`
+  - [ ] Validación al cargar (bounds checking)
+- [ ] **Backend API (si US-032 completado):**
+  - [ ] `PUT /api/configurations/:userId/floating-window`
+  - [ ] Guardar estado en `configurations.floatingWindow`
+- [ ] **Bounds Validation:**
+  - [ ] Verificar que x,y están dentro de screen bounds
+  - [ ] Si está fuera → centrar en pantalla
+  - [ ] Validar width/height mínimos (320x240) y máximos (screen size)
+- [ ] **Multi-monitor Support:**
+  - [ ] Detectar si la ventana está en monitor desconectado
+  - [ ] Mover a monitor principal si es necesario
+
+---
+
+## 🧪 Casos de Prueba
+
+### Caso 1: Guardar y restaurar posición
+- **Dado:** Muevo FloatingWindow a posición (500, 300)
+- **Cuando:** Cierro y vuelvo a abrir la ventana
+- **Entonces:** Se abre en la misma posición (500, 300)
+
+### Caso 2: Guardar y restaurar tamaño
+- **Dado:** Redimensiono FloatingWindow a 800x600
+- **Cuando:** Cierro y vuelvo a abrir
+- **Entonces:** Se abre con tamaño 800x600
+
+### Caso 3: Estado maximizado
+- **Dado:** Maximizo FloatingWindow (fullscreen)
+- **Cuando:** Cierro y vuelvo a abrir
+- **Entonces:** Se abre maximizada automáticamente
+
+### Caso 4: Primera apertura (sin estado previo)
+- **Dado:** Es la primera vez que abro FloatingWindow
+- **Cuando:** La abro
+- **Entonces:** Se abre centrada en pantalla con tamaño 960x720 (default)
+
+### Caso 5: Ventana fuera de pantalla (monitor desconectado)
+- **Dado:** Estado guardado indica posición (3000, 2000) en segundo monitor
+- **Cuando:** Abro ventana con un solo monitor activo
+- **Entonces:** Ventana se reposiciona automáticamente en monitor principal
+
+### Caso 6: Tamaño inválido
+- **Dado:** Estado guardado indica tamaño 100x50 (muy pequeño)
+- **Cuando:** Abro ventana
+- **Entonces:** Se aplica tamaño mínimo 320x240
+
+### Caso 7: Persistencia en backend
+- **Dado:** US-032 completado, backend disponible
+- **Cuando:** Cambio posición/tamaño
+- **Entonces:** Estado se guarda en backend además de localStorage
+
+---
+
+## 🔗 Dependencias
+
+- ✅ Requiere: FloatingTeleprompter existente
+- ⏳ Recomendado: US-032 (Backend para persistencia multi-dispositivo)
+- ⏳ Bloqueado por: Ninguna (puede usar solo localStorage)
+
+---
+
+## 👤 Asignado a
+
+**Frontend Lead**
+
+---
+
+## 🏷️ Labels
+
+`bug`, `priority:high`, `area:frontend`, `sprint-1`, `floating-window`, `persistence`, `state-management`
+
+---
+
+## 📝 Notas
+
+### Formato de Estado Guardado
+
+```typescript
+interface FloatingWindowState {
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  isMaximized: boolean;
+  timestamp: number; // Para invalidar estados antiguos
+  version: string; // "1.0.0" - Para migrar estados en el futuro
+}
+```
+
+### LocalStorage Implementation
+
+```typescript
+const STORAGE_KEY = 'teleprompter:floating:window:state';
+const DEFAULT_STATE: FloatingWindowState = {
+  position: { x: window.innerWidth / 2 - 480, y: window.innerHeight / 2 - 360 },
+  size: { width: 960, height: 720 },
+  isMaximized: false,
+  timestamp: Date.now(),
+  version: '1.0.0'
+};
+
+function loadState(): FloatingWindowState {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return DEFAULT_STATE;
+  
+  const state = JSON.parse(saved);
+  
+  // Validate bounds
+  if (!isWithinScreenBounds(state.position, state.size)) {
+    return { ...state, position: getCenteredPosition(state.size) };
+  }
+  
+  return state;
+}
+
+function saveState(state: FloatingWindowState) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    ...state,
+    timestamp: Date.now()
+  }));
+}
+```
+
+### Bounds Validation
+
+```typescript
+function isWithinScreenBounds(
+  position: {x: number, y: number},
+  size: {width: number, height: number}
+): boolean {
+  const margin = 50; // Mínimo visible
+  return (
+    position.x + size.width > margin &&
+    position.x < window.screen.width - margin &&
+    position.y + size.height > margin &&
+    position.y < window.screen.height - margin
+  );
+}
+```
+
+### Debounce para Performance
+
+```typescript
+const debouncedSave = debounce((state) => {
+  saveState(state);
+  // Opcional: Enviar a backend si está disponible
+  apiClient.put('/api/configurations/floating-window', state);
+}, 500);
+```
+
+### Consideraciones
+
+1. **Multi-monitor:** Usar `window.screenX` y `window.screenY` para detectar monitor
+2. **Resolución cambiada:** Validar que el estado guardado sigue siendo válido
+3. **Performance:** Debounce de guardado (500ms) para evitar writes excesivos
+4. **Fallback:** Si backend no disponible → solo localStorage
+5. **Migración:** Versión del estado para migrar formatos futuros
+
+---
+
+**Estado:** 📋 Backlog  
+**Última actualización:** 23 Oct 2025

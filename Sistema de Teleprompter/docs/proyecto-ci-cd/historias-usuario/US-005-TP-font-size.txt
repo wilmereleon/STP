@@ -1,0 +1,73 @@
+US-005: Ajuste de Tamaño de Fuente
+===================================
+
+**ID:** US-005
+**Epic:** Configuración de Teleprompter
+**Priority:** 🟡 Medium
+**Points:** 2
+**Sprint:** Sprint 1
+
+---
+
+## 📋 Description
+
+Como **Operador**, quiero **ajustar el tamaño de fuente del texto en tiempo real** para **adaptarlo a la distancia del talento y las condiciones del estudio**.
+
+---
+
+## ✅ Acceptance Criteria
+
+- [ ] Slider funcional con rango 12-120px
+- [ ] Cambios se aplican instantáneamente sin recargar
+- [ ] Valor persiste en base de datos
+- [ ] Shortcuts: `Ctrl++` (aumentar), `Ctrl+-` (disminuir)
+- [ ] Indicador visual muestra tamaño actual
+- [ ] Sincronización entre Preview y FloatingWindow
+- [ ] Default: 32px
+
+---
+
+## 🔧 Technical Tasks
+
+- [ ] Crear FontSizeSlider component
+- [ ] Actualizar `fontSize` en ConfigStore
+- [ ] Aplicar CSS `font-size` dinámicamente
+- [ ] API: `PUT /api/config` persistencia
+- [ ] Shortcuts en useMacros hook
+- [ ] WebSocket sync (evento `config:updated`)
+- [ ] Unit tests
+
+---
+
+## 🧪 Test Cases
+
+1. Cambiar slider → fuente actualiza inmediatamente
+2. `Ctrl++` → tamaño aumenta 2px
+3. `Ctrl+-` → tamaño disminuye 2px
+4. Recargar página → tamaño persiste
+5. Cambiar en Preview → FloatingWindow actualiza
+
+---
+
+## 🔗 Dependencies
+
+- Requires: US-032 (Backend)
+- Blocks: None
+
+---
+
+## 👤 Assignee
+
+Frontend Lead
+
+---
+
+## 🏷️ Labels
+
+`enhancement`, `priority:medium`, `area:frontend`, `sprint-1`, `configuration`
+
+---
+
+## 📝 Notes
+
+Bug original: RF-005 - Tamaño de fuente no se aplica correctamente

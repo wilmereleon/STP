@@ -1,0 +1,208 @@
+REQUERIMIENTOS FUNCIONALES - SISTEMA DE TELEPROMPTER
+======================================================
+
+FECHA: Enero 2025
+VERSIÓN: 2.0 (Con Backend y Docker)
+
+═══════════════════════════════════════════════════════
+RF-001: MÓDULO DE AUTENTICACIÓN Y USUARIOS
+═══════════════════════════════════════════════════════
+
+RF-001.1: El sistema debe permitir registro de usuarios con rol "Producer"
+RF-001.2: El sistema debe validar credenciales mediante JWT
+RF-001.3: Los tokens JWT deben expirar después de 24 horas
+RF-001.4: El sistema debe permitir acceso sin autenticación para rol "Operator"
+RF-001.5: El sistema debe mantener sesión activa usando localStorage/cookies
+RF-001.6: El sistema debe permitir logout manual
+RF-001.7: Las contraseñas deben hashearse con bcryptjs (10 salt rounds)
+
+═══════════════════════════════════════════════════════
+RF-002: MÓDULO DE SCRIPTS (CRUD)
+═══════════════════════════════════════════════════════
+
+RF-002.1: El sistema debe permitir crear nuevos scripts con título y contenido
+RF-002.2: El sistema debe permitir editar scripts existentes
+RF-002.3: El sistema debe permitir eliminar scripts (soft delete recomendado)
+RF-002.4: El sistema debe listar todos los scripts con paginación (20 por página)
+RF-002.5: El sistema debe buscar scripts por título, contenido o tags (full-text search)
+RF-002.6: El sistema debe filtrar scripts por categoría, prioridad y estado
+RF-002.7: El sistema debe asignar metadatos: categoría, prioridad, duración, tags
+RF-002.8: El sistema debe calcular duración estimada automáticamente (180 palabras/minuto)
+RF-002.9: El sistema debe guardar historial de versiones (últimas 10 versiones)
+RF-002.10: El sistema debe permitir restaurar versiones anteriores
+RF-002.11: El sistema debe marcar autor de creación y última modificación
+RF-002.12: El sistema debe permitir agregar notas del productor (no visibles en teleprompter)
+
+═══════════════════════════════════════════════════════
+RF-003: MÓDULO DE IMPORTACIÓN/EXPORTACIÓN
+═══════════════════════════════════════════════════════
+
+RF-003.1: El sistema debe importar scripts desde archivos Excel (.xlsx)
+RF-003.2: El sistema debe importar scripts desde archivos de texto (.txt)
+RF-003.3: El sistema debe validar formato antes de importar
+RF-003.4: El sistema debe mostrar preview de scripts a importar
+RF-003.5: El sistema debe reportar errores de importación con línea/columna
+RF-003.6: El sistema debe exportar scripts a formato TXT
+RF-003.7: El sistema debe exportar scripts a formato Excel
+RF-003.8: El sistema debe permitir exportación individual o por lote
+
+═══════════════════════════════════════════════════════
+RF-004: MÓDULO DE RUNORDER (ORDEN DE EJECUCIÓN)
+═══════════════════════════════════════════════════════
+
+RF-004.1: El sistema debe mantener orden de ejecución de scripts
+RF-004.2: El sistema debe permitir reordenar scripts mediante drag & drop
+RF-004.3: El sistema debe permitir agregar scripts al RunOrder
+RF-004.4: El sistema debe permitir quitar scripts del RunOrder
+RF-004.5: El sistema debe persistir el RunOrder en base de datos
+RF-004.6: El sistema debe auto-avanzar al siguiente script cuando termine el actual
+RF-004.7: El sistema debe mostrar indicador visual del script activo
+RF-004.8: El sistema debe sincronizar RunOrder entre Producer y Operator en tiempo real
+
+═══════════════════════════════════════════════════════
+RF-005: MÓDULO DE TELEPROMPTER (OPERACIÓN)
+═══════════════════════════════════════════════════════
+
+RF-005.1: El sistema debe iniciar desplazamiento automático con botón Play (▶)
+RF-005.2: El sistema debe pausar desplazamiento con botón Pause (⏸)
+RF-005.3: El sistema debe resetear posición de scroll con botón Reset (⏹)
+RF-005.4: El sistema debe ajustar velocidad de desplazamiento (1-100)
+RF-005.5: El sistema debe ajustar tamaño de fuente (12-120px)
+RF-005.6: El sistema debe mostrar línea guía horizontal configurable
+RF-005.7: El sistema debe ajustar posición de la línea guía (0-100%)
+RF-005.8: El sistema debe ajustar grosor de la línea guía (1-10px)
+RF-005.9: El sistema debe cambiar color de la línea guía
+RF-005.10: El sistema debe mostrar/ocultar línea guía con toggle
+RF-005.11: El sistema debe abrir ventana flotante independiente
+RF-005.12: El sistema debe sincronizar Preview con ventana flotante
+RF-005.13: El sistema debe activar modo pantalla completa (F11)
+RF-005.14: El sistema debe invertir texto (fondo oscuro/claro)
+RF-005.15: El sistema debe soportar desplazamiento con rueda del mouse
+RF-005.16: El sistema debe soportar desplazamiento manual (drag/scroll)
+RF-005.17: El sistema debe reanudar auto-scroll después de scroll manual
+RF-005.18: El sistema debe mantener desplazamiento continuo sin interrupciones
+
+═══════════════════════════════════════════════════════
+RF-006: MÓDULO DE MACROS Y SHORTCUTS
+═══════════════════════════════════════════════════════
+
+RF-006.1: El sistema debe asignar teclas F1-F12 a funciones configurables
+RF-006.2: El sistema debe permitir macros de navegación (PageUp/PageDown)
+RF-006.3: El sistema debe permitir configurar macros desde panel de configuración
+RF-006.4: El sistema debe guardar configuración de macros en backend
+RF-006.5: El sistema debe ejecutar macros con respuesta inmediata (<100ms)
+RF-006.6: El sistema debe prevenir conflictos de shortcuts del sistema
+RF-006.7: El sistema debe mostrar ayuda de shortcuts (modal)
+
+Macros predefinidos:
+- F11: Play/Pause
+- F12: Reset
+- PageUp: Script anterior
+- PageDown: Script siguiente
+- Ctrl+F: Buscar en script actual
+- Ctrl++: Aumentar fuente
+- Ctrl+-: Disminuir fuente
+
+═══════════════════════════════════════════════════════
+RF-007: MÓDULO DE EDITOR (PRODUCTOR)
+═══════════════════════════════════════════════════════
+
+RF-007.1: El sistema debe proporcionar editor de texto enriquecido
+RF-007.2: El sistema debe soportar formato: Negrita, Cursiva, Subrayado
+RF-007.3: El sistema debe soportar "Señalizador" (fondo blanco, texto rojo bold)
+RF-007.4: El sistema debe permitir insertar marcadores de salto
+RF-007.5: El sistema debe mostrar contador de palabras en tiempo real
+RF-007.6: El sistema debe mostrar duración estimada en tiempo real
+RF-007.7: El sistema debe implementar guardado automático cada 30 segundos
+RF-007.8: El sistema debe implementar corrector ortográfico
+RF-007.9: El sistema debe implementar buscar y reemplazar
+RF-007.10: El sistema debe soportar atajos de teclado (Ctrl+B, Ctrl+I, Ctrl+S)
+RF-007.11: El sistema debe permitir previsualización en tiempo real
+RF-007.12: El sistema debe validar contenido antes de guardar
+
+═══════════════════════════════════════════════════════
+RF-008: MÓDULO DE CONFIGURACIÓN
+═══════════════════════════════════════════════════════
+
+RF-008.1: El sistema debe guardar configuraciones por usuario
+RF-008.2: El sistema debe persistir configuraciones en base de datos
+RF-008.3: El sistema debe permitir exportar configuraciones a archivo
+RF-008.4: El sistema debe permitir importar configuraciones desde archivo
+RF-008.5: El sistema debe permitir restaurar valores por defecto
+RF-008.6: El sistema debe aplicar cambios de configuración en tiempo real
+
+Configuraciones incluidas:
+- Velocidad de scroll por defecto
+- Tamaño de fuente por defecto
+- Color de fondo
+- Color de texto
+- Posición de línea guía
+- Color de línea guía
+- Grosor de línea guía
+- Macros asignados
+- Auto-avance activado/desactivado
+
+═══════════════════════════════════════════════════════
+RF-009: MÓDULO DE SINCRONIZACIÓN EN TIEMPO REAL
+═══════════════════════════════════════════════════════
+
+RF-009.1: El sistema debe usar WebSocket para comunicación bidireccional
+RF-009.2: El sistema debe notificar creación de scripts en tiempo real
+RF-009.3: El sistema debe notificar edición de scripts en tiempo real
+RF-009.4: El sistema debe notificar eliminación de scripts en tiempo real
+RF-009.5: El sistema debe sincronizar estado de teleprompter (play/pause/speed)
+RF-009.6: El sistema debe sincronizar cambios en RunOrder
+RF-009.7: El sistema debe manejar desconexiones y reconexiones automáticas
+RF-009.8: El sistema debe mostrar indicador de conexión (online/offline)
+
+═══════════════════════════════════════════════════════
+RF-010: MÓDULO DE WORKFLOW Y ESTADOS
+═══════════════════════════════════════════════════════
+
+RF-010.1: El sistema debe implementar estados de workflow para scripts:
+  - Borrador: En edición, no visible para Operators
+  - Revisión: Listo para revisión
+  - Aprobado: Listo para producción
+  - En Uso: Actualmente en RunOrder
+  - Archivado: No activo
+
+RF-010.2: El sistema debe validar transiciones de estado
+RF-010.3: El sistema debe registrar cambios de estado con timestamp y usuario
+RF-010.4: El sistema debe filtrar scripts por estado en vista de Operator
+RF-010.5: El sistema debe prevenir eliminación de scripts "En Uso"
+
+═══════════════════════════════════════════════════════
+RF-011: MÓDULO DE COLABORACIÓN
+═══════════════════════════════════════════════════════
+
+RF-011.1: El sistema debe mostrar usuarios activos en tiempo real
+RF-011.2: El sistema debe indicar quién está editando cada script
+RF-011.3: El sistema debe prevenir edición simultánea del mismo script (lock)
+RF-011.4: El sistema debe liberar lock automáticamente tras inactividad (5 min)
+RF-011.5: El sistema debe permitir comentarios en scripts (opcional para v2.1)
+
+═══════════════════════════════════════════════════════
+RF-012: MÓDULO DE BÚSQUEDA Y FILTRADO
+═══════════════════════════════════════════════════════
+
+RF-012.1: El sistema debe implementar búsqueda full-text en título y contenido
+RF-012.2: El sistema debe buscar por tags
+RF-012.3: El sistema debe filtrar por categoría
+RF-012.4: El sistema debe filtrar por prioridad
+RF-012.5: El sistema debe filtrar por estado
+RF-012.6: El sistema debe filtrar por rango de fechas
+RF-012.7: El sistema debe ordenar resultados por relevancia/fecha/título
+RF-012.8: El sistema debe mostrar resultados con paginación
+
+═══════════════════════════════════════════════════════
+RF-013: MÓDULO DE ADMINISTRACIÓN
+═══════════════════════════════════════════════════════
+
+RF-013.1: El sistema debe proporcionar endpoint de health check
+RF-013.2: El sistema debe loggear todas las peticiones HTTP
+RF-013.3: El sistema debe loggear errores con stack trace
+RF-013.4: El sistema debe exponer métricas básicas (uptime, requests/min)
+RF-013.5: El sistema debe permitir backup de base de datos
+RF-013.6: El sistema debe permitir restauración de base de datos
+
+TOTAL: 100+ Requerimientos Funcionales

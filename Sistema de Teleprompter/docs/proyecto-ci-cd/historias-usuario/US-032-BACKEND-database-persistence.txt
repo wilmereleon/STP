@@ -1,0 +1,112 @@
+US-032: Implementación de Backend con Base de Datos
+====================================================
+
+CATEGORÍA: Backend - Persistencia de Datos
+PRIORIDAD: CRÍTICA
+ORIGEN: Nueva Funcionalidad + Bugs PD-1, PD-2, PD-3
+
+COMO: Equipo de desarrollo
+QUIERO: Un backend con base de datos MongoDB
+PARA: Persistir scripts, configuraciones, RunOrder y datos de usuarios entre sesiones
+
+CRITERIOS DE ACEPTACIÓN:
+------------------------
+✓ Backend implementado con Node.js + Express
+✓ Base de datos MongoDB configurada y funcionando
+✓ API REST expuesta en puerto 3000
+✓ WebSocket server en puerto 3001 para sincronización en tiempo real
+✓ Modelos de datos creados: Script, RunOrder, Config, User, Macro
+✓ CRUD completo para cada entidad
+✓ Autenticación JWT implementada
+✓ Validación de datos con express-validator
+✓ Manejo de errores centralizado
+✓ Logging de peticiones
+✓ Health check endpoint (/health)
+✓ Documentación de API endpoints
+
+ENDPOINTS REQUERIDOS:
+---------------------
+Scripts:
+  POST   /api/scripts              - Crear script
+  GET    /api/scripts              - Listar scripts
+  GET    /api/scripts/:id          - Obtener script por ID
+  PUT    /api/scripts/:id          - Actualizar script
+  DELETE /api/scripts/:id          - Eliminar script
+  POST   /api/scripts/import       - Importar desde Excel/TXT
+  GET    /api/scripts/:id/versions - Historial de versiones
+
+RunOrder:
+  GET    /api/runorder             - Obtener orden actual
+  PUT    /api/runorder             - Actualizar orden completo
+  POST   /api/runorder/reorder     - Reordenar items
+  POST   /api/runorder/add         - Agregar script al orden
+  DELETE /api/runorder/:id         - Quitar script del orden
+
+Configuración:
+  GET    /api/config               - Obtener configuración del usuario
+  PUT    /api/config               - Actualizar configuración
+  POST   /api/config/reset         - Restaurar valores por defecto
+
+Macros:
+  GET    /api/macros               - Listar macros configurados
+  PUT    /api/macros/:key          - Actualizar macro específico
+  POST   /api/macros/reset         - Restaurar macros por defecto
+
+Autenticación:
+  POST   /api/auth/login           - Iniciar sesión
+  POST   /api/auth/register        - Registrar usuario (Producer)
+  GET    /api/auth/me              - Obtener usuario actual
+  POST   /api/auth/logout          - Cerrar sesión
+
+EVENTOS WEBSOCKET:
+------------------
+Emitir:
+  - script:created     (cuando se crea script desde Producer)
+  - script:updated     (cuando se modifica script)
+  - script:deleted     (cuando se elimina script)
+  - sync:teleprompter  (sincronizar estado play/pause/speed)
+  - sync:runorder      (sincronizar orden de scripts)
+
+Recibir:
+  - identify           (identificar rol: operator/producer)
+  - sync:teleprompter  (recibir cambios de estado)
+  - sync:runorder      (recibir cambios de orden)
+
+NOTAS TÉCNICAS:
+---------------
+- Usar Mongoose para ODM
+- Implementar middleware de autenticación
+- CORS habilitado para frontend (http://localhost:5173)
+- Usar bcryptjs para hashear contraseñas
+- JWT con expiración de 24 horas
+- Índices en MongoDB para búsquedas eficientes
+- Validar todos los inputs antes de guardar
+- Sanitizar datos para prevenir XSS/injection
+
+CASOS DE PRUEBA:
+----------------
+1. Crear script → Guardar en BD → Verificar persistencia
+2. Reiniciar servidor → Datos deben persistir
+3. Actualizar configuración → Debe reflejarse tras reload
+4. Importar Excel → Scripts deben crearse en BD
+5. WebSocket: Cambio en Producer → Operador recibe evento
+6. WebSocket: Play en Operator → Producer recibe sync
+7. Health check → Debe retornar status 200 con estado de DB
+
+IMPACTO:
+--------
+Resuelve bugs:
+- PD-1: Persistencia de configuraciones
+- PD-2: Persistencia de scripts
+- PD-3: Persistencia de RunOrder
+
+Habilita funcionalidades:
+- Vista de Productor (US-034)
+- Sincronización en tiempo real (US-035)
+- Historial de versiones de scripts
+- Colaboración multi-usuario
+
+ESTADO: En Progreso
+ESTIMACIÓN: 13 Story Points
+SPRINT: Sprint 1 (Entrega 1 - Nov 4)
+ASIGNADO A: Backend Lead + Full Stack Developer

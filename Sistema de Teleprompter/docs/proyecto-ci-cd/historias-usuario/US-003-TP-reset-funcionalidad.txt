@@ -1,0 +1,102 @@
+US-003: Funcionalidad de Reset en Teleprompter
+==============================================
+
+**ID:** US-003
+**Categoría:** Teleprompter - Control de Reproducción
+**Prioridad:** ALTA
+**Origen:** Reporte de Pruebas - TP-3
+**Epic:** Control de Teleprompter
+
+---
+
+## Historia de Usuario
+
+**Como:** Operador de teleprompter  
+**Quiero:** Poder reiniciar la posición del scroll al inicio del script con el botón Reset  
+**Para:** Volver rápidamente al inicio cuando necesite releer o reiniciar la transmisión
+
+---
+
+## Criterios de Aceptación
+
+- [ ] Al presionar botón "Reset" (⏹), el scroll vuelve al inicio (scrollTop = 0)
+- [ ] El desplazamiento automático se detiene si estaba activo
+- [ ] El estado cambia a "Detenido" (no Play ni Pause)
+- [ ] La función se activa con F10 (atajo de teclado)
+- [ ] Funciona tanto en Preview como en Ventana Flotante
+- [ ] No pierde la configuración de velocidad o fuente
+
+---
+
+## Tareas Técnicas
+
+- [ ] Implementar función `handleReset()` en TeleprompterControls
+- [ ] Actualizar estado `isPlaying = false` en TeleprompterStore
+- [ ] Resetear `scrollPosition = 0` en store
+- [ ] Cancelar animationFrame activo si existe
+- [ ] Sincronizar reset entre Preview y FloatingWindow via WebSocket
+- [ ] Agregar shortcut F10 en useMacros hook
+- [ ] Tests unitarios del comportamiento
+
+---
+
+## Dependencias
+
+- Requiere: US-001 (Play), US-002 (Pause)
+- Bloquea: Ninguna
+
+---
+
+## Casos de Prueba
+
+1. **CP-003.1:** Texto en movimiento → Reset → Debe ir a inicio y detenerse
+2. **CP-003.2:** Texto pausado a mitad → Reset → Debe ir a inicio
+3. **CP-003.3:** Presionar F10 → Reset debe ejecutarse
+4. **CP-003.4:** Reset en Preview → FloatingWindow también resetea
+5. **CP-003.5:** Reset en FloatingWindow → Preview también resetea
+
+---
+
+## Estimación
+
+**Story Points:** 2  
+**Tiempo estimado:** 4 horas
+
+---
+
+## Sprint
+
+**Sprint 1** - Entrega 1 (4 Nov 2025)
+
+---
+
+## Asignado a
+
+**Frontend Lead**
+
+---
+
+## Labels
+
+`bug`, `priority:high`, `area:frontend`, `sprint-1`, `control-playback`
+
+---
+
+## Notas Adicionales
+
+- Bug reportado: Botón Reset no vuelve al inicio
+- Verificar que no hay memory leaks al cancelar animationFrame
+- El reset debe ser instantáneo (< 50ms)
+
+---
+
+## Definition of Done
+
+- [ ] Código implementado y funcional
+- [ ] Tests unitarios escritos y pasando (coverage > 80%)
+- [ ] Tests de integración pasando
+- [ ] Code review aprobado por peer
+- [ ] Documentación actualizada
+- [ ] Funcionalidad demostrada en Sprint Review
+- [ ] Merge a branch `develop`
+- [ ] Sin regresiones en otros tests

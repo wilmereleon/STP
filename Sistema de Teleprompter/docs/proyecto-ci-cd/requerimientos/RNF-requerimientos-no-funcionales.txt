@@ -1,0 +1,297 @@
+REQUERIMIENTOS NO FUNCIONALES - SISTEMA DE TELEPROMPTER
+=========================================================
+
+FECHA: Octubre 2025
+VERSIÓN: 2.0 (Con Backend y Docker)
+
+═══════════════════════════════════════════════════════
+RNF-001: RENDIMIENTO
+═══════════════════════════════════════════════════════
+
+RNF-001.1: SCROLL FLUIDO
+- El desplazamiento automático debe mantener 60 FPS constantes
+- La latencia entre Play y inicio de scroll debe ser < 50ms
+- No debe haber saltos ni stuttering durante el scroll
+- El scroll manual debe responder en < 16ms (60 FPS)
+
+RNF-001.2: TIEMPO DE RESPUESTA API
+- Peticiones GET simples: < 200ms (promedio)
+- Peticiones POST/PUT: < 500ms (promedio)
+- Búsqueda full-text: < 1 segundo para 1000+ scripts
+- Health check: < 50ms
+
+RNF-001.3: CARGA INICIAL
+- Primera carga de aplicación: < 3 segundos (3G)
+- Carga de lista de scripts: < 1 segundo (100 scripts)
+- Apertura de script para edición: < 300ms
+
+RNF-001.4: WEBSOCKET
+- Latencia de eventos: < 200ms entre clientes
+- Reconexión automática: < 5 segundos tras desconexión
+- Heartbeat cada 30 segundos para mantener conexión
+
+RNF-001.5: MEMORIA
+- Uso de memoria frontend: < 200MB en idle
+- Uso de memoria backend: < 512MB con 10 usuarios concurrentes
+- No memory leaks detectables en 8 horas de uso continuo
+
+═══════════════════════════════════════════════════════
+RNF-002: ESCALABILIDAD
+═══════════════════════════════════════════════════════
+
+RNF-002.1: USUARIOS CONCURRENTES
+- Soportar mínimo 10 usuarios simultáneos sin degradación
+- Soportar hasta 50 usuarios con degradación aceptable (<10% latencia)
+
+RNF-002.2: VOLUMEN DE DATOS
+- Base de datos debe soportar 10,000+ scripts sin degradación
+- Búsqueda debe mantener rendimiento con 50,000+ scripts
+- Historial de versiones: 10 versiones por script sin impacto
+
+RNF-002.3: CRECIMIENTO
+- Arquitectura debe permitir escalado horizontal (múltiples instancias backend)
+- Base de datos debe soportar sharding si es necesario
+- Frontend debe implementar lazy loading y paginación
+
+RNF-002.4: TRÁFICO
+- API debe soportar 100 peticiones/segundo sin caídas
+- WebSocket debe soportar 1000 mensajes/segundo
+
+═══════════════════════════════════════════════════════
+RNF-003: DISPONIBILIDAD Y CONFIABILIDAD
+═══════════════════════════════════════════════════════
+
+RNF-003.1: UPTIME
+- Disponibilidad objetivo: 99% (permite ~7 horas downtime/mes)
+- Disponibilidad en producción: 99.9% (permite ~43 minutos downtime/mes)
+
+RNF-003.2: RECUPERACIÓN
+- Tiempo de recuperación tras fallo (RTO): < 5 minutos
+- Punto de recuperación (RPO): < 15 minutos (pérdida máxima de datos)
+- Backup automático diario de base de datos
+
+RNF-003.3: TOLERANCIA A FALLOS
+- Sistema debe continuar operando si WebSocket cae (modo degradado)
+- Frontend debe funcionar offline con datos en caché (lectura solamente)
+- Backend debe reiniciarse automáticamente tras crash
+
+RNF-003.4: INTEGRIDAD DE DATOS
+- Transacciones atómicas para operaciones críticas
+- Validación de datos en cliente y servidor
+- Prevención de pérdida de datos durante edición (guardado automático)
+
+═══════════════════════════════════════════════════════
+RNF-004: SEGURIDAD
+═══════════════════════════════════════════════════════
+
+RNF-004.1: AUTENTICACIÓN
+- Passwords hasheados con bcrypt (10 salt rounds mínimo)
+- JWT con expiración de 24 horas
+- Refresh tokens con expiración de 7 días
+- Rate limiting: máximo 5 intentos de login fallidos por IP/15 min
+
+RNF-004.2: AUTORIZACIÓN
+- Roles claramente definidos: Producer, Operator, Admin
+- Producers pueden CRUD scripts propios
+- Operators solo lectura de scripts aprobados
+- Admins acceso total
+
+RNF-004.3: COMUNICACIÓN
+- HTTPS obligatorio en producción
+- WSS (WebSocket Secure) en producción
+- CORS configurado restrictivamente (solo orígenes autorizados)
+
+RNF-004.4: PROTECCIÓN
+- Sanitización de inputs para prevenir XSS
+- Prepared statements para prevenir SQL/NoSQL injection
+- Validación de uploads (tipo, tamaño, contenido)
+- Headers de seguridad: CSP, X-Frame-Options, etc.
+
+RNF-004.5: AUDITORÍA
+- Log de accesos con IP, usuario, timestamp
+- Log de cambios en datos sensibles
+- Retención de logs: 90 días mínimo
+
+═══════════════════════════════════════════════════════
+RNF-005: MANTENIBILIDAD
+═══════════════════════════════════════════════════════
+
+RNF-005.1: CÓDIGO
+- Cobertura de tests: mínimo 70% (objetivo 85%)
+- Linter sin errores (ESLint, TypeScript strict mode)
+- Documentación inline para funciones complejas
+- README actualizado con instrucciones de setup
+
+RNF-005.2: ARQUITECTURA
+- Separación clara de capas (frontend/backend/database)
+- Principios SOLID aplicados
+- Componentes reutilizables y modulares
+- Dependencias actualizadas (sin vulnerabilidades críticas)
+
+RNF-005.3: VERSIONADO
+- Git con commits descriptivos (Conventional Commits)
+- Branches: main, develop, feature/*, bugfix/*
+- Tags para releases (semantic versioning)
+- Pull requests con code review obligatorio
+
+RNF-005.4: DOCUMENTACIÓN
+- API documentada (Swagger/OpenAPI)
+- Diagramas de arquitectura actualizados
+- Guías de usuario actualizadas
+- Changelog actualizado por versión
+
+═══════════════════════════════════════════════════════
+RNF-006: USABILIDAD
+═══════════════════════════════════════════════════════
+
+RNF-006.1: INTERFAZ
+- Diseño consistente siguiendo Material Design o similar
+- Responsive en desktop (1920x1080, 1366x768)
+- Feedback visual inmediato para acciones (<100ms)
+- Estados de carga claros (spinners, skeletons)
+
+RNF-006.2: ACCESIBILIDAD
+- Navegación completa por teclado (operadores sin mouse)
+- Contraste mínimo WCAG AA (4.5:1)
+- ARIA labels en elementos interactivos
+- Focus visible en elementos activos
+
+RNF-006.3: MENSAJES
+- Errores claros y accionables (no códigos técnicos)
+- Confirmaciones para acciones destructivas
+- Tooltips en botones no obvios
+- Ayuda contextual disponible (F1 o ícono ?)
+
+RNF-006.4: IDIOMA
+- Interfaz en español (México)
+- Fechas en formato DD/MM/YYYY
+- Números con separadores regionales
+
+═══════════════════════════════════════════════════════
+RNF-007: COMPATIBILIDAD
+═══════════════════════════════════════════════════════
+
+RNF-007.1: NAVEGADORES
+- Chrome 100+ (principal)
+- Firefox 100+
+- Edge 100+
+- Safari 15+ (opcional)
+
+RNF-007.2: SISTEMAS OPERATIVOS
+- Windows 10/11 (principal)
+- macOS 12+ (secundario)
+- Linux Ubuntu 20.04+ (desarrollo)
+
+RNF-007.3: DISPOSITIVOS
+- Resoluciones: 1366x768 a 3840x2160
+- Pantallas táctiles: soporte básico
+- Múltiples monitores: ventana flotante en segundo monitor
+
+RNF-007.4: TECNOLOGÍAS
+- Node.js 18+ LTS
+- MongoDB 7.0+
+- Docker 24+
+- Docker Compose 2.20+
+
+═══════════════════════════════════════════════════════
+RNF-008: PORTABILIDAD Y DESPLIEGUE
+═══════════════════════════════════════════════════════
+
+RNF-008.1: CONTENEDORES
+- Imágenes Docker < 500MB cada una
+- Build time < 5 minutos por contenedor
+- Startup time < 30 segundos (todos los servicios)
+
+RNF-008.2: CONFIGURACIÓN
+- Variables de entorno para configuración
+- Sin hardcoded credentials
+- Archivos .env.example incluidos
+- Configuración por entorno (dev/staging/prod)
+
+RNF-008.3: MIGRACIÓN
+- Scripts de migración de base de datos versionados
+- Rollback automático en caso de fallo
+- Datos de ejemplo para desarrollo (seeds)
+
+═══════════════════════════════════════════════════════
+RNF-009: CI/CD Y CALIDAD
+═══════════════════════════════════════════════════════
+
+RNF-009.1: INTEGRACIÓN CONTINUA
+- Build automático en cada push
+- Tests automáticos en cada PR
+- Análisis de código estático (ESLint, SonarQube)
+- Cobertura de código reportada (CodeCov)
+
+RNF-009.2: DESPLIEGUE CONTINUO
+- Despliegue automático a staging tras merge a develop
+- Despliegue a producción tras merge a main (con aprobación)
+- Rollback en < 2 minutos si falla healthcheck
+
+RNF-009.3: CALIDAD DE CÓDIGO
+- Code coverage mínimo: 70%
+- Duplicación de código: < 5%
+- Complejidad ciclomática: < 15 por función
+- Technical debt ratio: < 5%
+
+RNF-009.4: TESTING
+- Tests unitarios para lógica de negocio
+- Tests de integración para API endpoints
+- Tests E2E para flujos críticos
+- Performance tests antes de release
+
+═══════════════════════════════════════════════════════
+RNF-010: MONITOREO Y OBSERVABILIDAD
+═══════════════════════════════════════════════════════
+
+RNF-010.1: LOGGING
+- Logs estructurados (JSON)
+- Niveles: ERROR, WARN, INFO, DEBUG
+- Correlación de requests (request ID)
+- Rotación de logs automática
+
+RNF-010.2: MÉTRICAS
+- CPU, RAM, disco monitoreados
+- Latencia de API (p50, p95, p99)
+- Tasa de errores por endpoint
+- Usuarios activos simultáneos
+
+RNF-010.3: ALERTAS
+- Alerta si error rate > 5%
+- Alerta si latencia p95 > 2 segundos
+- Alerta si disco > 85%
+- Alerta si servicio down > 2 minutos
+
+RNF-010.4: HEALTHCHECKS
+- Endpoint /health con status de dependencias
+- Readiness probe para Kubernetes/Docker
+- Liveness probe para Kubernetes/Docker
+
+═══════════════════════════════════════════════════════
+RESUMEN DE MÉTRICAS CLAVE
+═══════════════════════════════════════════════════════
+
+RENDIMIENTO:
+✓ Scroll: 60 FPS constantes
+✓ API response: < 500ms
+✓ WebSocket latency: < 200ms
+
+DISPONIBILIDAD:
+✓ Uptime: 99.9%
+✓ RTO: < 5 minutos
+✓ RPO: < 15 minutos
+
+ESCALABILIDAD:
+✓ 50 usuarios concurrentes
+✓ 10,000+ scripts
+✓ 100 req/s
+
+CALIDAD:
+✓ Code coverage: 70%+
+✓ Test pass rate: 100%
+✓ Build time: < 5 min
+
+SEGURIDAD:
+✓ HTTPS/WSS obligatorio
+✓ JWT expiración 24h
+✓ Rate limiting activo

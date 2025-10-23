@@ -1,0 +1,45 @@
+# US-013: Sincronización en Modo Fullscreen | Epic: Pantalla Completa | 🔴 CRÍTICA | 3 pts | Sprint 1
+
+## 📋 Descripción
+
+**Como** operador  
+**Quiero** que el modo fullscreen esté sincronizado con Preview y FloatingWindow  
+**Para** que todos muestren el mismo contenido y estado en tiempo real
+
+**Origen:** Bug PF-2 - Reporte de Pruebas
+
+---
+
+## ✅ Criterios de Aceptación
+
+- [ ] Scroll sincronizado (Preview ↔ Fullscreen ↔ Floating)
+- [ ] Play/Pause sincronizado en las 3 vistas
+- [ ] Cambios de config aplicados inmediatamente
+- [ ] Script actual sincronizado
+- [ ] Latencia < 16ms
+
+---
+
+## 🔧 Tareas Técnicas
+
+- [ ] TeleprompterModal registrado como esclavo en StateSyncService
+- [ ] Listener para state updates del maestro
+- [ ] Propagación de scrollTop bidireccional
+- [ ] WebSocket sync si backend disponible
+- [ ] Tests de sincronización en fullscreen
+
+---
+
+## 👤 Asignado a
+
+**Frontend Lead**
+
+---
+
+## 🏷️ Labels
+
+`bug`, `priority:critical`, `area:frontend`, `sprint-1`, `fullscreen`, `synchronization`
+
+---
+
+**Estado:** 📋 Backlog

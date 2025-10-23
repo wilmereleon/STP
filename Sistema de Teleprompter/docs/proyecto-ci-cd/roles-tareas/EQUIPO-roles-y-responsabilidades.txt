@@ -1,0 +1,479 @@
+ASIGNACIÓN DE ROLES Y RESPONSABILIDADES - EQUIPO STP
+=====================================================
+
+PROYECTO: Sistema de Teleprompter v2.0 con Docker + CI/CD
+FECHA INICIO: 23 de Octubre 2025
+ENTREGAS: 3 iteraciones (4 nov, 18 nov, 2 dic 2025)
+EQUIPO: 5 miembros
+
+═══════════════════════════════════════════════════════
+ROL 1: FRONTEND LEAD
+═══════════════════════════════════════════════════════
+
+RESPONSABILIDADES PRINCIPALES:
+-------------------------------
+✓ Arquitectura y diseño de componentes React
+✓ Implementación de la Vista de Operador (refactorización)
+✓ Implementación de la Vista de Productor (nueva)
+✓ Gestión de estado global (stores)
+✓ Integración con API backend
+✓ Integración con WebSocket
+✓ Performance y optimización de rendering
+✓ Responsive design y accesibilidad
+
+TECNOLOGÍAS:
+------------
+- React 18.3.1 + TypeScript
+- Zustand (state management)
+- React Query / SWR (data fetching)
+- Socket.IO Client
+- Vite (build tool)
+- TailwindCSS / Material-UI
+- React Router
+
+TAREAS ESPECÍFICAS:
+-------------------
+Sprint 1 (Entrega 1 - 4 Nov):
+□ US-001: Implementar funcionalidad Play
+□ US-002: Implementar funcionalidad Pause
+□ US-003: Implementar funcionalidad Reset
+□ US-004: Implementar ajuste de velocidad
+□ Integrar con API de configuraciones
+□ Integrar WebSocket para sincronización
+□ Dockerizar aplicación frontend
+□ Tests unitarios de componentes críticos
+
+Sprint 2 (Entrega 2 - 18 Nov):
+□ US-034: Implementar Vista de Productor (completa)
+□ Editor enriquecido con formato
+□ Panel de metadatos
+□ Búsqueda y filtrado avanzado
+□ Importador de Excel/TXT
+□ Tests E2E con Playwright
+□ Optimización de performance
+
+Sprint 3 (Entrega 3 - 2 Dec):
+□ Refinamiento UI/UX basado en feedback
+□ Accesibilidad (navegación por teclado)
+□ Temas oscuro/claro
+□ Internacionalización (i18n)
+□ Documentación de componentes
+
+COLABORACIÓN:
+-------------
+- Trabaja estrechamente con Backend Lead para definir API contracts
+- Coordina con DevOps para configuración de Docker frontend
+- Apoya a Full Stack Developer en integraciones complejas
+
+KPIs:
+-----
+- Code coverage frontend: > 70%
+- Performance score (Lighthouse): > 90
+- 0 errores de ESLint/TypeScript
+- Componentes documentados con Storybook (opcional)
+
+═══════════════════════════════════════════════════════
+ROL 2: BACKEND LEAD
+═══════════════════════════════════════════════════════
+
+RESPONSABILIDADES PRINCIPALES:
+-------------------------------
+✓ Diseño de arquitectura backend
+✓ Implementación de API REST
+✓ Diseño de base de datos (esquemas MongoDB)
+✓ Implementación de WebSocket server
+✓ Autenticación y autorización (JWT)
+✓ Validación de datos y manejo de errores
+✓ Optimización de queries
+✓ Seguridad del backend
+
+TECNOLOGÍAS:
+------------
+- Node.js 18+ LTS
+- Express.js
+- MongoDB + Mongoose
+- Socket.IO Server
+- JWT (jsonwebtoken)
+- bcryptjs (hashing)
+- express-validator
+- multer (file uploads)
+
+TAREAS ESPECÍFICAS:
+-------------------
+Sprint 1 (Entrega 1 - 4 Nov):
+□ US-032: Implementar backend completo con BD
+  □ Setup Express server
+  □ Configurar MongoDB + Mongoose
+  □ Crear modelos: Script, RunOrder, Config, User, Macro
+  □ Implementar CRUD para Scripts
+  □ Implementar CRUD para RunOrder
+  □ Implementar CRUD para Configuraciones
+  □ Implementar autenticación JWT
+  □ Implementar WebSocket server
+  □ Health check endpoint
+  □ Dockerizar backend
+  □ Tests de integración con Supertest
+
+Sprint 2 (Entrega 2 - 18 Nov):
+□ US-033: API avanzada para Producer
+  □ Endpoint de importación Excel/TXT
+  □ Endpoint de exportación
+  □ Sistema de versionado de scripts
+  □ Búsqueda full-text con índices
+  □ Filtrado y paginación optimizados
+  □ Colaboración y locks de edición
+  □ WebSocket: eventos de sincronización
+  □ Rate limiting y throttling
+  □ Tests de carga con Artillery
+
+Sprint 3 (Entrega 3 - 2 Dec):
+□ Optimización de performance
+□ Implementar caché con Redis (opcional)
+□ Métricas y monitoring (Prometheus)
+□ Documentación API con Swagger
+□ Backup y restore de BD
+□ Migración de datos legacy
+
+COLABORACIÓN:
+-------------
+- Define API contracts con Frontend Lead
+- Coordina con DevOps para configuración de Docker backend
+- Apoya a QA Engineer con datos de prueba (seeds)
+
+KPIs:
+-----
+- Code coverage backend: > 75%
+- Latencia API p95: < 500ms
+- 0 vulnerabilidades críticas (npm audit)
+- API documentada (Swagger)
+
+═══════════════════════════════════════════════════════
+ROL 3: DEVOPS ENGINEER
+═══════════════════════════════════════════════════════
+
+RESPONSABILIDADES PRINCIPALES:
+-------------------------------
+✓ Configuración de Docker y Docker Compose
+✓ Configuración de CI/CD (Jenkins)
+✓ Gestión de infraestructura
+✓ Monitoreo y observabilidad
+✓ Gestión de ambientes (dev/staging/prod)
+✓ Seguridad de infraestructura
+✓ Automatización de despliegues
+✓ Backup y recuperación
+
+TECNOLOGÍAS:
+------------
+- Docker + Docker Compose
+- Jenkins (CI/CD)
+- Git + GitHub
+- MongoDB (administración)
+- Nginx (reverse proxy)
+- Linux (Ubuntu/Debian)
+- Bash scripting
+- CodeCov
+
+TAREAS ESPECÍFICAS:
+-------------------
+Sprint 1 (Entrega 1 - 4 Nov):
+□ US-036: Dockerizar frontend
+□ US-037: Dockerizar backend
+□ US-038: Configurar comunicación entre contenedores
+  □ Crear Dockerfile.frontend (multi-stage)
+  □ Crear Dockerfile (backend)
+  □ Crear docker-compose.yml (3 servicios: frontend, backend, mongo)
+  □ Configurar volúmenes persistentes
+  □ Configurar networking
+  □ Variables de entorno
+  □ Script de inicio rápido (start.sh)
+  □ Documentación de Docker setup
+
+Sprint 2 (Entrega 2 - 18 Nov):
+□ US-039: Implementar pipeline CI/CD con Jenkins
+  □ Configurar Jenkins en contenedor Docker
+  □ Pipeline: Build → Test → Analyze → Deploy
+  □ Integración con GitHub (webhooks)
+  □ Integración con CodeCov
+  □ Notificaciones de build (Slack/Email)
+  □ Despliegue automático a staging
+  □ Rollback automático si falla healthcheck
+□ Configurar ambientes dev/staging/prod
+□ Scripts de backup automático MongoDB
+
+Sprint 3 (Entrega 3 - 2 Dec):
+□ Implementar monitoring (Prometheus + Grafana)
+□ Dashboards de métricas
+□ Alertas automatizadas
+□ Optimización de imágenes Docker (reducir tamaño)
+□ Hardening de seguridad
+□ Documentación completa de infraestructura
+
+COLABORACIÓN:
+-------------
+- Coordina con todos para requisitos de infraestructura
+- Apoya a QA Engineer con ambientes de pruebas
+- Enseña al equipo uso de Docker y Jenkins
+
+KPIs:
+-----
+- Build time: < 5 minutos
+- Deployment time: < 3 minutos
+- Uptime: > 99%
+- Mean Time to Recovery (MTTR): < 10 minutos
+
+═══════════════════════════════════════════════════════
+ROL 4: QA ENGINEER (QUALITY ASSURANCE)
+═══════════════════════════════════════════════════════
+
+RESPONSABILIDADES PRINCIPALES:
+-------------------------------
+✓ Planificación de estrategia de testing
+✓ Creación de casos de prueba
+✓ Ejecución de tests manuales y automatizados
+✓ Reporte y seguimiento de bugs
+✓ Validación de correcciones
+✓ Tests de regresión
+✓ Tests de performance
+✓ Análisis de cobertura de código
+
+TECNOLOGÍAS:
+------------
+- Jest (unit tests)
+- Supertest (API tests)
+- Playwright / Cypress (E2E tests)
+- Artillery / k6 (load tests)
+- CodeCov (coverage analysis)
+- Postman (API testing)
+- GitHub Issues (bug tracking)
+
+TAREAS ESPECÍFICAS:
+-------------------
+Sprint 1 (Entrega 1 - 4 Nov):
+□ Crear plan de pruebas basado en requerimientos funcionales
+□ Documentar 31 bugs del reporte en GitHub Issues
+□ Crear casos de prueba para US-001 a US-031
+□ Tests unitarios para utils y helpers
+□ Tests de integración para API endpoints críticos
+□ Validar corrección de bugs TP-1 a TP-6
+□ Tests de regresión
+□ Reporte de cobertura de código (objetivo 70%)
+
+Sprint 2 (Entrega 2 - 18 Nov):
+□ Tests E2E para flujos completos:
+  □ Flujo Operator: Cargar script → Play → Pause → Siguiente
+  □ Flujo Producer: Crear script → Editar → Aprobar → Ver en Operator
+  □ Flujo Sincronización: Cambio en Producer → Update en Operator
+□ Tests de performance:
+  □ Scroll a 60 FPS con scripts largos (10,000+ palabras)
+  □ API latency con 100 requests/segundo
+  □ WebSocket latency < 200ms
+□ Tests de carga: 50 usuarios concurrentes
+□ Análisis CodeCov: identificar áreas sin cobertura
+
+Sprint 3 (Entrega 3 - 2 Dec):
+□ Tests de compatibilidad (Chrome, Firefox, Edge)
+□ Tests de accesibilidad (navegación teclado, screen readers)
+□ Tests de seguridad (OWASP Top 10)
+□ Pruebas de usuario con stakeholders
+□ Reporte final de calidad
+□ Checklist de pre-release
+
+COLABORACIÓN:
+-------------
+- Reporta bugs a Frontend/Backend Lead según corresponda
+- Coordina con DevOps para ambientes de pruebas
+- Valida con stakeholders criterios de aceptación
+
+KPIs:
+-----
+- Code coverage: > 70% (frontend y backend)
+- Bug detection rate: > 90% antes de release
+- Test automation rate: > 60%
+- 0 bugs críticos en producción
+
+═══════════════════════════════════════════════════════
+ROL 5: FULL STACK DEVELOPER
+═══════════════════════════════════════════════════════
+
+RESPONSABILIDADES PRINCIPALES:
+-------------------------------
+✓ Apoyo en frontend y backend según necesidad
+✓ Integración entre frontend y backend
+✓ Implementación de historias de usuario completas (end-to-end)
+✓ Resolución de bugs complejos
+✓ Code reviews
+✓ Documentación técnica
+✓ Soporte a otros miembros del equipo
+
+TECNOLOGÍAS:
+------------
+- React + TypeScript (frontend)
+- Node.js + Express (backend)
+- MongoDB (database)
+- Socket.IO (WebSocket)
+- Docker
+- Git
+
+TAREAS ESPECÍFICAS:
+-------------------
+Sprint 1 (Entrega 1 - 4 Nov):
+□ Apoyo a Backend Lead en US-032:
+  □ Implementar modelos Mongoose
+  □ Implementar controladores de API
+  □ Implementar middleware de validación
+□ Apoyo a Frontend Lead en US-001 a US-004:
+  □ Implementar hooks personalizados
+  □ Integrar con API backend
+  □ Implementar WebSocket client
+□ Code reviews de PRs
+□ Documentar configuración de desarrollo
+□ Resolver bugs de integración frontend-backend
+
+Sprint 2 (Entrega 2 - 18 Nov):
+□ US-035: Sincronización en tiempo real
+  □ Implementar eventos WebSocket completos
+  □ Manejar reconexiones
+  □ Optimistic updates en frontend
+  □ Conflict resolution en ediciones simultáneas
+□ US-007 a US-012: Bugs del Editor
+  □ Implementar formato de texto (bold, italic)
+  □ Implementar "Señalizador"
+  □ Contador de palabras
+□ Importador/Exportador Excel
+□ Tests de integración end-to-end
+
+Sprint 3 (Entrega 3 - 2 Dec):
+□ Refinamiento y optimización general
+□ Resolución de bugs reportados por QA
+□ Mejoras de UX basadas en feedback
+□ Documentación de arquitectura
+□ Video tutorial de uso del sistema
+□ Knowledge transfer al equipo
+
+COLABORACIÓN:
+-------------
+- Puente entre Frontend y Backend Lead
+- Apoya donde haya mayor necesidad
+- Facilita integración de componentes
+
+KPIs:
+-----
+- Code review turnaround: < 24 horas
+- Bugs resueltos por sprint: > 10
+- Pull requests aprobados: > 80%
+- Documentación actualizada semanalmente
+
+═══════════════════════════════════════════════════════
+DISTRIBUCIÓN DE USER STORIES POR SPRINT
+═══════════════════════════════════════════════════════
+
+SPRINT 1 (23 Oct - 4 Nov) - FOUNDATION:
+----------------------------------------
+Total Story Points: 40
+
+Frontend Lead (15 pts):
+- US-001: Play funcionalidad (3 pts)
+- US-002: Pause funcionalidad (2 pts)
+- US-003: Reset funcionalidad (2 pts)
+- US-004: Velocidad ajustable (3 pts)
+- US-005: Tamaño fuente ajustable (2 pts)
+- US-006: Línea guía visible (3 pts)
+
+Backend Lead (13 pts):
+- US-032: Backend con BD (13 pts) ⭐ CRÍTICO
+
+DevOps (8 pts):
+- US-036: Docker frontend (3 pts)
+- US-037: Docker backend (3 pts)
+- US-038: Comunicación contenedores (2 pts)
+
+QA Engineer (4 pts):
+- Plan de pruebas (2 pts)
+- Tests unitarios críticos (2 pts)
+
+Full Stack (15 pts):
+- Apoyo Backend US-032 (7 pts)
+- Apoyo Frontend US-001 a US-006 (5 pts)
+- Integración frontend-backend (3 pts)
+
+SPRINT 2 (5 Nov - 18 Nov) - FEATURES:
+--------------------------------------
+Total Story Points: 50
+
+Frontend Lead (21 pts):
+- US-034: Vista de Productor (21 pts) ⭐ CRÍTICO
+
+Backend Lead (13 pts):
+- US-033: API avanzada Producer (13 pts)
+
+DevOps (8 pts):
+- US-039: Jenkins CI/CD (8 pts) ⭐ CRÍTICO
+
+QA Engineer (8 pts):
+- Tests E2E (4 pts)
+- Tests performance (4 pts)
+
+Full Stack (16 pts):
+- US-035: Sincronización tiempo real (8 pts)
+- US-007 a US-012: Editor bugs (8 pts)
+
+SPRINT 3 (19 Nov - 2 Dec) - POLISH:
+------------------------------------
+Total Story Points: 30
+
+- Refinamiento general (10 pts)
+- Resolución bugs QA (10 pts)
+- Documentación final (5 pts)
+- Preparación release (5 pts)
+
+═══════════════════════════════════════════════════════
+RITUALES SCRUM
+═══════════════════════════════════════════════════════
+
+DAILY STANDUP:
+- Duración: 15 minutos
+- Horario: 9:00 AM
+- Formato: ¿Qué hice? ¿Qué haré? ¿Blockers?
+
+SPRINT PLANNING:
+- Inicio de cada sprint
+- Duración: 2 horas
+- Selección y estimación de user stories
+
+SPRINT REVIEW:
+- Final de cada sprint (entregas: 4 nov, 18 nov, 2 dic)
+- Duración: 1 hora
+- Demo de funcionalidades completadas
+
+SPRINT RETROSPECTIVE:
+- Después del Sprint Review
+- Duración: 1 hora
+- ¿Qué salió bien? ¿Qué mejorar?
+
+CODE REVIEW:
+- Todos los PRs requieren 1 aprobación mínimo
+- Turnaround: < 24 horas
+- Guidelines: Clean code, tests incluidos, docs actualizados
+
+═══════════════════════════════════════════════════════
+CANALES DE COMUNICACIÓN
+═══════════════════════════════════════════════════════
+
+- GitHub Issues: Bug tracking y user stories
+- GitHub Projects: Kanban board
+- Slack/Discord: Comunicación diaria
+- Google Meet/Zoom: Dailies y meetings
+- Notion/Confluence: Documentación compartida
+
+═══════════════════════════════════════════════════════
+CRITERIOS DE DEFINICIÓN DE "DONE"
+═══════════════════════════════════════════════════════
+
+✓ Código escrito y funcional
+✓ Tests unitarios escritos y pasando
+✓ Tests de integración (si aplica) pasando
+✓ Code review aprobado
+✓ Documentación actualizada
+✓ Merge a branch develop
+✓ Funcionalidad demostrada en Sprint Review
+✓ Aprobación del Product Owner (stakeholder)

@@ -1,0 +1,415 @@
+pipeline {
+    agent any
+    
+    environment {
+        // Variables de entorno
+        DOCKER_REGISTRY = 'docker.io'
+        IMAGE_NAME = 'teleprompter'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+        
+        // Credenciales (configurar en Jenkins)
+        DOCKER_CREDENTIALS = credentials('docker-hub-credentials')
+        CODECOV_TOKEN = credentials('codecov-token')
+        
+        // Notificaciones
+        SLACK_CHANNEL = '#teleprompter-ci'
+        EMAIL_RECIPIENTS = 'team@teleprompter.com'
+    }
+    
+    options {
+        // Mantener últimos 10 builds
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        
+        // Timeout de 30 minutos
+        timeout(time: 30, unit: 'MINUTES')
+        
+        // Timestamps en logs
+        timestamps()
+        
+        // No permitir builds concurrentes
+        disableConcurrentBuilds()
+    }
+    
+    stages {
+        stage('📋 Checkout') {
+            steps {
+                echo '🔄 Clonando repositorio...'
+                checkout scm
+                
+                script {
+                    // Información del commit
+                    env.GIT_COMMIT_MSG = sh(script: "git log -1 --pretty=%B", returnStdout: true).trim()
+                    env.GIT_AUTHOR = sh(script: "git log -1 --pretty=%an", returnStdout: true).trim()
+                }
+                
+                echo "📝 Commit: ${env.GIT_COMMIT_SHORT}"
+                echo "👤 Autor: ${env.GIT_AUTHOR}"
+                echo "💬 Mensaje: ${env.GIT_COMMIT_MSG}"
+            }
+        }
+        
+        stage('🔍 Análisis de Código Estático') {
+            parallel {
+                stage('ESLint - Frontend') {
+                    steps {
+                        echo '🔎 Ejecutando ESLint en frontend...'
+                        dir('Sistema de Teleprompter') {
+                            sh 'npm install'
+                            sh 'npm run lint || true'
+                        }
+                    }
+                }
+                
+                stage('ESLint - Backend') {
+                    steps {
+                        echo '🔎 Ejecutando ESLint en backend...'
+                        dir('Sistema de Teleprompter/backend') {
+                            sh 'npm install'
+                            sh 'npm run lint || true'
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('🧪 Tests Unitarios') {
+            parallel {
+                stage('Tests - Frontend') {
+                    steps {
+                        echo '🧪 Ejecutando tests unitarios frontend...'
+                        dir('Sistema de Teleprompter') {
+                            sh 'npm test -- --coverage --watchAll=false'
+                            
+                            // Publicar resultados
+                            junit 'coverage/junit.xml'
+                            publishHTML([
+                                reportDir: 'coverage/lcov-report',
+                                reportFiles: 'index.html',
+                                reportName: 'Frontend Coverage Report'
+                            ])
+                        }
+                    }
+                }
+                
+                stage('Tests - Backend') {
+                    steps {
+                        echo '🧪 Ejecutando tests unitarios backend...'
+                        dir('Sistema de Teleprompter/backend') {
+                            sh 'npm test -- --coverage --watchAll=false'
+                            
+                            // Publicar resultados
+                            junit 'coverage/junit.xml'
+                            publishHTML([
+                                reportDir: 'coverage/lcov-report',
+                                reportFiles: 'index.html',
+                                reportName: 'Backend Coverage Report'
+                            ])
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('📊 CodeCov Analysis') {
+            steps {
+                echo '📊 Enviando cobertura a CodeCov...'
+                
+                script {
+                    // Frontend coverage
+                    dir('Sistema de Teleprompter') {
+                        sh """
+                            curl -Os https://uploader.codecov.io/latest/linux/codecov
+                            chmod +x codecov
+                            ./codecov -t ${CODECOV_TOKEN} -f coverage/coverage-final.json -F frontend
+                        """
+                    }
+                    
+                    // Backend coverage
+                    dir('Sistema de Teleprompter/backend') {
+                        sh """
+                            curl -Os https://uploader.codecov.io/latest/linux/codecov
+                            chmod +x codecov
+                            ./codecov -t ${CODECOV_TOKEN} -f coverage/coverage-final.json -F backend
+                        """
+                    }
+                }
+                
+                echo '✅ Cobertura enviada a CodeCov'
+            }
+        }
+        
+        stage('🏗️ Build Docker Images') {
+            parallel {
+                stage('Build - Frontend') {
+                    steps {
+                        echo '🏗️ Construyendo imagen Docker frontend...'
+                        dir('Sistema de Teleprompter') {
+                            script {
+                                docker.build(
+                                    "${DOCKER_REGISTRY}/${IMAGE_NAME}-frontend:${IMAGE_TAG}",
+                                    "-f docker/Dockerfile.frontend ."
+                                )
+                                docker.build(
+                                    "${DOCKER_REGISTRY}/${IMAGE_NAME}-frontend:latest",
+                                    "-f docker/Dockerfile.frontend ."
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                stage('Build - Backend') {
+                    steps {
+                        echo '🏗️ Construyendo imagen Docker backend...'
+                        dir('Sistema de Teleprompter/backend') {
+                            script {
+                                docker.build(
+                                    "${DOCKER_REGISTRY}/${IMAGE_NAME}-backend:${IMAGE_TAG}",
+                                    "."
+                                )
+                                docker.build(
+                                    "${DOCKER_REGISTRY}/${IMAGE_NAME}-backend:latest",
+                                    "."
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('🔐 Security Scan') {
+            steps {
+                echo '🔐 Escaneando vulnerabilidades...'
+                
+                script {
+                    // Trivy scan para imágenes Docker
+                    sh """
+                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                        aquasec/trivy image \
+                        --severity HIGH,CRITICAL \
+                        --exit-code 0 \
+                        ${DOCKER_REGISTRY}/${IMAGE_NAME}-frontend:${IMAGE_TAG}
+                    """
+                    
+                    sh """
+                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                        aquasec/trivy image \
+                        --severity HIGH,CRITICAL \
+                        --exit-code 0 \
+                        ${DOCKER_REGISTRY}/${IMAGE_NAME}-backend:${IMAGE_TAG}
+                    """
+                }
+            }
+        }
+        
+        stage('🚀 Deploy to Staging') {
+            when {
+                branch 'develop'
+            }
+            steps {
+                echo '🚀 Desplegando a ambiente de Staging...'
+                
+                script {
+                    // Push images to registry
+                    docker.withRegistry("https://${DOCKER_REGISTRY}", 'docker-hub-credentials') {
+                        docker.image("${DOCKER_REGISTRY}/${IMAGE_NAME}-frontend:${IMAGE_TAG}").push()
+                        docker.image("${DOCKER_REGISTRY}/${IMAGE_NAME}-frontend:latest").push()
+                        docker.image("${DOCKER_REGISTRY}/${IMAGE_NAME}-backend:${IMAGE_TAG}").push()
+                        docker.image("${DOCKER_REGISTRY}/${IMAGE_NAME}-backend:latest").push()
+                    }
+                    
+                    // Deploy to staging
+                    dir('Sistema de Teleprompter') {
+                        sh """
+                            export IMAGE_TAG=${IMAGE_TAG}
+                            docker-compose -f docker-compose.staging.yml down
+                            docker-compose -f docker-compose.staging.yml up -d
+                        """
+                    }
+                }
+                
+                // Wait for services to be ready
+                sleep(time: 30, unit: 'SECONDS')
+                
+                // Health check
+                sh """
+                    curl -f http://staging.teleprompter.local:3000/health || exit 1
+                """
+                
+                echo '✅ Deploy a Staging exitoso'
+            }
+        }
+        
+        stage('🧪 Integration Tests') {
+            when {
+                branch 'develop'
+            }
+            steps {
+                echo '🧪 Ejecutando tests de integración...'
+                
+                dir('Sistema de Teleprompter') {
+                    sh """
+                        export API_URL=http://staging.teleprompter.local:3000
+                        npm run test:integration
+                    """
+                }
+            }
+        }
+        
+        stage('⚡ Performance Tests') {
+            when {
+                branch 'develop'
+            }
+            steps {
+                echo '⚡ Ejecutando tests de performance...'
+                
+                dir('Sistema de Teleprompter') {
+                    sh """
+                        export TARGET_URL=http://staging.teleprompter.local:3000
+                        npm run test:performance
+                    """
+                }
+                
+                // Publicar reporte de Artillery
+                publishHTML([
+                    reportDir: 'performance-results',
+                    reportFiles: 'report.html',
+                    reportName: 'Performance Test Report'
+                ])
+            }
+        }
+        
+        stage('📦 Deploy to Production') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo '📦 Desplegando a Producción...'
+                
+                // Requiere aprobación manual
+                input message: '¿Desplegar a Producción?', ok: 'Deploy'
+                
+                script {
+                    // Push images
+                    docker.withRegistry("https://${DOCKER_REGISTRY}", 'docker-hub-credentials') {
+                        docker.image("${DOCKER_REGISTRY}/${IMAGE_NAME}-frontend:${IMAGE_TAG}").push()
+                        docker.image("${DOCKER_REGISTRY}/${IMAGE_NAME}-backend:${IMAGE_TAG}").push()
+                    }
+                    
+                    // Deploy to production
+                    dir('Sistema de Teleprompter') {
+                        sh """
+                            export IMAGE_TAG=${IMAGE_TAG}
+                            docker-compose -f docker-compose.prod.yml down
+                            docker-compose -f docker-compose.prod.yml up -d
+                        """
+                    }
+                }
+                
+                // Wait for services
+                sleep(time: 30, unit: 'SECONDS')
+                
+                // Health check
+                sh """
+                    curl -f https://teleprompter.prod/health || exit 1
+                """
+                
+                echo '✅ Deploy a Producción exitoso'
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✅ Pipeline completado exitosamente'
+            
+            script {
+                // Notificación Slack
+                slackSend(
+                    channel: env.SLACK_CHANNEL,
+                    color: 'good',
+                    message: """
+                        ✅ Build #${env.BUILD_NUMBER} EXITOSO
+                        Proyecto: ${env.JOB_NAME}
+                        Branch: ${env.GIT_BRANCH}
+                        Commit: ${env.GIT_COMMIT_SHORT}
+                        Autor: ${env.GIT_AUTHOR}
+                        Duración: ${currentBuild.durationString}
+                        <${env.BUILD_URL}|Ver build>
+                    """
+                )
+                
+                // Email
+                emailext(
+                    to: env.EMAIL_RECIPIENTS,
+                    subject: "✅ Build #${env.BUILD_NUMBER} EXITOSO - ${env.JOB_NAME}",
+                    body: """
+                        Build completado exitosamente.
+                        
+                        Detalles:
+                        - Proyecto: ${env.JOB_NAME}
+                        - Build: #${env.BUILD_NUMBER}
+                        - Branch: ${env.GIT_BRANCH}
+                        - Commit: ${env.GIT_COMMIT_SHORT}
+                        - Autor: ${env.GIT_AUTHOR}
+                        - Mensaje: ${env.GIT_COMMIT_MSG}
+                        - Duración: ${currentBuild.durationString}
+                        
+                        Ver detalles: ${env.BUILD_URL}
+                    """
+                )
+            }
+        }
+        
+        failure {
+            echo '❌ Pipeline falló'
+            
+            script {
+                // Notificación Slack
+                slackSend(
+                    channel: env.SLACK_CHANNEL,
+                    color: 'danger',
+                    message: """
+                        ❌ Build #${env.BUILD_NUMBER} FALLIDO
+                        Proyecto: ${env.JOB_NAME}
+                        Branch: ${env.GIT_BRANCH}
+                        Commit: ${env.GIT_COMMIT_SHORT}
+                        Autor: ${env.GIT_AUTHOR}
+                        <${env.BUILD_URL}console|Ver logs>
+                    """
+                )
+                
+                // Email
+                emailext(
+                    to: env.EMAIL_RECIPIENTS,
+                    subject: "❌ Build #${env.BUILD_NUMBER} FALLIDO - ${env.JOB_NAME}",
+                    body: """
+                        Build falló. Por favor revisa los logs.
+                        
+                        Detalles:
+                        - Proyecto: ${env.JOB_NAME}
+                        - Build: #${env.BUILD_NUMBER}
+                        - Branch: ${env.GIT_BRANCH}
+                        - Commit: ${env.GIT_COMMIT_SHORT}
+                        - Autor: ${env.GIT_AUTHOR}
+                        
+                        Ver logs: ${env.BUILD_URL}console
+                    """
+                )
+            }
+        }
+        
+        always {
+            // Limpiar workspace
+            cleanWs()
+            
+            // Limpiar imágenes Docker antiguas
+            sh """
+                docker image prune -f
+                docker container prune -f
+            """
+        }
+    }
+}

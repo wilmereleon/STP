@@ -1,0 +1,346 @@
+# US-011: Optimización de Performance y Memory Leaks | Epic: Vista Flotante | 🟡 ALTA | 5 pts | Sprint 1
+
+## 📋 Descripción
+
+**Como** operador del teleprompter  
+**Quiero** que la Ventana Flotante funcione sin degradación de performance ni memory leaks  
+**Para** poder usarla durante largas jornadas sin problemas
+
+**Origen:** Bug VF-6 del Reporte de Pruebas (23 Oct 2025)  
+**Problema:** Memory leaks detectados, FPS drops, CPU usage alto después de uso prolongado
+
+---
+
+## ✅ Criterios de Aceptación
+
+- [ ] FPS constante en 60fps durante scroll automático
+- [ ] CPU usage < 10% durante operación normal
+- [ ] Memory usage estable (no crecimiento continuo)
+- [ ] No memory leaks detectados en DevTools
+- [ ] Limpieza correcta de listeners al cerrar ventana
+- [ ] Cancelación de timers/intervals/RAF al unmount
+- [ ] Throttle/debounce en eventos frecuentes
+- [ ] React DevTools Profiler sin warnings
+- [ ] Funciona correctamente después de 4+ horas de uso
+
+---
+
+## 🔧 Tareas Técnicas
+
+- [ ] **Memory Leaks Audit:**
+  - [ ] Chrome DevTools Memory Profiler
+  - [ ] Identificar objetos no liberados
+  - [ ] Verificar cleanup en useEffect returns
+  - [ ] Revisar event listeners no removidos
+- [ ] **Performance Profiling:**
+  - [ ] React DevTools Profiler
+  - [ ] Identificar renders innecesarios
+  - [ ] Optimizar re-renders con useMemo/useCallback
+  - [ ] Virtual scrolling para contenido largo
+- [ ] **AutoScrollService (refactor):**
+  - [ ] Cancelar animationFrame al pause/unmount
+  - [ ] Cleanup de timers pendientes
+  - [ ] Evitar crear múltiples instancias
+- [ ] **Event Listeners Cleanup:**
+  - [ ] Revisar todos los addEventListener
+  - [ ] Agregar removeEventListener en cleanup
+  - [ ] Usar AbortController para fetch requests
+- [ ] **React Optimization:**
+  - [ ] React.memo en componentes pesados
+  - [ ] useMemo para cálculos costosos
+  - [ ] useCallback para funciones estables
+  - [ ] Lazy loading de componentes grandes
+- [ ] **WebSocket Cleanup:**
+  - [ ] Disconnect al unmount
+  - [ ] Cleanup de listeners socket.on
+  - [ ] Evitar reconexiones infinitas
+- [ ] **DOM Optimization:**
+  - [ ] Reducir número de nodos DOM
+  - [ ] CSS transforms en lugar de left/top (GPU)
+  - [ ] will-change para animaciones
+  - [ ] Virtualization para listas largas
+- [ ] **Testing:**
+  - [ ] Test de memory leaks (heap snapshots)
+  - [ ] Test de performance (4 horas de uso)
+  - [ ] Benchmark de FPS durante scroll
+
+---
+
+## 🧪 Casos de Prueba
+
+### Caso 1: FPS durante scroll automático
+- **Dado:** FloatingWindow en Play con scrollSpeed 50
+- **Cuando:** Monitoreo FPS con Chrome DevTools
+- **Entonces:** FPS constante en 60fps (± 2fps)
+
+### Caso 2: CPU usage normal
+- **Dado:** FloatingWindow abierta en idle (sin scroll)
+- **Cuando:** Monitoreo CPU usage
+- **Entonces:** CPU < 5%
+
+### Caso 3: CPU usage durante scroll
+- **Dado:** FloatingWindow en Play
+- **Cuando:** Monitoreo CPU usage
+- **Entonces:** CPU < 10%
+
+### Caso 4: Memory leaks - Abrir/cerrar repetido
+- **Dado:** Heap snapshot inicial
+- **Cuando:** Abro y cierro FloatingWindow 20 veces
+- **Entonces:** Heap size final ≈ inicial (± 10%)
+
+### Caso 5: Memory usage durante uso prolongado
+- **Dado:** FloatingWindow en uso continuo
+- **Cuando:** Monitoreo memory después de 4 horas
+- **Entonces:** Memory no crece más de 50MB desde inicio
+
+### Caso 6: Cleanup de event listeners
+- **Dado:** FloatingWindow con múltiples listeners
+- **Cuando:** Cierro la ventana
+- **Entonces:** DevTools muestra 0 listeners activos de esa ventana
+
+### Caso 7: Cleanup de timers
+- **Dado:** autoScroll activo con setInterval
+- **Cuando:** Pause y unmount
+- **Entonces:** clearInterval ejecutado, no timers activos
+
+### Caso 8: Renders innecesarios
+- **Dado:** React Profiler activo
+- **Cuando:** Cambio scrollTop 60 veces/segundo
+- **Entonces:** Solo componentes afectados se re-renderizan
+
+### Caso 9: WebSocket cleanup
+- **Dado:** WebSocket conectado con 5 listeners
+- **Cuando:** Cierro FloatingWindow
+- **Entonces:** socket.disconnect() llamado, listeners removidos
+
+---
+
+## 🔗 Dependencias
+
+- ✅ Requiere: FloatingTeleprompter existente
+- ✅ Requiere: AutoScrollService existente
+- ⏳ Requiere: US-008, US-010 (Sincronización)
+
+---
+
+## 👤 Asignado a
+
+**Frontend Lead** + **QA Engineer**
+
+---
+
+## 🏷️ Labels
+
+`bug`, `priority:high`, `area:frontend`, `sprint-1`, `floating-window`, `performance`, `memory-leak`, `optimization`
+
+---
+
+## 📝 Notas
+
+### Memory Leak Checklist
+
+```typescript
+// ❌ MAL - Memory leak
+useEffect(() => {
+  const interval = setInterval(() => {
+    updateScrollPosition();
+  }, 16);
+  // FALTA: return cleanup
+}, []);
+
+// ✅ BIEN - Sin memory leak
+useEffect(() => {
+  const interval = setInterval(() => {
+    updateScrollPosition();
+  }, 16);
+  
+  return () => {
+    clearInterval(interval); // Cleanup
+  };
+}, []);
+```
+
+### Event Listeners Cleanup
+
+```typescript
+// ❌ MAL - Listener no removido
+useEffect(() => {
+  window.addEventListener('resize', handleResize);
+}, []);
+
+// ✅ BIEN - Listener removido
+useEffect(() => {
+  window.addEventListener('resize', handleResize);
+  
+  return () => {
+    window.removeEventListener('resize', handleResize);
+  };
+}, [handleResize]);
+```
+
+### RequestAnimationFrame Cleanup
+
+```typescript
+// ❌ MAL - RAF no cancelado
+useEffect(() => {
+  const animate = () => {
+    updateScroll();
+    requestAnimationFrame(animate);
+  };
+  requestAnimationFrame(animate);
+}, []);
+
+// ✅ BIEN - RAF cancelado
+useEffect(() => {
+  let rafId: number;
+  
+  const animate = () => {
+    updateScroll();
+    rafId = requestAnimationFrame(animate);
+  };
+  
+  rafId = requestAnimationFrame(animate);
+  
+  return () => {
+    cancelAnimationFrame(rafId);
+  };
+}, []);
+```
+
+### WebSocket Cleanup
+
+```typescript
+// ❌ MAL - Socket no desconectado
+useEffect(() => {
+  socket.on('state:update', handleUpdate);
+  socket.connect();
+}, []);
+
+// ✅ BIEN - Socket limpio
+useEffect(() => {
+  socket.on('state:update', handleUpdate);
+  socket.connect();
+  
+  return () => {
+    socket.off('state:update', handleUpdate);
+    socket.disconnect();
+  };
+}, [handleUpdate]);
+```
+
+### React Optimization
+
+```typescript
+// Evitar re-renders innecesarios
+const TeleprompterContent = React.memo(({ content, fontSize }) => {
+  return <div style={{ fontSize }}>{content}</div>;
+}, (prevProps, nextProps) => {
+  // Solo re-renderizar si cambió content o fontSize
+  return prevProps.content === nextProps.content &&
+         prevProps.fontSize === nextProps.fontSize;
+});
+
+// useMemo para cálculos costosos
+const formattedContent = useMemo(() => {
+  return processLongContent(rawContent);
+}, [rawContent]);
+
+// useCallback para funciones estables
+const handleScroll = useCallback((e) => {
+  setScrollTop(e.target.scrollTop);
+}, []);
+```
+
+### CSS Performance
+
+```css
+/* ❌ MAL - Trigger layout recalc */
+.teleprompter {
+  top: 100px; /* Cambiado dinámicamente */
+}
+
+/* ✅ BIEN - GPU accelerated */
+.teleprompter {
+  transform: translateY(100px); /* GPU accelerated */
+  will-change: transform; /* Hint para browser */
+}
+```
+
+### Virtual Scrolling
+
+```typescript
+// Para scripts muy largos (>10,000 líneas)
+import { FixedSizeList } from 'react-window';
+
+const VirtualizedContent = ({ lines }) => (
+  <FixedSizeList
+    height={600}
+    itemCount={lines.length}
+    itemSize={35} // Altura de cada línea
+    width="100%"
+  >
+    {({ index, style }) => (
+      <div style={style}>{lines[index]}</div>
+    )}
+  </FixedSizeList>
+);
+```
+
+### Performance Testing Script
+
+```javascript
+// Ejecutar en Chrome DevTools Console
+async function testMemoryLeaks() {
+  console.log('🧪 Test de Memory Leaks');
+  
+  const initialHeap = performance.memory.usedJSHeapSize;
+  console.log(`Heap inicial: ${(initialHeap / 1024 / 1024).toFixed(2)} MB`);
+  
+  // Abrir/cerrar ventana 20 veces
+  for (let i = 0; i < 20; i++) {
+    await openFloatingWindow();
+    await sleep(1000);
+    await closeFloatingWindow();
+    await sleep(1000);
+    
+    if (i % 5 === 0) {
+      const currentHeap = performance.memory.usedJSHeapSize;
+      console.log(`Iteración ${i}: ${(currentHeap / 1024 / 1024).toFixed(2)} MB`);
+    }
+  }
+  
+  // Forzar GC (requiere flag --expose-gc)
+  if (global.gc) {
+    global.gc();
+    await sleep(2000);
+  }
+  
+  const finalHeap = performance.memory.usedJSHeapSize;
+  const diff = finalHeap - initialHeap;
+  console.log(`Heap final: ${(finalHeap / 1024 / 1024).toFixed(2)} MB`);
+  console.log(`Diferencia: ${(diff / 1024 / 1024).toFixed(2)} MB`);
+  
+  if (diff > 50 * 1024 * 1024) { // 50MB
+    console.error('❌ Memory leak detectado!');
+  } else {
+    console.log('✅ Sin memory leaks');
+  }
+}
+```
+
+### Metrics to Track
+
+| Métrica                 | Objetivo      | Crítico       |
+|-------------------------|---------------|---------------|
+| FPS (scroll)            | 60 fps        | < 55 fps      |
+| CPU (idle)              | < 5%          | > 15%         |
+| CPU (scroll)            | < 10%         | > 20%         |
+| Memory (inicial)        | ~50 MB        | > 100 MB      |
+| Memory (4h uso)         | < 100 MB      | > 200 MB      |
+| Memory leak (20 cycles) | < 10 MB       | > 50 MB       |
+| Render time             | < 16ms        | > 32ms        |
+
+---
+
+**Estado:** 📋 Backlog  
+**Última actualización:** 23 Oct 2025

@@ -1,0 +1,39 @@
+US-001: Funcionalidad de Play en Teleprompter
+==============================================
+
+CATEGORÍA: Teleprompter - Control de Reproducción
+PRIORIDAD: CRÍTICA
+ORIGEN: Reporte de Pruebas - TP-1
+
+COMO: Operador de teleprompter
+QUIERO: Poder iniciar el desplazamiento automático del texto presionando el botón Play
+PARA: Que el talento pueda leer el guion mientras se desplaza automáticamente
+
+CRITERIOS DE ACEPTACIÓN:
+------------------------
+✓ Al presionar el botón "Play" (▶), el texto comienza a desplazarse hacia arriba
+✓ La velocidad de desplazamiento corresponde a la configurada en el panel de velocidad
+✓ El botón "Play" cambia visualmente a "Pause" (⏸) después de presionarlo
+✓ El desplazamiento es suave y continuo (sin saltos ni interrupciones)
+✓ La función también debe activarse con el atajo de teclado F11
+✓ El desplazamiento se mantiene constante hasta que se presione Pause o se llegue al final del script
+
+NOTAS TÉCNICAS:
+---------------
+- Bug identificado: Botón Play no responde al hacer clic
+- Verificar event handlers en TeleprompterControls.tsx
+- Revisar la lógica de isPlaying en TeleprompterStore
+- Asegurar que el estado se propaga correctamente a TeleprompterWindow.tsx
+- Validar que el requestAnimationFrame se ejecuta correctamente
+
+CASOS DE PRUEBA:
+----------------
+1. Hacer clic en botón Play → Texto debe desplazarse
+2. Presionar F11 → Texto debe desplazarse
+3. Ajustar velocidad con texto en movimiento → Velocidad debe cambiar sin detener el scroll
+4. Llegar al final del script → Desplazamiento debe detenerse automáticamente
+
+ESTADO: Pendiente
+ESTIMACIÓN: 3 Story Points
+SPRINT: Sprint 1 (Entrega 1 - Nov 4)
+ASIGNADO A: Frontend Lead

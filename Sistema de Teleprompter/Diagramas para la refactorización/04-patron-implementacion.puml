@@ -1,8 +1,8 @@
-@startuml Patrón de Implementación
+@startuml Patrón de Implementación v2.0
 !theme plain
 skinparam backgroundColor #FEFEFE
 
-title Guía de Implementación - Patrón Store con Hooks\n**Migración Paso a Paso**
+title Guía de Implementación Completa - Frontend + Backend\n**Stack: React + Zustand + Express + MongoDB + Socket.IO**
 
 package "PASO 1: Crear Store Base" {
   class TeleprompterStore {
@@ -145,6 +145,346 @@ package "PASO 8: Importar Excel" {
   }
 }
 
+package "🌐 BACKEND - PASO 1: Configurar Servidor" {
+  class BackendSetup {
+    <b>Archivo:</b> backend/src/server.js
+    --
+    <i>Stack tecnológico:</i>
+    - Express 4.18+
+    - Mongoose 8.0+
+    - Socket.IO 4.6+
+    - JWT + bcrypt
+    - express-validator
+    - express-rate-limit
+    - helmet (security)
+    --
+    <b>Inicialización:</b>
+    1. Conectar MongoDB
+    2. Configurar middlewares
+    3. Montar rutas API
+    4. Iniciar WebSocket server
+    5. Error handling global
+    --
+    Puerto: 3000 (HTTP/REST)
+    Puerto: 3001 (WebSocket)
+  }
+}
+
+package "🌐 BACKEND - PASO 2: Crear Modelos" {
+  class MongooseModels {
+    <b>Directorio:</b> backend/src/models/
+    --
+    <i>7 Modelos Mongoose:</i>
+    --
+    <b>User.model.js</b>
+    - email, password (hashed)
+    - role: Admin/Producer/Operator
+    - pre-save hook: bcrypt hash
+    - comparePassword() method
+    --
+    <b>Script.model.js</b>
+    - userId (ref), title, content
+    - soft delete: deletedAt
+    - text index: title + content
+    --
+    <b>RunOrder.model.js</b>
+    - items array embebido
+    - pre-save: calc totalDuration
+    - validate: solo 1 activo
+    --
+    <b>Configuration.model.js</b>
+    - 1:1 con User (unique userId)
+    - validaciones: fontSize 12-120
+    - colores: regex hex
+    --
+    <b>Macro.model.js</b>
+    - compound index: userId + key
+    - category enum
+    --
+    <b>Session.model.js</b>
+    - JWT token storage
+    - expiry tracking
+    --
+    <b>AuditLog.model.js</b>
+    - entityType, action enums
+    - changes (Mixed type)
+  }
+}
+
+package "🌐 BACKEND - PASO 3: Crear Routes" {
+  class APIRoutes {
+    <b>Directorio:</b> backend/src/routes/
+    --
+    <i>5 Módulos de rutas (42 endpoints):</i>
+    --
+    <b>auth.routes.js</b> (5 endpoints)
+    POST /api/auth/register
+    POST /api/auth/login
+    POST /api/auth/logout
+    POST /api/auth/refresh
+    GET /api/auth/me
+    --
+    <b>script.routes.js</b> (7 endpoints)
+    GET /api/scripts (paginación)
+    POST /api/scripts
+    GET /api/scripts/:id
+    PUT /api/scripts/:id
+    DELETE /api/scripts/:id (soft)
+    POST /api/scripts/:id/duplicate
+    GET /api/scripts/search/fulltext
+    --
+    <b>runorder.routes.js</b> (9 endpoints)
+    CRUD + items management
+    POST /:id/items
+    PUT /:id/items/:itemId
+    DELETE /:id/items/:itemId
+    PUT /:id/activate
+    --
+    <b>config.routes.js</b> (4 endpoints)
+    GET /api/config
+    PUT /api/config
+    POST /api/config/reset
+    PATCH /api/config/theme
+    --
+    <b>macro.routes.js</b> (6 endpoints)
+    CRUD + POST /defaults + PATCH /:id/toggle
+  }
+}
+
+package "🌐 BACKEND - PASO 4: Middlewares" {
+  class BackendMiddlewares {
+    <b>Directorio:</b> backend/src/middleware/
+    --
+    <b>auth.middleware.js</b>
+    - authenticateToken()
+    - requireRole(roles)
+    - requireAdmin()
+    Verifica JWT + sesión activa
+    Agrega req.user = {userId, email, role}
+    --
+    <b>rateLimit.middleware.js</b>
+    - apiLimiter: 100 req/15min
+    - authLimiter: 5 req/15min
+    - createLimiter: 20/hora
+    --
+    <b>error.middleware.js</b>
+    - errorHandler(err, req, res, next)
+    - notFoundHandler (404)
+    Maneja ValidationError, CastError
+    JWT errors, Duplicate keys
+    --
+    <b>validation.middleware.js</b>
+    - validate(req, res, next)
+    Procesa express-validator
+  }
+}
+
+package "🌐 BACKEND - PASO 5: WebSocket Server" {
+  class SocketIOSetup {
+    <b>Archivo:</b> backend/src/server.js
+    --
+    <i>Eventos implementados:</i>
+    --
+    <b>Cliente → Servidor:</b>
+    - 'identify' → {userId, role}
+    - 'sync:teleprompter' → broadcast
+    - 'sync:runorder' → broadcast
+    --
+    <b>Servidor → Clientes:</b>
+    - 'sync:teleprompter' → state
+    - 'sync:runorder' → order
+    - 'script:created' → script
+    - 'script:updated' → script
+    - 'script:deleted' → scriptId
+    --
+    <b>Rooms:</b>
+    socket.join(`user-${userId}`)
+    io.to(`user-${userId}`).emit(...)
+    --
+    Manejo de conexión/desconexión
+    activeConnections Map
+  }
+}
+
+package "💻 FRONTEND - PASO 6: API Client" {
+  class FrontendAPIClient {
+    <b>Archivo:</b> src/services/ApiClient.ts
+    --
+    <i>Cliente HTTP centralizado:</i>
+    --
+    <b>Config:</b>
+    - baseURL: process.env.API_URL
+    - timeout: 10000ms
+    - headers: Authorization Bearer
+    --
+    <b>Interceptores:</b>
+    Request: agregar JWT token
+    Response: 
+      - 401 → refresh token
+      - 5xx → retry con backoff
+    --
+    <b>Métodos:</b>
+    - login(email, pass)
+    - getScripts(params)
+    - createScript(data)
+    - updateScript(id, data)
+    - getRunOrders()
+    - addItemToRunOrder(id, item)
+    - getConfig()
+    - updateConfig(changes)
+    - getMacros()
+    --
+    Manejo de errores centralizado
+    Loading states
+    Error toasts automáticos
+  }
+}
+
+package "💻 FRONTEND - PASO 7: WebSocket Client" {
+  class FrontendWebSocket {
+    <b>Archivo:</b> src/services/WebSocketClient.ts
+    --
+    <i>Socket.IO Client:</i>
+    --
+    <b>Inicialización:</b>
+    socket = io('http://localhost:3001', {
+      auth: { token: jwt },
+      reconnection: true,
+      reconnectionDelay: 1000
+    })
+    --
+    <b>Eventos escuchados:</b>
+    on('connect', () => {
+      socket.emit('identify', {userId, role})
+    })
+    --
+    on('sync:teleprompter', (state) => {
+      store.applyRemoteState(state)
+    })
+    --
+    on('script:updated', (script) => {
+      store.updateScript(script)
+      toast.info('Script actualizado')
+    })
+    --
+    <b>Integración con Store:</b>
+    useEffect(() =>
+      wsClient.connect()
+      wsClient.onStateSync((state) =>
+        if (state.timestamp > localState.timestamp)
+          applyState(state)
+      )
+    )
+  }
+}
+
+package "💻 FRONTEND - PASO 8: Integración Stores ↔ API" {
+  class StoreAPIIntegration {
+    <b>Archivo:</b> src/stores/TeleprompterStore.ts
+    --
+    <i>Persistencia automática:</i>
+    --
+    <b>Patrón:</b>
+    1. Usuario cambia estado local
+    2. Store notifica componentes (rápido)
+    3. Store llama API en background
+    4. API actualiza backend
+    5. Backend broadcast WebSocket
+    6. Otros clientes reciben update
+    --
+    <b>Ejemplo - Cambio de velocidad:</b>
+    setSpeed(speed)
+      1. Update local
+      this.state.speed = speed
+      this.notifyListeners()
+      
+      2. Persist to backend (async)
+      apiClient.updateConfig(scrollSpeed: speed)
+        .catch(err =>
+          Rollback on error
+          this.state.speed = oldSpeed
+          this.notifyListeners()
+          toast.error('Error al guardar')
+        )
+      
+      3. Broadcast local (popup)
+      syncService.broadcast(this.state)
+      
+      4. Broadcast network (WebSocket)
+      wsClient.emit('sync:teleprompter', speed)
+    --
+    <b>Ventajas:</b>
+    ✓ UI responsive (no espera API)
+    ✓ Persistencia en background
+    ✓ Rollback automático en error
+    ✓ Sincronización multi-nivel
+  }
+}
+
+package "🔐 SEGURIDAD - PASO 9: Autenticación" {
+  class AuthFlow {
+    <b>Flujo completo:</b>
+    --
+    <b>1. Register/Login</b>
+    POST /api/auth/login
+    → Backend valida credenciales
+    → Genera JWT access token (1h)
+    → Genera refresh token (7d)
+    → Crea Session en DB
+    → Retorna tokens + user
+    --
+    <b>2. Frontend guarda tokens</b>
+    localStorage.setItem('accessToken', ...)
+    localStorage.setItem('refreshToken', ...)
+    --
+    <b>3. Requests autenticados</b>
+    headers: Authorization: Bearer + accessToken
+    --
+    <b>4. Token expira (401)</b>
+    Interceptor detecta 401
+    → POST /api/auth/refresh
+    → Backend valida refreshToken
+    → Genera nuevo accessToken
+    → Retry request original
+    --
+    <b>5. WebSocket auth</b>
+    socket = io(url, auth: token: accessToken)
+    → Backend verifica en handshake
+    → Asocia socket con userId
+  }
+}
+
+package "📊 DEPLOYMENT - PASO 10: Docker" {
+  class DockerSetup {
+    <b>Archivo:</b> docker-compose.yml
+    --
+    <i>3 Contenedores:</i>
+    --
+    <b>frontend:</b>
+    - Node 20 Alpine
+    - Vite dev server :5173
+    - Volume: ./src → /app/src
+    --
+    <b>backend:</b>
+    - Node 20 Alpine
+    - Express server :3000
+    - WebSocket :3001
+    - ENV: DATABASE_URL, JWT_SECRET
+    - Depends on: mongodb
+    --
+    <b>mongodb:</b>
+    - MongoDB 7.0
+    - Port :27017
+    - Volume: mongo-data
+    - Init script: create indexes
+    --
+    <b>Comandos:</b>
+    docker-compose up -d
+    docker-compose logs -f backend
+    docker-compose down
+  }
+}
+
 note right of TeleprompterStore
   **BENEFICIOS:**
   
@@ -156,25 +496,113 @@ note right of TeleprompterStore
   ✓ Re-renders optimizados
 end note
 
-note right of SyncService
-  **SOLUCIONA BUGS:**
+note right of MongooseModels
+  **MODELOS MONGOOSE:**
   
-  ✓ TP-1: Play funciona
-  ✓ VF-3: Scroll sincronizado
-  ✓ VF-4: Velocidad consistente
-  ✓ VF-5: Font size sincronizado
-  ✓ Sin loops infinitos
-  ✓ Estado predecible
+  ✓ 7 modelos con validación
+  ✓ Hooks pre-save para lógica
+  ✓ Índices para performance
+  ✓ Refs para relaciones
+  ✓ Virtuals para campos calc
+  ✓ Statics para queries comunes
+  ✓ Methods para instancias
 end note
 
-note bottom of PersistenceService
-  **SOLUCIONA BUGS:**
+note right of APIRoutes
+  **42 ENDPOINTS REST:**
   
-  ✓ PD-1: Scripts persisten
-  ✓ PD-2: Config persiste
-  ✓ PD-3: Orden persiste
-  ✓ Auto-save cada 30s
-  ✓ Restauración de sesión
+  ✓ Auth: 5 endpoints
+  ✓ Scripts: 7 endpoints
+  ✓ RunOrders: 9 endpoints
+  ✓ Config: 4 endpoints
+  ✓ Macros: 6 endpoints
+  ✓ Health: 1 endpoint
+  
+  Todos con:
+  - Validación input
+  - Autenticación JWT
+  - Rate limiting
+  - Audit logging
+  - Error handling
+end note
+
+note right of BackendMiddlewares
+  **MIDDLEWARE STACK:**
+  
+  1. helmet (security headers)
+  2. cors (CORS policy)
+  3. body-parser (JSON)
+  4. rate-limit (throttling)
+  5. logging (requests)
+  6. authenticateToken (JWT)
+  7. routes (endpoints)
+  8. notFoundHandler (404)
+  9. errorHandler (500)
+  
+  Order matters!
+end note
+
+note bottom of SocketIOSetup
+  **WEBSOCKET REAL-TIME:**
+  
+  ✓ Sincronización multi-usuario
+  ✓ Broadcast de cambios
+  ✓ Rooms por usuario/proyecto
+  ✓ Reconexión automática
+  ✓ ACK de mensajes críticos
+  ✓ Throttling de updates
+  
+  Complementa REST API
+  para cambios en tiempo real
+end note
+
+note bottom of StoreAPIIntegration
+  **ARQUITECTURA 3-CAPAS:**
+  
+  <b>Capa 1: UI (React)</b>
+  Componentes consumen stores
+  Re-render automático
+  
+  <b>Capa 2: Store (Zustand)</b>
+  Estado centralizado
+  Lógica de negocio
+  Sincronización local/red
+  
+  <b>Capa 3: Backend (Express)</b>
+  API REST para CRUD
+  WebSocket para real-time
+  MongoDB para persistencia
+  
+  <b>Comunicación:</b>
+  UI → Store (inmediato)
+  Store → API (async)
+  API → DB (persist)
+  DB → WebSocket → Stores
+end note
+
+note bottom of AuthFlow
+  **JWT TOKENS:**
+  
+  <b>Access Token:</b>
+  - Expira: 1 hora
+  - Payload: {userId, email, role}
+  - Uso: Authorization header
+  
+  <b>Refresh Token:</b>
+  - Expira: 7 días
+  - Payload: {userId}
+  - Uso: renovar access token
+  
+  <b>Session DB:</b>
+  - Valida tokens activos
+  - Permite invalidación
+  - Tracking: IP, userAgent
+  
+  <b>Seguridad:</b>
+  ✓ Tokens en httpOnly cookies
+  ✓ CSRF protection
+  ✓ Rate limiting en auth
+  ✓ Bcrypt para passwords
 end note
 
 @enduml

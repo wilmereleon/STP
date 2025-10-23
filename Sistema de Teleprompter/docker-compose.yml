@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # FRONTEND - Aplicación Web del Teleprompter
+  # ============================================
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: teleprompter-frontend
+    ports:
+      - "5173:5173"  # Vite dev server
+      - "4173:4173"  # Vite preview
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./index.html:/app/index.html
+      - ./vite.config.ts:/app/vite.config.ts
+      - /app/node_modules  # Evitar sobreescribir node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:3000
+    networks:
+      - teleprompter-network
+    depends_on:
+      - backend
+    command: npm run dev -- --host 0.0.0.0
+
+  # ============================================
+  # BACKEND - API REST + WebSocket Server
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: teleprompter-backend
+    ports:
+      - "3000:3000"  # API REST
+      - "3001:3001"  # WebSocket
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/uploads:/app/uploads
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - WS_PORT=3001
+      - DATABASE_URL=mongodb://mongo:27017/teleprompter
+      - JWT_SECRET=teleprompter_secret_key_2025
+      - CORS_ORIGIN=http://localhost:5173
+    networks:
+      - teleprompter-network
+    depends_on:
+      - mongo
+    command: npm run dev
+
+  # ============================================
+  # BASE DE DATOS - MongoDB
+  # ============================================
+  mongo:
+    image: mongo:7.0
+    container_name: teleprompter-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./docker/mongo-init:/docker-entrypoint-initdb.d
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin123
+      - MONGO_INITDB_DATABASE=teleprompter
+    networks:
+      - teleprompter-network
+
+  # ============================================
+  # JENKINS - Integración Continua (Entrega 2)
+  # ============================================
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: teleprompter-jenkins
+    ports:
+      - "8080:8080"  # UI
+      - "50000:50000"  # Agents
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker-in-Docker
+    environment:
+      - JENKINS_OPTS=--prefix=/jenkins
+    networks:
+      - teleprompter-network
+    user: root  # Necesario para Docker-in-Docker
+
+# ============================================
+# VOLÚMENES PERSISTENTES
+# ============================================
+volumes:
+  mongo-data:
+    driver: local
+  jenkins-data:
+    driver: local
+
+# ============================================
+# RED INTERNA
+# ============================================
+networks:
+  teleprompter-network:
+    driver: bridge

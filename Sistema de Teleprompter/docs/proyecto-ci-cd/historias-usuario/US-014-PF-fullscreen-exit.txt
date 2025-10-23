@@ -1,0 +1,47 @@
+# US-014: Salida Limpia de Fullscreen | Epic: Pantalla Completa | 🟡 ALTA | 2 pts | Sprint 1
+
+## 📋 Descripción
+
+**Como** operador  
+**Quiero** salir del modo fullscreen sin perder estado ni configuración  
+**Para** continuar trabajando en modo normal sin interrupciones
+
+**Origen:** Bug PF-3 - Reporte de Pruebas
+
+---
+
+## ✅ Criterios de Aceptación
+
+- [ ] ESC sale de fullscreen correctamente
+- [ ] F11 toggle entre fullscreen y normal
+- [ ] scrollTop se preserva al salir
+- [ ] isPlaying se mantiene
+- [ ] Configuraciones se preservan
+- [ ] Transición suave sin parpadeos
+- [ ] No errores de React en consola
+
+---
+
+## 🔧 Tareas Técnicas
+
+- [ ] Guardar estado antes de salir
+- [ ] document.exitFullscreen() con error handling
+- [ ] Restaurar scrollTop después de salir
+- [ ] Cleanup de listeners fullscreen
+- [ ] Tests de entrada/salida múltiples veces
+
+---
+
+## 👤 Asignado a
+
+**Frontend Lead**
+
+---
+
+## 🏷️ Labels
+
+`bug`, `priority:high`, `area:frontend`, `sprint-1`, `fullscreen`, `state-management`
+
+---
+
+**Estado:** 📋 Backlog

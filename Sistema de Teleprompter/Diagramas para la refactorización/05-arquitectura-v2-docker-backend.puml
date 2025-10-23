@@ -1,0 +1,346 @@
+@startuml Arquitectura v2.0 - Microservicios con Docker
+!theme plain
+skinparam componentStyle rectangle
+skinparam backgroundColor #FEFEFE
+skinparam component {
+  BackgroundColor<<frontend>> #90EE90
+  BackgroundColor<<backend>> #87CEEB
+  BackgroundColor<<database>> #FFD700
+  BackgroundColor<<service>> #FFB6C1
+  BackgroundColor<<docker>> #E0E0E0
+}
+
+title Sistema de Teleprompter v2.0 - Arquitectura Completa\n**Docker + Backend + MongoDB + CI/CD**
+
+' ============================================
+' CAPA DE CONTENEDORES DOCKER
+' ============================================
+package "🐳 Docker Compose" <<docker>> {
+  
+  ' ============================================
+  ' CONTENEDOR FRONTEND
+  ' ============================================
+  package "📱 Frontend Container\n(React + Vite)\nPort: 5173" <<frontend>> {
+    
+    component "Vista de Operador" {
+      [TeleprompterPanel] <<frontend>>
+      [FloatingTeleprompter] <<frontend>>
+      [TeleprompterModal\n(Fullscreen)] <<frontend>>
+      [TeleprompterControls] <<frontend>>
+    }
+    
+    component "Vista de Productor" {
+      [ScriptEditor] <<frontend>>
+      [RunOrderPanel] <<frontend>>
+      [RunOrderList] <<frontend>>
+      [MacroSettings] <<frontend>>
+      [ConfigurationPanel] <<frontend>>
+    }
+    
+    component "Estado Zustand" {
+      [TeleprompterStore] <<frontend>>
+      [ScriptStore] <<frontend>>
+      [RunOrderStore] <<frontend>>
+      [ConfigStore] <<frontend>>
+      [MacroStore] <<frontend>>
+    }
+    
+    component "Servicios Frontend" {
+      [APIClient\n(Axios)] <<service>>
+      [WebSocketClient\n(Socket.IO)] <<service>>
+      [ScrollSyncService] <<service>>
+      [AutoScrollService] <<service>>
+    }
+  }
+  
+  ' ============================================
+  ' CONTENEDOR BACKEND
+  ' ============================================
+  package "⚙️ Backend Container\n(Node.js + Express)\nPort: 3000, 3001" <<backend>> {
+    
+    component "API REST" {
+      [AuthController] <<backend>>
+      [ScriptController] <<backend>>
+      [RunOrderController] <<backend>>
+      [ConfigController] <<backend>>
+      [MacroController] <<backend>>
+      [ProducerController] <<backend>>
+    }
+    
+    component "WebSocket Server" {
+      [SocketIO Server\nPort: 3001] <<backend>>
+      [EventHandlers:\n- script:updated\n- runorder:changed\n- config:changed\n- sync:scroll] <<backend>>
+    }
+    
+    component "Middleware" {
+      [JWT Auth] <<backend>>
+      [Validation\n(express-validator)] <<backend>>
+      [Error Handler] <<backend>>
+      [Logger\n(Winston)] <<backend>>
+    }
+    
+    component "Modelos Mongoose" {
+      [User.model] <<backend>>
+      [Script.model] <<backend>>
+      [RunOrder.model] <<backend>>
+      [Configuration.model] <<backend>>
+      [Macro.model] <<backend>>
+      [Collaboration.model] <<backend>>
+      [AuditLog.model] <<backend>>
+    }
+    
+    component "Servicios Backend" {
+      [AuthService\n(JWT, bcrypt)] <<service>>
+      [ScriptService\n(CRUD + versioning)] <<service>>
+      [FileService\n(Excel, TXT import)] <<service>>
+      [CollaborationService\n(Locks)] <<service>>
+    }
+  }
+  
+  ' ============================================
+  ' CONTENEDOR MONGODB
+  ' ============================================
+  package "🗄️ Database Container\n(MongoDB 7.0+)\nPort: 27017" <<database>> {
+    database "teleprompter_db" {
+      frame "Collections" as cols {
+        component [users] <<database>>
+        component [scripts] <<database>>
+        component [runorders] <<database>>
+        component [configurations] <<database>>
+        component [macros] <<database>>
+        component [collaborations] <<database>>
+        component [auditlogs] <<database>>
+        component [sessions] <<database>>
+      }
+    }
+    
+    note right of cols
+      <b>Normalización 3FN</b>
+      
+      <b>Denormalización estratégica:</b>
+      - scripts.versions[] (max 10)
+      - scripts.jumpMarkers[]
+      - runorders.items[]
+      
+      <b>Índices:</b>
+      - Text: title, content, tags
+      - Compound: (status, createdAt)
+      - Unique: email, (userId, key)
+    end note
+  }
+  
+  ' ============================================
+  ' CONTENEDOR JENKINS (CI/CD)
+  ' ============================================
+  package "🚀 Jenkins Container\n(CI/CD Pipeline)\nPort: 8080" <<docker>> {
+    [Jenkinsfile] <<docker>>
+    
+    component "Pipeline Stages" {
+      [1. Checkout] <<docker>>
+      [2. Lint (ESLint)] <<docker>>
+      [3. Tests (Jest)] <<docker>>
+      [4. Build Docker] <<docker>>
+      [5. Security Scan] <<docker>>
+      [6. Deploy Staging] <<docker>>
+      [7. E2E Tests] <<docker>>
+      [8. Deploy Prod\n(Manual)] <<docker>>
+    }
+    
+    component "Integrations" {
+      [CodeCov\n(Coverage)] <<docker>>
+      [Slack\n(Notificaciones)] <<docker>>
+      [GitHub\n(Status Checks)] <<docker>>
+    }
+  }
+}
+
+' ============================================
+' RELACIONES: FRONTEND ↔ BACKEND
+' ============================================
+[APIClient\n(Axios)] --> [AuthController] : POST /api/auth/login
+[APIClient\n(Axios)] --> [ScriptController] : GET/POST/PUT/DELETE /api/scripts
+[APIClient\n(Axios)] --> [RunOrderController] : GET/POST/PUT /api/runorders
+[APIClient\n(Axios)] --> [ConfigController] : GET/PUT /api/configurations
+[APIClient\n(Axios)] --> [MacroController] : GET/POST /api/macros
+[APIClient\n(Axios)] --> [ProducerController] : POST /api/producer/*
+
+[WebSocketClient\n(Socket.IO)] <--> [SocketIO Server\nPort: 3001] : Bidireccional\nScript sync\nScroll sync\nConfig sync
+
+' ============================================
+' RELACIONES: BACKEND ↔ DATABASE
+' ============================================
+[User.model] --> [users] : Mongoose ODM
+[Script.model] --> [scripts]
+[RunOrder.model] --> [runorders]
+[Configuration.model] --> [configurations]
+[Macro.model] --> [macros]
+[Collaboration.model] --> [collaborations]
+[AuditLog.model] --> [auditlogs]
+
+[AuthService\n(JWT, bcrypt)] --> [User.model]
+[ScriptService\n(CRUD + versioning)] --> [Script.model]
+[CollaborationService\n(Locks)] --> [Collaboration.model]
+
+' ============================================
+' RELACIONES: FRONTEND INTERNO
+' ============================================
+[TeleprompterPanel] --> [TeleprompterStore]
+[FloatingTeleprompter] --> [TeleprompterStore]
+[ScriptEditor] --> [ScriptStore]
+[RunOrderPanel] --> [RunOrderStore]
+[ConfigurationPanel] --> [ConfigStore]
+
+[TeleprompterStore] --> [APIClient\n(Axios)]
+[ScriptStore] --> [APIClient\n(Axios)]
+[RunOrderStore] --> [APIClient\n(Axios)]
+
+[ScrollSyncService] --> [TeleprompterPanel]
+[ScrollSyncService] --> [FloatingTeleprompter]
+[AutoScrollService] --> [TeleprompterStore]
+
+' ============================================
+' RELACIONES: CI/CD
+' ============================================
+[Jenkinsfile] --> [1. Checkout]
+[1. Checkout] --> [2. Lint (ESLint)]
+[2. Lint (ESLint)] --> [3. Tests (Jest)]
+[3. Tests (Jest)] --> [4. Build Docker]
+[4. Build Docker] --> [5. Security Scan]
+[5. Security Scan] --> [6. Deploy Staging]
+[6. Deploy Staging] --> [7. E2E Tests]
+[7. E2E Tests] --> [8. Deploy Prod\n(Manual)]
+
+[3. Tests (Jest)] --> [CodeCov\n(Coverage)]
+[8. Deploy Prod\n(Manual)] --> [Slack\n(Notificaciones)]
+[Jenkinsfile] --> [GitHub\n(Status Checks)]
+
+' ============================================
+' NOTAS EXPLICATIVAS
+' ============================================
+note right of [WebSocketClient\n(Socket.IO)]
+  <b>Eventos WebSocket:</b>
+  
+  <b>Cliente → Servidor:</b>
+  • script:edit (Producer edita)
+  • scroll:position (Operator scroll)
+  • config:update (Cambio config)
+  
+  <b>Servidor → Cliente:</b>
+  • script:updated (Broadcast)
+  • runorder:changed
+  • config:changed
+  • collaboration:lock
+  • collaboration:unlock
+  
+  <b>Ventajas:</b>
+  ✓ Sincronización tiempo real
+  ✓ Latencia < 50ms
+  ✓ Broadcast a múltiples clientes
+  ✓ Reconnect automático
+end note
+
+note bottom of [Modelos Mongoose]
+  <b>Esquema MongoDB</b>
+  
+  Ver: database/mongodb/01-init.js
+  
+  <b>Características:</b>
+  • JSON Schema validators
+  • Índices de performance
+  • Timestamps automáticos
+  • Versionado de scripts (max 10)
+  • Soft delete
+  
+  <b>Normalización 3FN:</b>
+  • 1FN: Atributos atómicos ✓
+  • 2FN: Sin dependencias parciales ✓
+  • 3FN: Sin dependencias transitivas ✓
+end note
+
+note left of [AuthController]
+  <b>API REST</b>
+  
+  <b>Autenticación:</b>
+  POST /api/auth/login
+  POST /api/auth/register
+  POST /api/auth/logout
+  
+  <b>Scripts:</b>
+  GET /api/scripts
+  GET /api/scripts/:id
+  POST /api/scripts
+  PUT /api/scripts/:id
+  DELETE /api/scripts/:id
+  
+  <b>RunOrder:</b>
+  GET /api/runorders
+  POST /api/runorders
+  PUT /api/runorders/:id/items
+  
+  <b>Producer:</b>
+  POST /api/producer/import/excel
+  POST /api/producer/export/txt
+end note
+
+note top of "🐳 Docker Compose"
+  <b>Arquitectura de 3 Capas</b>
+  
+  <b>Ventajas Docker:</b>
+  ✓ Aislamiento de servicios
+  ✓ Escalabilidad horizontal
+  ✓ Fácil deployment
+  ✓ Ambientes consistentes (dev = prod)
+  ✓ Rollback rápido
+  ✓ Logs centralizados
+  
+  <b>docker-compose.yml:</b>
+  • frontend: React + Vite + nginx
+  • backend: Node.js + Express
+  • mongo: MongoDB 7.0+
+  • jenkins: CI/CD pipeline
+  
+  <b>Comando inicio:</b>
+  docker-compose up -d
+end note
+
+note bottom of [JWT Auth]
+  <b>Seguridad</b>
+  
+  <b>JWT Authentication:</b>
+  • Access token (15min)
+  • Refresh token (7 días)
+  • HttpOnly cookies
+  • CSRF protection
+  
+  <b>Roles:</b>
+  • Admin (gestión usuarios)
+  • Producer (crear scripts)
+  • Operator (usar teleprompter)
+  
+  <b>Validación:</b>
+  • express-validator
+  • Sanitización de input
+  • Rate limiting (100 req/15min)
+end note
+
+note right of [Pipeline Stages]
+  <b>CI/CD Pipeline</b>
+  
+  <b>Triggers:</b>
+  • Push → Stages 1-5
+  • Push develop → + Stages 6-7
+  • Push main → + Stage 8 (manual)
+  
+  <b>Métricas:</b>
+  • Coverage mínimo: 70%
+  • Vulnerabilidades: 0 críticas
+  • Performance: API < 500ms
+  • E2E: 100% casos críticos
+  
+  <b>Rollback:</b>
+  • Automático si deploy falla
+  • Manual via Jenkins UI
+  • Tags de imágenes Docker
+end note
+
+@enduml

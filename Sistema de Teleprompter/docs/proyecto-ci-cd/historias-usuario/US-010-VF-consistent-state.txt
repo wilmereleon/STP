@@ -1,0 +1,294 @@
+# US-010: Gestión de Estado Consistente en Ventana Flotante | Epic: Vista Flotante | 🔴 CRÍTICA | 5 pts | Sprint 1
+
+## 📋 Descripción
+
+**Como** operador del teleprompter  
+**Quiero** que el estado (Play/Pause, scroll, configuración) sea consistente entre todas las ventanas  
+**Para** evitar comportamientos erráticos y desincronización
+
+**Origen:** Bug VF-5 del Reporte de Pruebas (23 Oct 2025)  
+**Problema:** Estado inconsistente entre Preview, FloatingWindow y Fullscreen (ej: Play en una, Pause en otra)
+
+---
+
+## ✅ Criterios de Aceptación
+
+- [ ] Estado de reproducción (isPlaying) sincronizado en todas las vistas
+- [ ] Posición de scroll idéntica en todas las ventanas
+- [ ] Configuraciones (fontSize, colors, speed) aplicadas simultáneamente
+- [ ] Script actual sincronizado (si cambio script, todas las ventanas lo muestran)
+- [ ] Macros ejecutados propagan a todas las ventanas
+- [ ] Jump markers funcionan en todas las vistas
+- [ ] Única fuente de verdad (Single Source of Truth)
+- [ ] No loops infinitos de actualización
+- [ ] Latencia de sincronización < 16ms
+
+---
+
+## 🔧 Tareas Técnicas
+
+- [ ] **Arquitectura Maestro-Esclavo:**
+  - [ ] Main window = MAESTRO (única fuente de verdad)
+  - [ ] FloatingWindow y Modal = ESCLAVOS (solo reflejan estado)
+  - [ ] Comunicación unidireccional: Maestro → Esclavos
+- [ ] **StateSync Service (nuevo):**
+  - [ ] `registerSlave(windowId, updateCallback)`
+  - [ ] `unregisterSlave(windowId)`
+  - [ ] `broadcastState(stateChange)` → envía a todos los esclavos
+  - [ ] Queue de comandos pendientes
+  - [ ] Prevención de loops (flag `isBroadcasting`)
+- [ ] **TeleprompterStore (refactor):**
+  - [ ] Todas las acciones (play, pause, setSpeed, etc.) llaman a `StateSync.broadcastState()`
+  - [ ] Estado es inmutable (usar Immer para updates)
+  - [ ] Timestamp en cada cambio de estado
+- [ ] **FloatingTeleprompter (refactor):**
+  - [ ] Registrar como esclavo en mount
+  - [ ] Listener para recibir state updates
+  - [ ] Aplicar estado sin emitir eventos (evitar loop)
+  - [ ] Unregister en unmount
+- [ ] **TeleprompterModal (refactor):**
+  - [ ] Igual que FloatingTeleprompter (registrar como esclavo)
+- [ ] **WebSocket Integration:**
+  - [ ] Servidor como árbitro de estado
+  - [ ] Broadcast de estado a todos los clientes conectados
+  - [ ] Resolución de conflictos (último timestamp gana)
+- [ ] **Debug Tools:**
+  - [ ] DevTools panel para ver estado de cada ventana
+  - [ ] Logger de sincronización con timestamps
+  - [ ] Visualización de comandos en cola
+
+---
+
+## 🧪 Casos de Prueba
+
+### Caso 1: Play sincronizado
+- **Dado:** Preview, FloatingWindow y Fullscreen abiertas
+- **Cuando:** Presiono Play en Preview
+- **Entonces:** Las 3 ventanas inician scroll automático simultáneamente
+
+### Caso 2: Pause sincronizado
+- **Dado:** Todas las ventanas en Play
+- **Cuando:** Presiono Pause en FloatingWindow
+- **Entonces:** Las 3 ventanas se detienen simultáneamente
+
+### Caso 3: Cambio de velocidad propagado
+- **Dado:** Velocidad actual en 50
+- **Cuando:** Ajusto velocidad a 75 en ConfigPanel
+- **Entonces:** Todas las ventanas adoptan velocidad 75 inmediatamente
+
+### Caso 4: Cambio de script
+- **Dado:** Todas las ventanas mostrando Script A
+- **Cuando:** Selecciono Script B en RunOrderPanel
+- **Entonces:** Las 3 ventanas cargan Script B simultáneamente
+
+### Caso 5: Jump marker
+- **Dado:** scrollTop en 0 en todas las ventanas
+- **Cuando:** Ejecuto jump a marker "Deportes" (posición 2000px)
+- **Entonces:** Las 3 ventanas saltan a 2000px simultáneamente
+
+### Caso 6: Cambio de fontSize
+- **Dado:** fontSize actual 48px
+- **Cuando:** Aumento a 60px con Ctrl++
+- **Entonces:** Todas las ventanas actualizan fontSize a 60px sin lag
+
+### Caso 7: Prevención de loops
+- **Dado:** Sistema configurado con StateSync
+- **Cuando:** Play en Preview → broadcast → FloatingWindow recibe
+- **Entonces:** FloatingWindow NO emite otro evento (no hay loop infinito)
+
+### Caso 8: Apertura tardía de ventana
+- **Dado:** Preview en Play con scrollTop 1000px
+- **Cuando:** Abro FloatingWindow
+- **Entonces:** Se abre en Play con scrollTop 1000px (estado sincronizado)
+
+### Caso 9: Cierre de una ventana
+- **Dado:** 3 ventanas abiertas y sincronizadas
+- **Cuando:** Cierro FloatingWindow
+- **Entonces:** Preview y Fullscreen continúan sincronizadas sin errores
+
+---
+
+## 🔗 Dependencias
+
+- ✅ Requiere: TeleprompterStore existente
+- ✅ Requiere: FloatingTeleprompter existente
+- ⏳ Requiere: US-008 (Sincronización Preview ↔ Floating)
+- ⏳ Recomendado: US-032 (Backend) + US-035 (WebSocket)
+
+---
+
+## 👤 Asignado a
+
+**Frontend Lead** + **Full Stack Developer**
+
+---
+
+## 🏷️ Labels
+
+`bug`, `priority:critical`, `area:frontend`, `sprint-1`, `floating-window`, `state-management`, `synchronization`, `architecture`
+
+---
+
+## 📝 Notas
+
+### Arquitectura Maestro-Esclavo
+
+```typescript
+// StateSync Service
+class StateSyncService {
+  private master: Window | null = null;
+  private slaves: Map<string, (state: TeleprompterState) => void> = new Map();
+  private isBroadcasting = false;
+  
+  setMaster(window: Window) {
+    this.master = window;
+  }
+  
+  registerSlave(windowId: string, updateCallback: (state: TeleprompterState) => void) {
+    this.slaves.set(windowId, updateCallback);
+    // Enviar estado actual inmediatamente
+    const currentState = useTeleprompterStore.getState();
+    updateCallback(currentState);
+  }
+  
+  unregisterSlave(windowId: string) {
+    this.slaves.delete(windowId);
+  }
+  
+  broadcastState(stateChange: Partial<TeleprompterState>) {
+    if (this.isBroadcasting) return; // Evitar loops
+    
+    this.isBroadcasting = true;
+    
+    // Enviar a todos los esclavos
+    this.slaves.forEach((updateCallback) => {
+      updateCallback(stateChange as TeleprompterState);
+    });
+    
+    // Enviar vía WebSocket si está disponible
+    if (websocketClient.isConnected()) {
+      websocketClient.emit('state:changed', stateChange);
+    }
+    
+    this.isBroadcasting = false;
+  }
+}
+
+export const stateSyncService = new StateSyncService();
+```
+
+### TeleprompterStore con Broadcast
+
+```typescript
+const useTeleprompterStore = create<TeleprompterState>((set, get) => ({
+  isPlaying: false,
+  scrollTop: 0,
+  fontSize: 48,
+  // ... otros estados
+  
+  play: () => {
+    set({ isPlaying: true });
+    stateSyncService.broadcastState({ isPlaying: true });
+  },
+  
+  pause: () => {
+    set({ isPlaying: false });
+    stateSyncService.broadcastState({ isPlaying: false });
+  },
+  
+  setScrollTop: (scrollTop: number) => {
+    set({ scrollTop });
+    stateSyncService.broadcastState({ scrollTop });
+  },
+  
+  setFontSize: (fontSize: number) => {
+    set({ fontSize });
+    stateSyncService.broadcastState({ fontSize });
+  }
+}));
+```
+
+### FloatingTeleprompter como Esclavo
+
+```typescript
+useEffect(() => {
+  const windowId = 'floating-window';
+  
+  // Registrar como esclavo
+  stateSyncService.registerSlave(windowId, (state) => {
+    // Aplicar estado SIN emitir eventos
+    if (state.isPlaying !== undefined) {
+      setLocalIsPlaying(state.isPlaying);
+    }
+    if (state.scrollTop !== undefined) {
+      containerRef.current.scrollTop = state.scrollTop;
+    }
+    if (state.fontSize !== undefined) {
+      setLocalFontSize(state.fontSize);
+    }
+  });
+  
+  return () => {
+    stateSyncService.unregisterSlave(windowId);
+  };
+}, []);
+```
+
+### WebSocket Integration
+
+```typescript
+// Backend - Socket.IO
+io.on('connection', (socket) => {
+  socket.on('state:changed', (stateChange) => {
+    // Broadcast a todos los demás clientes
+    socket.broadcast.emit('state:update', stateChange);
+  });
+});
+
+// Frontend - Socket.IO Client
+websocketClient.on('state:update', (stateChange) => {
+  // Aplicar estado recibido del servidor
+  useTeleprompterStore.setState(stateChange);
+});
+```
+
+### Debug Panel (DevTools)
+
+```typescript
+// Agregar a Redux DevTools o crear panel custom
+const StateDebugPanel = () => {
+  const state = useTeleprompterStore();
+  
+  return (
+    <div className="debug-panel">
+      <h3>Estado Global</h3>
+      <pre>{JSON.stringify(state, null, 2)}</pre>
+      
+      <h3>Ventanas Registradas</h3>
+      <ul>
+        {Array.from(stateSyncService.slaves.keys()).map(id => (
+          <li key={id}>{id} ✓</li>
+        ))}
+      </ul>
+      
+      <h3>Log de Sincronización</h3>
+      {/* Mostrar últimos 50 cambios con timestamps */}
+    </div>
+  );
+};
+```
+
+### Consideraciones
+
+1. **Single Source of Truth:** TeleprompterStore es la única fuente de verdad
+2. **Unidireccional:** Flujo maestro → esclavos (nunca al revés)
+3. **Timestamp:** Agregar timestamp a cada cambio para resolver conflictos
+4. **Performance:** Throttle de updates si es necesario (16ms máximo)
+5. **Error Handling:** Si un esclavo falla, no debe afectar a otros
+6. **Testing:** Crear tests de integración con múltiples ventanas
+
+---
+
+**Estado:** 📋 Backlog  
+**Prioridad:** 🔴 CRÍTICA (Arquitectura fundamental)  
+**Última actualización:** 23 Oct 2025

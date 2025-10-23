@@ -1,0 +1,117 @@
+# US-006: Ajuste de Posición de Línea Guía | Epic: Teleprompter Control | 🟡 ALTA | 2 pts | Sprint 1
+
+## 📋 Descripción
+
+**Como** operador del teleprompter  
+**Quiero** ajustar la posición vertical de la línea guía entre 0% y 100%  
+**Para** adaptarla a la altura de lectura cómoda del presentador
+
+**Origen:** Bug TP-5 del Reporte de Pruebas (23 Oct 2025)  
+**Problema:** El slider de posición no actualiza la línea guía en tiempo real
+
+---
+
+## ✅ Criterios de Aceptación
+
+- [ ] Slider de posición con rango 0-100% funcionando
+- [ ] Actualización en tiempo real (sin necesidad de confirmación)
+- [ ] Posición se aplica en Preview, FloatingWindow y Fullscreen
+- [ ] Valor persistido en ConfigStore
+- [ ] Sincronización vía WebSocket entre ventanas
+- [ ] Indicador visual del porcentaje actual (tooltip o label)
+- [ ] Posición inicial en 30% (por defecto)
+- [ ] Restricción: línea siempre visible dentro del viewport
+
+---
+
+## 🔧 Tareas Técnicas
+
+- [ ] **ConfigStore:** Agregar `guidelinePosition` (number 0-100, default 30)
+- [ ] **ConfigurationPanel:** 
+  - [ ] Crear slider con range 0-100
+  - [ ] Label dinámico "Posición: {value}%"
+  - [ ] onChange actualiza ConfigStore
+- [ ] **TeleprompterPanel:** Leer `guidelinePosition` de store y aplicar CSS
+- [ ] **FloatingTeleprompter:** Sincronizar posición desde ConfigStore
+- [ ] **TeleprompterModal (Fullscreen):** Sincronizar posición
+- [ ] **CSS:** Calcular `top: ${guidelinePosition}%` dinámicamente
+- [ ] **WebSocket:** Emitir evento `guideline:position:changed` 
+- [ ] **Backend:** Persistir en `configurations.guidelinePosition`
+- [ ] **Validación:** Clamp value entre 0-100 antes de aplicar
+
+---
+
+## 🧪 Casos de Prueba
+
+### Caso 1: Ajuste básico de posición
+- **Dado:** Panel de configuración abierto
+- **Cuando:** Muevo slider a 50%
+- **Entonces:** Línea guía se posiciona al 50% de altura en todas las vistas
+
+### Caso 2: Valores extremos
+- **Dado:** Slider en posición 0%
+- **Cuando:** Verifico posición de línea guía
+- **Entonces:** Línea está en el borde superior (visible)
+
+- **Dado:** Slider en posición 100%
+- **Cuando:** Verifico posición de línea guía
+- **Entonces:** Línea está en el borde inferior (visible)
+
+### Caso 3: Persistencia
+- **Dado:** Ajusto posición a 70%
+- **Cuando:** Recargo la aplicación
+- **Entonces:** Línea guía se carga en posición 70%
+
+### Caso 4: Sincronización entre ventanas
+- **Dado:** Preview y FloatingWindow abiertas
+- **Cuando:** Cambio posición a 40% en ConfigPanel
+- **Entonces:** Ambas ventanas actualizan la posición simultáneamente
+
+### Caso 5: Validación de rango
+- **Dado:** Intento establecer posición fuera de rango (ej: 150)
+- **Cuando:** Aplico el valor
+- **Entonces:** Sistema lo ajusta automáticamente a 100
+
+---
+
+## 🔗 Dependencias
+
+- ✅ Requiere: ConfigurationPanel existente
+- ✅ Requiere: ConfigStore con guidelineVisible
+- ⏳ Requiere: US-032 (Backend con BD para persistencia)
+- ⏳ Requiere: US-035 (WebSocket para sincronización)
+
+---
+
+## 👤 Asignado a
+
+**Frontend Lead**
+
+---
+
+## 🏷️ Labels
+
+`bug`, `priority:high`, `area:frontend`, `sprint-1`, `teleprompter`, `guideline`, `configuration`
+
+---
+
+## 📝 Notas
+
+- La línea guía debe ser responsive (funcionar en todas las resoluciones)
+- Considerar añadir presets (Superior: 20%, Centro: 50%, Inferior: 80%)
+- En fullscreen, la posición debe escalar correctamente
+- Performance: Actualización debe ser smooth (throttle si es necesario)
+
+**Fórmula CSS:**
+```css
+.guideline {
+  position: absolute;
+  top: calc(var(--guideline-position) * 1%);
+  transform: translateY(-50%); /* Centrar línea en posición */
+}
+```
+
+---
+
+**Estado:** 📋 Backlog  
+**Última actualización:** 23 Oct 2025

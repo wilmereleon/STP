@@ -1,0 +1,338 @@
+@startuml Teleprompter_Database_ER
+!define ENTITY_COLOR #E1F5FE
+!define ATTRIBUTE_COLOR #B3E5FC
+
+' ============================================
+' DIAGRAMA ENTIDAD-RELACIÓN
+' Sistema de Teleprompter v2.0
+' ============================================
+
+skinparam linetype ortho
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+
+' ============================================
+' ENTIDADES PRINCIPALES
+' ============================================
+
+entity "User" as user ENTITY_COLOR {
+  * **_id** : ObjectId <<PK>>
+  --
+  * name : String(100)
+  * email : String(255) <<UNIQUE>>
+  * password : String(255) <<HASHED>>
+  * role : ENUM('Producer', 'Operator', 'Admin')
+  * avatar : String(500)
+  * isActive : Boolean
+  * lastLogin : DateTime
+  * preferences : Object
+  --
+  * createdAt : DateTime
+  * updatedAt : DateTime
+}
+
+entity "Script" as script ENTITY_COLOR {
+  * **_id** : ObjectId <<PK>>
+  --
+  * title : String(200)
+  * content : Text
+  * category : ENUM('Noticias', 'Deportes', 'Clima', 'Entrevista', 'Especial', 'Comercial', 'Otro')
+  * status : ENUM('Borrador', 'Revisión', 'Aprobado', 'En Uso', 'Archivado')
+  * priority : ENUM('Alta', 'Media', 'Baja')
+  * duration : Integer (segundos)
+  * fontSize : Integer (12-120)
+  * scrollSpeed : Integer (1-100)
+  * producerNotes : Text(1000)
+  * tags : Array[String]
+  * timesUsed : Integer
+  * lastUsedAt : DateTime
+  --
+  createdBy : ObjectId <<FK>>
+  lastModifiedBy : ObjectId <<FK>>
+  --
+  * createdAt : DateTime
+  * updatedAt : DateTime
+}
+
+entity "ScriptVersion" as version ENTITY_COLOR {
+  * **_id** : ObjectId <<PK>>
+  --
+  scriptId : ObjectId <<FK>>
+  * versionNumber : Integer
+  * content : Text
+  * changeDescription : String(500)
+  modifiedBy : ObjectId <<FK>>
+  --
+  * createdAt : DateTime
+}
+
+entity "RunOrder" as runorder ENTITY_COLOR {
+  * **_id** : ObjectId <<PK>>
+  --
+  userId : ObjectId <<FK>>
+  * name : String(200)
+  * isActive : Boolean
+  * totalDuration : Integer
+  --
+  * createdAt : DateTime
+  * updatedAt : DateTime
+}
+
+entity "RunOrderItem" as runitem ENTITY_COLOR {
+  * **_id** : ObjectId <<PK>>
+  --
+  runOrderId : ObjectId <<FK>>
+  scriptId : ObjectId <<FK>>
+  * position : Integer
+  * isCompleted : Boolean
+  * startedAt : DateTime
+  * completedAt : DateTime
+  --
+  * createdAt : DateTime
+}
+
+entity "Configuration" as config ENTITY_COLOR {
+  * **_id** : ObjectId <<PK>>
+  --
+  userId : ObjectId <<FK>>
+  * scrollSpeed : Integer (1-100)
+  * fontSize : Integer (12-120)
+  * backgroundColor : String(7) <<HEX>>
+  * textColor : String(7) <<HEX>>
+  * guidelinePosition : Integer (0-100)
+  * guidelineColor : String(7) <<HEX>>
+  * guidelineThickness : Integer (1-10)
+  * guidelineVisible : Boolean
+  * autoAdvance : Boolean
+  * theme : ENUM('Light', 'Dark')
+  --
+  * createdAt : DateTime
+  * updatedAt : DateTime
+}
+
+entity "Macro" as macro ENTITY_COLOR {
+  * **_id** : ObjectId <<PK>>
+  --
+  userId : ObjectId <<FK>>
+  * key : String(20) <<UNIQUE per user>>
+  * action : String(50)
+  * description : String(200)
+  * isActive : Boolean
+  * params : Object
+  --
+  * createdAt : DateTime
+  * updatedAt : DateTime
+}
+
+entity "JumpMarker" as marker ENTITY_COLOR {
+  * **_id** : ObjectId <<PK>>
+  --
+  scriptId : ObjectId <<FK>>
+  * position : Integer (char index)
+  * label : String(100)
+  * color : String(7) <<HEX>>
+  --
+  * createdAt : DateTime
+}
+
+entity "Collaboration" as collab ENTITY_COLOR {
+  * **_id** : ObjectId <<PK>>
+  --
+  scriptId : ObjectId <<FK>>
+  userId : ObjectId <<FK>>
+  * action : ENUM('Viewing', 'Editing', 'Commenting')
+  * isActive : Boolean
+  * lockExpiry : DateTime
+  --
+  * createdAt : DateTime
+  * updatedAt : DateTime
+}
+
+entity "AuditLog" as audit ENTITY_COLOR {
+  * **_id** : ObjectId <<PK>>
+  --
+  userId : ObjectId <<FK>>
+  * entityType : String(50)
+  * entityId : ObjectId
+  * action : String(50)
+  * changes : Object
+  * ipAddress : String(45)
+  * userAgent : String(500)
+  --
+  * createdAt : DateTime
+}
+
+entity "Session" as session ENTITY_COLOR {
+  * **_id** : ObjectId <<PK>>
+  --
+  userId : ObjectId <<FK>>
+  * token : String(500) <<JWT>>
+  * refreshToken : String(500)
+  * expiresAt : DateTime
+  * ipAddress : String(45)
+  * userAgent : String(500)
+  * isActive : Boolean
+  --
+  * createdAt : DateTime
+}
+
+' ============================================
+' RELACIONES
+' ============================================
+
+' User relationships
+user ||--o{ script : "creates"
+user ||--o{ script : "modifies"
+user ||--o{ version : "creates version"
+user ||--o{ runorder : "owns"
+user ||--|| config : "has"
+user ||--o{ macro : "configures"
+user ||--o{ collab : "collaborates"
+user ||--o{ audit : "generates"
+user ||--o{ session : "has"
+
+' Script relationships
+script ||--o{ version : "has versions"
+script ||--o{ runitem : "used in"
+script ||--o{ marker : "has markers"
+script ||--o{ collab : "has collaborators"
+
+' RunOrder relationships
+runorder ||--o{ runitem : "contains"
+
+' Collaboration
+collab }o--|| script : "on"
+
+' ============================================
+' ÍNDICES Y CONSTRAINTS
+' ============================================
+
+note right of user
+  **Índices:**
+  - email (unique)
+  - role
+  - isActive
+  - createdAt (desc)
+  
+  **Constraints:**
+  - Email válido (regex)
+  - Password min 8 chars
+  - Role debe ser válido
+end note
+
+note right of script
+  **Índices:**
+  - title (text search)
+  - content (text search)
+  - tags (text search)
+  - category
+  - status
+  - priority
+  - createdBy
+  - createdAt (desc)
+  - Compound: (status, createdAt)
+  
+  **Constraints:**
+  - title max 200 chars
+  - status debe ser válido
+  - duration >= 0
+end note
+
+note right of version
+  **Índices:**
+  - scriptId
+  - versionNumber (desc)
+  - createdAt (desc)
+  - Compound: (scriptId, versionNumber)
+  
+  **Constraints:**
+  - Max 10 versiones por script
+  - versionNumber auto-increment
+end note
+
+note right of runorder
+  **Índices:**
+  - userId
+  - isActive
+  - createdAt (desc)
+  
+  **Constraints:**
+  - Solo 1 RunOrder activo por usuario
+end note
+
+note right of config
+  **Índices:**
+  - userId (unique)
+  
+  **Constraints:**
+  - scrollSpeed 1-100
+  - fontSize 12-120
+  - guidelinePosition 0-100
+end note
+
+note bottom of macro
+  **Índices:**
+  - Compound: (userId, key) unique
+  - isActive
+  
+  **Constraints:**
+  - key debe ser válido (F1-F12, etc.)
+  - action no vacío
+end note
+
+' ============================================
+' NORMALIZACIÓN 3FN
+' ============================================
+
+note top of user
+  **NORMALIZACIÓN 3FN:**
+  
+  **1FN:** ✓ Atributos atómicos
+  - Todos los campos contienen valores únicos
+  - No hay grupos repetitivos
+  - preferences almacenado como JSON
+  
+  **2FN:** ✓ Sin dependencias parciales
+  - Clave primaria: _id (simple)
+  - Todos los atributos dependen de _id
+  
+  **3FN:** ✓ Sin dependencias transitivas
+  - No hay dependencias entre atributos no-clave
+  - role no determina permissions (manejado en aplicación)
+end note
+
+note bottom of script
+  **NORMALIZACIÓN 3FN:**
+  
+  **1FN:** ✓ Atributos atómicos
+  - tags como Array (permitido en MongoDB)
+  - versions desnormalizado por performance
+  
+  **2FN:** ✓ Clave simple _id
+  - Todos dependen de _id
+  
+  **3FN:** ✓ Sin dependencias transitivas
+  - duration calculado de content (denormalizado)
+  - createdBy/lastModifiedBy referencian User
+  - category no determina otros campos
+end note
+
+' ============================================
+' CARDINALIDADES
+' ============================================
+
+note as N1
+  **CARDINALIDADES:**
+  
+  User 1:N Script (un usuario crea muchos scripts)
+  User 1:1 Configuration (un usuario tiene una configuración)
+  User 1:N Macro (un usuario tiene muchos macros)
+  User 1:N RunOrder (un usuario tiene muchos run orders)
+  Script 1:N ScriptVersion (un script tiene muchas versiones)
+  Script N:M RunOrderItem (muchos scripts en muchos run orders)
+  Script 1:N JumpMarker (un script tiene muchos marcadores)
+  Script N:M Collaboration (muchos usuarios colaboran en muchos scripts)
+  RunOrder 1:N RunOrderItem (un run order tiene muchos items)
+end note
+
+@enduml

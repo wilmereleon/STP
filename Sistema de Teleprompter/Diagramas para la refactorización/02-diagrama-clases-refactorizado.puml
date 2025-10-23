@@ -1,9 +1,9 @@
-@startuml Diagrama de Clases Refactorizado
+@startuml Diagrama de Clases Refactorizado v2.0
 !theme plain
 skinparam classAttributeIconSize 0
 skinparam backgroundColor #FEFEFE
 
-title Sistema de Teleprompter - Modelo Refactorizado con Stores\n**Patrón Flux/Observer**
+title Sistema de Teleprompter - Arquitectura Completa Frontend + Backend\n**Patrón Flux/Observer + RESTful API + WebSocket**
 
 package "Estado Centralizado (Stores)" {
   
@@ -207,6 +207,332 @@ package "Servicios (Services)" {
   end note
 }
 
+package "🌐 Backend - API REST (Node.js + Express)" {
+  
+  class AuthController {
+    - userService: UserService
+    - jwtService: JWTService
+    --
+    + register(req, res): Promise<void>
+    + login(req, res): Promise<void>
+    + logout(req, res): Promise<void>
+    + refresh(req, res): Promise<void>
+    + me(req, res): Promise<void>
+    --
+    POST /api/auth/register
+    POST /api/auth/login
+    POST /api/auth/logout
+    POST /api/auth/refresh
+    GET /api/auth/me
+  }
+  
+  class ScriptController {
+    - scriptService: ScriptService
+    --
+    + list(req, res): Promise<void>
+    + create(req, res): Promise<void>
+    + getById(req, res): Promise<void>
+    + update(req, res): Promise<void>
+    + delete(req, res): Promise<void>
+    + duplicate(req, res): Promise<void>
+    + search(req, res): Promise<void>
+    --
+    GET /api/scripts
+    POST /api/scripts
+    GET /api/scripts/:id
+    PUT /api/scripts/:id
+    DELETE /api/scripts/:id
+    POST /api/scripts/:id/duplicate
+  }
+  
+  class RunOrderController {
+    - runOrderService: RunOrderService
+    --
+    + list(req, res): Promise<void>
+    + create(req, res): Promise<void>
+    + getById(req, res): Promise<void>
+    + update(req, res): Promise<void>
+    + delete(req, res): Promise<void>
+    + addItem(req, res): Promise<void>
+    + removeItem(req, res): Promise<void>
+    + activate(req, res): Promise<void>
+    --
+    GET /api/runorders
+    POST /api/runorders
+    GET /api/runorders/:id
+    PUT /api/runorders/:id
+    POST /api/runorders/:id/items
+    DELETE /api/runorders/:id/items/:itemId
+  }
+  
+  class ConfigController {
+    - configService: ConfigService
+    --
+    + get(req, res): Promise<void>
+    + update(req, res): Promise<void>
+    + reset(req, res): Promise<void>
+    + changeTheme(req, res): Promise<void>
+    --
+    GET /api/config
+    PUT /api/config
+    POST /api/config/reset
+    PATCH /api/config/theme
+  }
+  
+  class MacroController {
+    - macroService: MacroService
+    --
+    + list(req, res): Promise<void>
+    + create(req, res): Promise<void>
+    + update(req, res): Promise<void>
+    + delete(req, res): Promise<void>
+    + restoreDefaults(req, res): Promise<void>
+    + toggle(req, res): Promise<void>
+    --
+    GET /api/macros
+    POST /api/macros
+    PUT /api/macros/:id
+    DELETE /api/macros/:id
+    POST /api/macros/defaults
+  }
+}
+
+package "📦 Backend - Mongoose Models" {
+  
+  class UserModel {
+    + _id: ObjectId
+    + email: string (unique)
+    + password: string (hashed)
+    + name: string
+    + role: 'Admin' | 'Producer' | 'Operator'
+    + isActive: boolean
+    + lastLogin: Date
+    + preferences: JSON
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + comparePassword(password): Promise<boolean>
+    + getPublicProfile(): UserPublic
+    --
+    <i>Hooks:</i>
+    pre-save: hash password con bcrypt
+    --
+    <i>Statics:</i>
+    findByEmail(email): Promise<User>
+  }
+  
+  class ScriptModel {
+    + _id: ObjectId
+    + userId: ObjectId (ref: User)
+    + title: string
+    + content: string
+    + metadata: JSON
+    + deletedAt: Date | null
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    <i>Indexes:</i>
+    { userId, deletedAt }
+    { title: 'text', content: 'text' }
+  }
+  
+  class RunOrderModel {
+    + _id: ObjectId
+    + userId: ObjectId (ref: User)
+    + title: string
+    + description: string
+    + isActive: boolean
+    + runOrderItems: [RunOrderItemSchema]
+    + totalDuration: number
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    <i>Embedded Schema - RunOrderItemSchema:</i>
+    scriptId: ObjectId (ref: Script)
+    position: number
+    duration: number
+    --
+    <i>Hooks:</i>
+    pre-save: calcular totalDuration
+    pre-save: validar solo 1 activo
+    --
+    <i>Virtuals:</i>
+    itemCount: runOrderItems.length
+  }
+  
+  class ConfigurationModel {
+    + _id: ObjectId
+    + userId: ObjectId (ref: User, unique)
+    + fontSize: number (12-120)
+    + fontFamily: string
+    + textColor: string (hex)
+    + backgroundColor: string (hex)
+    + scrollSpeed: number (1-100)
+    + guidelinePosition: number (0-100)
+    + guidelineColor: string (hex)
+    + guidelineThickness: number (1-10)
+    + showGuideline: boolean
+    + mirrorMode: boolean
+    + autoSave: boolean
+    + theme: 'light' | 'dark'
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    <i>Validaciones:</i>
+    fontSize: 12-120, scrollSpeed: 1-100
+    colores: regex /^#[0-9A-F]{6}$/
+  }
+  
+  class MacroModel {
+    + _id: ObjectId
+    + userId: ObjectId (ref: User)
+    + key: string (ej: 'F11', 'Ctrl+P')
+    + action: string
+    + category: 'Playback' | 'Navigation' | ...
+    + description: string
+    + isEnabled: boolean
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    <i>Indexes:</i>
+    { userId, key } (unique compound)
+  }
+  
+  class SessionModel {
+    + _id: ObjectId
+    + userId: ObjectId (ref: User)
+    + token: string (JWT, indexed)
+    + expiresAt: Date
+    + isActive: boolean
+    + ipAddress: string
+    + userAgent: string
+    + createdAt: Date
+    --
+    <i>Statics:</i>
+    createSession(userId, token, ...)
+    invalidateSession(token)
+  }
+  
+  class AuditLogModel {
+    + _id: ObjectId
+    + entityType: 'User' | 'Script' | ...
+    + entityId: ObjectId
+    + action: 'create' | 'update' | ...
+    + userId: ObjectId (ref: User)
+    + changes: Mixed
+    + ipAddress: string
+    + userAgent: string
+    + createdAt: Date
+    --
+    <i>Statics:</i>
+    logChange(entityType, entityId, ...)
+  }
+}
+
+package "🔌 Backend - WebSocket (Socket.IO)" {
+  
+  class WebSocketServer {
+    - io: SocketIO.Server
+    - activeConnections: Map<string, Connection>
+    --
+    + on('connection', handler): void
+    + broadcast(event, data): void
+    + emitToUser(userId, event, data): void
+    --
+    <i>Events emitidos:</i>
+    - sync:teleprompter
+    - sync:runorder
+    - script:updated
+    - script:created
+    - script:deleted
+  }
+  
+  class Connection {
+    + socketId: string
+    + userId: string
+    + role: 'operator' | 'producer'
+    + connectedAt: Date
+  }
+}
+
+package "🛡️ Backend - Middlewares" {
+  
+  class AuthMiddleware {
+    + authenticateToken(req, res, next): void
+    + requireRole(roles: string[]): Middleware
+    + requireAdmin(req, res, next): void
+    --
+    Verifica JWT en header Authorization
+    Valida sesión activa en DB
+    Agrega req.user con {userId, email, role}
+  }
+  
+  class RateLimitMiddleware {
+    + apiLimiter: RateLimiter (100 req/15min)
+    + authLimiter: RateLimiter (5 req/15min)
+    + createLimiter: RateLimiter (20 req/hora)
+  }
+  
+  class ErrorMiddleware {
+    + errorHandler(err, req, res, next): void
+    + notFoundHandler(req, res, next): void
+    --
+    Maneja:
+    - ValidationError (400)
+    - CastError (400)
+    - Duplicate key (409)
+    - JWT errors (401)
+    - Generic errors (500)
+  }
+}
+
+package "🔗 Frontend - API Client" {
+  
+  class ApiClient {
+    - baseURL: string = 'http://localhost:3000'
+    - token: string | null
+    --
+    + setToken(token: string): void
+    + clearToken(): void
+    --
+    <i>Auth endpoints:</i>
+    + login(email, password): Promise<LoginResponse>
+    + register(data): Promise<User>
+    + logout(): Promise<void>
+    + refresh(refreshToken): Promise<string>
+    --
+    <i>Script endpoints:</i>
+    + getScripts(params): Promise<Script[]>
+    + createScript(data): Promise<Script>
+    + updateScript(id, data): Promise<Script>
+    + deleteScript(id): Promise<void>
+    --
+    <i>RunOrder endpoints:</i>
+    + getRunOrders(): Promise<RunOrder[]>
+    + createRunOrder(data): Promise<RunOrder>
+    + addItemToRunOrder(id, item): Promise<void>
+    --
+    Interceptor: agrega token a headers
+    Manejo de errores 401 → refresh token
+  }
+  
+  class WebSocketClient {
+    - socket: Socket
+    - store: TeleprompterStore
+    --
+    + connect(): void
+    + disconnect(): void
+    + identify(userId, role): void
+    + emit(event, data): void
+    + on(event, handler): void
+    --
+    <i>Events escuchados:</i>
+    - sync:teleprompter → actualiza store
+    - sync:runorder → actualiza store
+    - script:updated → refresca lista
+  }
+}
+
 package "Interfaces de Datos" {
   
   class RunOrderItem {
@@ -287,7 +613,9 @@ package "Hooks Personalizados" {
   }
 }
 
-' Relaciones
+' ==========================================
+' RELACIONES FRONTEND
+' ==========================================
 
 TeleprompterStore "1" *-- "1" TeleprompterState : mantiene >
 TeleprompterStore "1" o-- "1" AutoScrollService : usa >
@@ -311,6 +639,55 @@ ConfigurationStore "1" *-- "1" EditorSettings : almacena >
 useTeleprompterStore ..> TeleprompterStore : suscribe >
 useAutoScroll ..> AutoScrollService : usa >
 usePersistence ..> PersistenceService : usa >
+
+' ==========================================
+' RELACIONES BACKEND
+' ==========================================
+
+AuthController ..> UserModel : CRUD >
+AuthController ..> SessionModel : gestiona >
+AuthController ..> AuditLogModel : registra >
+
+ScriptController ..> ScriptModel : CRUD >
+ScriptController ..> AuditLogModel : registra >
+
+RunOrderController ..> RunOrderModel : CRUD >
+RunOrderController ..> ScriptModel : referencia >
+RunOrderController ..> AuditLogModel : registra >
+
+ConfigController ..> ConfigurationModel : CRUD >
+ConfigController ..> AuditLogModel : registra >
+
+MacroController ..> MacroModel : CRUD >
+MacroController ..> AuditLogModel : registra >
+
+WebSocketServer "1" *-- "*" Connection : mantiene >
+WebSocketServer ..> UserModel : valida >
+
+AuthMiddleware ..> SessionModel : verifica >
+AuthMiddleware ..> UserModel : consulta >
+
+' ==========================================
+' RELACIONES FRONTEND ↔ BACKEND
+' ==========================================
+
+ApiClient ..> AuthController : HTTP >
+ApiClient ..> ScriptController : HTTP >
+ApiClient ..> RunOrderController : HTTP >
+ApiClient ..> ConfigController : HTTP >
+ApiClient ..> MacroController : HTTP >
+
+WebSocketClient ..> WebSocketServer : WebSocket >
+
+TeleprompterStore ..> ApiClient : sincroniza >
+RunOrderStore ..> ApiClient : persiste >
+ConfigurationStore ..> ApiClient : persiste >
+
+SyncService ..> WebSocketClient : broadcast >
+
+' ==========================================
+' NOTAS
+' ==========================================
 
 note right of TeleprompterStore
   **PATRÓN OBSERVER:**
@@ -357,15 +734,91 @@ note right of AutoScrollService
   ✓ Auto-advance coordinado
 end note
 
-note bottom of PersistenceService
-  **PERSISTENCIA AUTOMÁTICA:**
+note right of ApiClient
+  **COMUNICACIÓN HTTP:**
   
-  Soluciona BUG PD-1/2/3:
-  - IndexedDB para datos grandes
-  - Auto-save cada 30 segundos
-  - Versionado de sesiones
-  - Backup antes de cambios
-  - Restauración automática
+  REST API para operaciones CRUD:
+  - Scripts: crear, editar, eliminar
+  - RunOrders: gestionar orden
+  - Config: sincronizar ajustes
+  - Macros: gestionar atajos
+  
+  JWT en header Authorization
+  Refresh token automático
+  Retry logic en errores 5xx
+end note
+
+note right of WebSocketClient
+  **COMUNICACIÓN WEBSOCKET:**
+  
+  Tiempo real para:
+  - Sincronización de teleprompter
+  - Cambios de scripts (Producer)
+  - Estado de reproducción
+  - Multi-usuario colaborativo
+  
+  Socket.IO con reconexión automática
+  Rooms por usuario/proyecto
+end note
+
+note bottom of UserModel
+  **BACKEND - MONGODB:**
+  
+  8 Collections:
+  - users (autenticación)
+  - scripts (guiones)
+  - runorders (orden de reproducción)
+  - configurations (ajustes usuario)
+  - macros (atajos teclado)
+  - sessions (JWT tokens)
+  - auditlogs (registro cambios)
+  - collaborations (locks concurrentes)
+  
+  Mongoose 8.0+ con validaciones
+  Índices para performance
+  Hooks para lógica de negocio
+end note
+
+note bottom of WebSocketServer
+  **EVENTOS WEBSOCKET:**
+  
+  <b>Emitidos por servidor:</b>
+  - sync:teleprompter
+  - sync:runorder
+  - script:created
+  - script:updated
+  - script:deleted
+  - config:changed
+  
+  <b>Recibidos de clientes:</b>
+  - identify (userId, role)
+  - sync:teleprompter (broadcast)
+  - script:lock (colaboración)
+  - script:unlock
+  
+  Arquitectura pub/sub
+  Rooms por proyecto/usuario
+end note
+
+note bottom of RateLimitMiddleware
+  **SEGURIDAD:**
+  
+  <b>Rate Limiting:</b>
+  - API general: 100 req/15min
+  - Auth: 5 intentos/15min
+  - Create: 20 req/hora
+  
+  <b>Otros middlewares:</b>
+  - helmet (security headers)
+  - cors (CORS policy)
+  - express-validator (input validation)
+  - bcrypt (password hashing)
+  
+  <b>Autorización:</b>
+  - JWT access token (1h)
+  - Refresh token (7d)
+  - Role-based access control
+  - Session validation en DB
 end note
 
 @enduml

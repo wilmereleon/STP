@@ -1,0 +1,152 @@
+# US-007: Personalización de Línea Guía (Color y Grosor) | Epic: Teleprompter Control | 🟡 ALTA | 3 pts | Sprint 1
+
+## 📋 Descripción
+
+**Como** operador del teleprompter  
+**Quiero** personalizar el color y grosor de la línea guía  
+**Para** mejorar la visibilidad según el contenido y preferencias del presentador
+
+**Origen:** Bug TP-6 del Reporte de Pruebas (23 Oct 2025)  
+**Problema:** No hay opciones para cambiar color ni grosor de la línea guía
+
+---
+
+## ✅ Criterios de Aceptación
+
+- [ ] Color picker para seleccionar color de línea (formato HEX/RGB)
+- [ ] Slider de grosor con rango 1-10 pixeles
+- [ ] Actualización en tiempo real en todas las vistas
+- [ ] Valores persistidos en ConfigStore y backend
+- [ ] Presets de colores comunes (Rojo, Verde, Azul, Amarillo, Blanco)
+- [ ] Preview del color/grosor antes de aplicar
+- [ ] Valores por defecto: Color #FF0000 (rojo), Grosor 2px
+- [ ] Sincronización vía WebSocket
+
+---
+
+## 🔧 Tareas Técnicas
+
+- [ ] **ConfigStore:** 
+  - [ ] Agregar `guidelineColor` (string hex, default '#FF0000')
+  - [ ] Agregar `guidelineThickness` (number 1-10, default 2)
+- [ ] **ConfigurationPanel - GuideLineSettings:**
+  - [ ] Implementar color picker component (react-color o similar)
+  - [ ] Crear slider de grosor con label "{value}px"
+  - [ ] Agregar botones de presets de colores
+  - [ ] Preview visual de la línea con configuración actual
+- [ ] **CSS Variables:**
+  - [ ] `--guideline-color: ${guidelineColor}`
+  - [ ] `--guideline-thickness: ${guidelineThickness}px`
+- [ ] **TeleprompterPanel:** Aplicar variables CSS dinámicamente
+- [ ] **FloatingTeleprompter:** Sincronizar color/grosor
+- [ ] **TeleprompterModal:** Sincronizar color/grosor
+- [ ] **WebSocket:** Emitir `guideline:style:changed` con color y thickness
+- [ ] **Backend API:** 
+  - [ ] `PUT /api/configurations/:userId` con validación
+  - [ ] Validar formato HEX (#RRGGBB)
+  - [ ] Validar rango thickness (1-10)
+- [ ] **Validación:** Color válido HEX, thickness en rango
+
+---
+
+## 🧪 Casos de Prueba
+
+### Caso 1: Cambio de color básico
+- **Dado:** Panel de configuración abierto
+- **Cuando:** Selecciono color verde (#00FF00) del color picker
+- **Entonces:** Línea guía cambia a verde inmediatamente en todas las vistas
+
+### Caso 2: Uso de presets
+- **Dado:** Panel de configuración abierto
+- **Cuando:** Hago clic en preset "Amarillo"
+- **Entonces:** Color picker y línea guía cambian a amarillo (#FFFF00)
+
+### Caso 3: Ajuste de grosor
+- **Dado:** Slider de grosor en 2px
+- **Cuando:** Muevo slider a 5px
+- **Entonces:** Línea guía aumenta su grosor a 5px visualmente
+
+### Caso 4: Preview antes de aplicar
+- **Dado:** Estoy ajustando color y grosor
+- **Cuando:** Veo el preview en ConfigurationPanel
+- **Entonces:** Veo exactamente cómo se verá la línea antes de confirmar
+
+### Caso 5: Persistencia
+- **Dado:** Configuro color azul (#0000FF) y grosor 4px
+- **Cuando:** Recargo aplicación
+- **Entonces:** Línea guía se carga con color azul y 4px de grosor
+
+### Caso 6: Validación de color inválido
+- **Dado:** Intento ingresar color inválido "XYZ123"
+- **Cuando:** Aplico el cambio
+- **Entonces:** Sistema muestra error y mantiene color anterior
+
+### Caso 7: Sincronización WebSocket
+- **Dado:** Preview y FloatingWindow abiertas
+- **Cuando:** Cambio color a rojo en ConfigPanel
+- **Entonces:** Ambas ventanas actualizan el color simultáneamente
+
+---
+
+## 🔗 Dependencias
+
+- ✅ Requiere: ConfigurationPanel existente
+- ✅ Requiere: GuideLineSettings component
+- ⏳ Requiere: US-006 (Posición de línea guía)
+- ⏳ Requiere: US-032 (Backend con BD para persistencia)
+- ⏳ Requiere: US-035 (WebSocket para sincronización)
+
+---
+
+## 👤 Asignado a
+
+**Frontend Lead** + **Full Stack Developer**
+
+---
+
+## 🏷️ Labels
+
+`bug`, `priority:high`, `area:frontend`, `sprint-1`, `teleprompter`, `guideline`, `configuration`, `ui-enhancement`
+
+---
+
+## 📝 Notas
+
+### Presets de Colores Sugeridos
+```javascript
+const COLOR_PRESETS = [
+  { name: 'Rojo', hex: '#FF0000' },
+  { name: 'Verde', hex: '#00FF00' },
+  { name: 'Azul', hex: '#0000FF' },
+  { name: 'Amarillo', hex: '#FFFF00' },
+  { name: 'Blanco', hex: '#FFFFFF' },
+  { name: 'Magenta', hex: '#FF00FF' }
+];
+```
+
+### Librería Recomendada
+- **react-color**: Color picker completo con presets
+- Alternativa: `<input type="color">` (nativo HTML5)
+
+### CSS Implementation
+```css
+.guideline {
+  background-color: var(--guideline-color);
+  height: var(--guideline-thickness);
+  box-shadow: 0 0 4px rgba(0,0,0,0.5); /* Mejorar visibilidad */
+}
+```
+
+### Consideraciones de Contraste
+- Si fondo es oscuro y línea es negra → poca visibilidad
+- Sugerir colores con buen contraste según backgroundColor
+- Opcional: Calcular luminosidad y sugerir color complementario
+
+### Performance
+- Throttle color picker onChange para evitar renders excesivos
+- Debounce API call para persistencia (500ms)
+
+---
+
+**Estado:** 📋 Backlog  
+**Última actualización:** 23 Oct 2025

@@ -1,0 +1,125 @@
+US-034: Vista de Productor para Creación de Contenido
+======================================================
+
+CATEGORÍA: Frontend - Nueva Interfaz de Usuario
+PRIORIDAD: ALTA
+ORIGEN: Nueva Funcionalidad (Diseño/Vista de Productor.png)
+
+COMO: Productor de contenido
+QUIERO: Una interfaz dedicada para crear, editar y gestionar scripts
+PARA: Preparar el contenido que luego será usado por los operadores en el teleprompter
+
+CRITERIOS DE ACEPTACIÓN:
+------------------------
+✓ Interfaz separada de la vista de Operador (diferentes rutas/componentes)
+✓ Editor de texto enriquecido para escribir scripts con formato
+✓ Previsualización en tiempo real de cómo se verá en el teleprompter
+✓ Gestión de metadatos: título, categoría, prioridad, duración estimada
+✓ Guardado automático cada 30 segundos
+✓ Historial de versiones con posibilidad de restaurar
+✓ Búsqueda y filtrado de scripts (por título, categoría, fecha, tags)
+✓ Importación masiva desde Excel o archivos TXT
+✓ Exportación de scripts individuales o por lote
+✓ Sistema de tags para organización
+✓ Notas del productor (no visibles en teleprompter)
+✓ Estado de workflow: Borrador → Revisión → Aprobado
+✓ Colaboración: Ver quién está editando un script
+✓ Sincronización en tiempo real con backend vía WebSocket
+
+COMPONENTES A CREAR:
+--------------------
+1. ProducerView.tsx (contenedor principal)
+2. ScriptLibrary.tsx (lista/grilla de scripts)
+3. ScriptEditor.tsx (editor mejorado con funciones de Producer)
+4. ScriptMetadataPanel.tsx (panel lateral para metadatos)
+5. ScriptVersionHistory.tsx (modal con historial)
+6. ScriptImporter.tsx (modal para importar Excel/TXT)
+7. ScriptSearch.tsx (barra de búsqueda avanzada)
+8. ProducerToolbar.tsx (barra de herramientas específica)
+9. CollaborationIndicator.tsx (mostrar usuarios activos)
+10. ScriptPreviewPane.tsx (previsualización en tiempo real)
+
+FUNCIONALIDADES DEL EDITOR:
+----------------------------
+- Formato de texto: Negrita, Cursiva, Subrayado
+- "Señalizador" especial (fondo blanco, texto rojo en negrita)
+- Marcadores de salto para scripts largos
+- Contador de palabras y duración estimada
+- Autocompletado de frases comunes
+- Corrector ortográfico
+- Buscar y reemplazar
+- Shortcuts de teclado (Ctrl+B, Ctrl+I, Ctrl+S, etc.)
+
+ESTADOS DE WORKFLOW:
+--------------------
+1. Borrador: Script en edición, no visible para operadores
+2. Revisión: Listo para revisión, puede tener comentarios
+3. Aprobado: Listo para usar en producción
+4. En Uso: Actualmente en el RunOrder de un operador
+5. Archivado: Script antiguo, no activo
+
+SINCRONIZACIÓN EN TIEMPO REAL:
+-------------------------------
+- Al guardar → Emitir evento "script:updated" via WebSocket
+- Al crear → Emitir evento "script:created"
+- Al eliminar → Emitir evento "script:deleted"
+- Operadores reciben actualizaciones automáticas en su lista
+
+IMPORTACIÓN DESDE EXCEL:
+-------------------------
+Formato esperado:
+| Título | Contenido | Categoría | Prioridad | Tags |
+|--------|-----------|-----------|-----------|------|
+| ...    | ...       | Noticias  | Alta      | ...  |
+
+- Validar formato antes de importar
+- Mostrar preview de scripts a importar
+- Permitir edición rápida antes de confirmar
+- Reportar errores de importación claramente
+
+NOTAS TÉCNICAS:
+---------------
+- Usar React Router para rutas: /operator y /producer
+- Implementar autenticación: Producers requieren login, Operators no
+- Persistir borradores en localStorage además del backend
+- Implementar debounce para guardado automático (evitar peticiones excesivas)
+- Usar React Query o SWR para cache de scripts
+- Optimistic updates para mejor UX
+- Lazy loading de scripts (paginación o scroll infinito)
+
+DISEÑO UI/UX:
+-------------
+- Referencia: Diseño/Vista de Productor.png
+- Layout de 2 columnas: Lista izquierda + Editor derecha
+- Tema oscuro opcional
+- Responsive (desktop prioritario, tablet secundario)
+- Accesibilidad: navegación por teclado, ARIA labels
+
+CASOS DE PRUEBA:
+----------------
+1. Crear nuevo script → Llenar datos → Guardar → Verificar en BD
+2. Editar script existente → Cambios deben autoguardarse cada 30s
+3. Importar Excel con 10 scripts → Todos deben crearse correctamente
+4. Cambiar estado de Borrador a Aprobado → Debe aparecer en vista de Operador
+5. Dos productores editan scripts diferentes → Sin conflictos
+6. Producer guarda script → Operator ve actualización en tiempo real
+7. Buscar por tag "deportes" → Filtrar correctamente
+8. Restaurar versión anterior → Contenido debe revertirse
+
+DEPENDENCIAS:
+-------------
+- Requiere US-032 (Backend) completado
+- Requiere autenticación JWT
+- Requiere WebSocket funcionando
+
+IMPACTO:
+--------
+- Separa roles: Producers crean, Operators operan
+- Mejora workflow de producción
+- Facilita colaboración entre equipo
+- Centraliza gestión de contenido
+
+ESTADO: Pendiente
+ESTIMACIÓN: 21 Story Points
+SPRINT: Sprint 2 (Entrega 2 - Nov 18)
+ASIGNADO A: Frontend Lead + Full Stack Developer

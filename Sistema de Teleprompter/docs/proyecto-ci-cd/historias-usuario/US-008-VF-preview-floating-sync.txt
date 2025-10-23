@@ -1,0 +1,192 @@
+# US-008: Sincronización Preview ↔ Ventana Flotante | Epic: Vista Flotante | 🔴 CRÍTICA | 5 pts | Sprint 1
+
+## 📋 Descripción
+
+**Como** operador del teleprompter  
+**Quiero** que el Preview y la Ventana Flotante estén perfectamente sincronizados  
+**Para** que ambas muestren exactamente el mismo contenido y posición de scroll en todo momento
+
+**Origen:** Bug VF-3 del Reporte de Pruebas (23 Oct 2025)  
+**Problema:** Preview y FloatingWindow se dessincronizan al hacer scroll o cambiar contenido
+
+---
+
+## ✅ Criterios de Aceptación
+
+- [ ] Scroll sincronizado bidireccionalmente (Preview → Floating y viceversa)
+- [ ] Mismo contenido mostrado en ambas vistas simultáneamente
+- [ ] Misma posición de scroll en todo momento (pixelPerfect)
+- [ ] Play/Pause sincronizados entre ventanas
+- [ ] Velocidad de scroll idéntica en ambas
+- [ ] Cambios de configuración (font, colors) aplicados instantáneamente
+- [ ] Latencia máxima de sincronización: 16ms (1 frame @ 60fps)
+- [ ] Línea guía en misma posición absoluta en ambas vistas
+- [ ] Jump markers respetados en ambas ventanas
+
+---
+
+## 🔧 Tareas Técnicas
+
+- [ ] **ScrollSyncService (nuevo):**
+  - [ ] Crear servicio singleton para gestionar sincronización
+  - [ ] Método `registerView(viewId, scrollElement)` 
+  - [ ] Método `unregisterView(viewId)`
+  - [ ] Método `syncScroll(viewId, scrollTop)` → propaga a otras vistas
+  - [ ] Throttle de eventos scroll (16ms) para performance
+- [ ] **TeleprompterPanel:**
+  - [ ] Registrar vista en mount
+  - [ ] onScroll → `ScrollSyncService.syncScroll('preview', scrollTop)`
+  - [ ] Listener para recibir scroll de otras vistas
+  - [ ] Unregister en unmount
+- [ ] **FloatingTeleprompter:**
+  - [ ] Registrar vista en mount
+  - [ ] onScroll → `ScrollSyncService.syncScroll('floating', scrollTop)`
+  - [ ] Listener para recibir scroll de otras vistas
+  - [ ] Unregister en unmount
+- [ ] **ScriptStore:**
+  - [ ] Emitir evento `script:content:changed` al cambiar contenido
+  - [ ] Ambas vistas suscritas al evento
+- [ ] **ConfigStore:**
+  - [ ] Emitir eventos específicos (fontSize, colors, scrollSpeed, etc.)
+  - [ ] Ambas vistas reaccionan a cambios de config
+- [ ] **Control de Reproducción:**
+  - [ ] `isPlaying` state compartido entre vistas
+  - [ ] `animationFrameId` sincronizado
+  - [ ] Ambas vistas usan misma función de scroll animado
+- [ ] **Tests:**
+  - [ ] Test de sincronización con scrollTop aleatorio
+  - [ ] Test de latencia (debe ser < 16ms)
+  - [ ] Test de cambio de contenido
+  - [ ] Test de Play/Pause sync
+
+---
+
+## 🧪 Casos de Prueba
+
+### Caso 1: Scroll manual sincronizado (Preview → Floating)
+- **Dado:** Preview y FloatingWindow abiertas
+- **Cuando:** Hago scroll manual en Preview a scrollTop 500px
+- **Entonces:** FloatingWindow se posiciona automáticamente en 500px
+
+### Caso 2: Scroll manual sincronizado (Floating → Preview)
+- **Dado:** Preview y FloatingWindow abiertas
+- **Cuando:** Hago scroll manual en FloatingWindow a scrollTop 1000px
+- **Entonces:** Preview se posiciona automáticamente en 1000px
+
+### Caso 3: Scroll automático (Play) sincronizado
+- **Dado:** Ambas vistas abiertas, Play activado
+- **Cuando:** El scroll automático avanza
+- **Entonces:** Ambas vistas avanzan exactamente al mismo ritmo
+
+### Caso 4: Cambio de contenido
+- **Dado:** Ambas vistas mostrando Script A
+- **Cuando:** Cambio a Script B en editor
+- **Entonces:** Ambas vistas cargan Script B simultáneamente
+
+### Caso 5: Cambio de configuración (fontSize)
+- **Dado:** Ambas vistas con fontSize 48px
+- **Cuando:** Cambio fontSize a 60px
+- **Entonces:** Ambas vistas actualizan el tamaño inmediatamente
+
+### Caso 6: Play/Pause sincronizado
+- **Dado:** Preview en Play, FloatingWindow en Pause (inconsistencia)
+- **Cuando:** Corrijo el bug
+- **Entonces:** Ambas vistas siempre tienen mismo estado (Play o Pause)
+
+### Caso 7: Jump Marker
+- **Dado:** Ambas vistas en scrollTop 0
+- **Cuando:** Ejecuto jump a marker en posición 2000px
+- **Entonces:** Ambas vistas saltan a 2000px simultáneamente
+
+### Caso 8: Latencia de sincronización
+- **Dado:** Scroll rápido en una vista (120px/frame)
+- **Cuando:** Mido tiempo de sincronización
+- **Entonces:** Latencia < 16ms (imperceptible al ojo humano)
+
+---
+
+## 🔗 Dependencias
+
+- ✅ Requiere: TeleprompterPanel existente
+- ✅ Requiere: FloatingTeleprompter existente
+- ✅ Requiere: ScriptStore y ConfigStore
+- ⏳ Requiere: US-001, US-002 (Play/Pause funcionando)
+- ⏳ Requiere: US-004 (Velocidad ajustable)
+
+---
+
+## 👤 Asignado a
+
+**Frontend Lead** + **Full Stack Developer**
+
+---
+
+## 🏷️ Labels
+
+`bug`, `priority:critical`, `area:frontend`, `sprint-1`, `floating-window`, `synchronization`, `performance`
+
+---
+
+## 📝 Notas
+
+### Arquitectura del ScrollSyncService
+
+```typescript
+class ScrollSyncService {
+  private views: Map<string, HTMLElement> = new Map();
+  private isSyncing = false; // Evitar loops infinitos
+  
+  registerView(viewId: string, element: HTMLElement) {
+    this.views.set(viewId, element);
+  }
+  
+  unregisterView(viewId: string) {
+    this.views.delete(viewId);
+  }
+  
+  syncScroll(sourceViewId: string, scrollTop: number) {
+    if (this.isSyncing) return; // Evitar loop
+    
+    this.isSyncing = true;
+    
+    this.views.forEach((element, viewId) => {
+      if (viewId !== sourceViewId) {
+        element.scrollTop = scrollTop;
+      }
+    });
+    
+    this.isSyncing = false;
+  }
+}
+
+export const scrollSyncService = new ScrollSyncService();
+```
+
+### Throttle para Performance
+
+```typescript
+const throttledSync = throttle((viewId, scrollTop) => {
+  scrollSyncService.syncScroll(viewId, scrollTop);
+}, 16); // 60fps = 16ms por frame
+```
+
+### Consideraciones
+
+1. **Loop Infinito:** Usar flag `isSyncing` para evitar que el sync cause otro sync
+2. **Performance:** Throttle a 60fps (16ms) para evitar sobrecarga
+3. **Precisión:** scrollTop debe ser exacto (no aproximado)
+4. **Edge Cases:** Manejar cuando una vista se cierra/abre
+5. **RequestAnimationFrame:** Considerar usar RAF para scroll suave
+
+### Métricas de Éxito
+
+- ✅ Latencia < 16ms (60fps)
+- ✅ 0 desincronizaciones reportadas en QA
+- ✅ CPU usage < 10% durante scroll
+- ✅ Sin jank visual (frames dropped)
+
+---
+
+**Estado:** 📋 Backlog  
+**Prioridad:** 🔴 CRÍTICA (Impacta UX significativamente)  
+**Última actualización:** 23 Oct 2025
