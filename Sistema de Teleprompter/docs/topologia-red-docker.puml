@@ -1,0 +1,114 @@
+@startuml Diagrama de Red - Docker Compose
+
+!define ICONURL https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/v2.4.0
+!include ICONURL/devicons2/docker.puml
+
+title Topología de Red Docker\nSistema de Teleprompter
+
+skinparam backgroundColor #F0F0F0
+
+' Red Docker
+package "Docker Host (Windows)" {
+    
+    ' Red bridge
+    cloud "teleprompter-network\n(Bridge Network)" as network {
+        
+        ' Frontend
+        node "frontend\n<$docker>\n172.19.0.5" as frontend {
+            component "Vite Dev Server" as vite
+            component "React App" as react
+            interface "5173" as port5173
+            interface "4173" as port4173
+            
+            vite -down-> react
+            port5173 -down-> vite
+            port4173 -down-> vite
+        }
+        
+        ' Backend
+        node "backend\n<$docker>\n172.19.0.3" as backend {
+            component "Express API" as express
+            component "Socket.IO" as socketio
+            interface "3000" as port3000
+            interface "3001" as port3001
+            
+            express -down-> socketio
+            port3000 -down-> express
+            port3001 -down-> socketio
+        }
+        
+        ' MongoDB
+        node "mongo\n<$docker>\n172.19.0.2" as mongo {
+            database "MongoDB 7.0" as mongodb
+            interface "27017" as port27017
+            
+            port27017 -down-> mongodb
+        }
+        
+        ' Jenkins
+        node "jenkins\n<$docker>\n172.19.0.4" as jenkins {
+            component "Jenkins Server" as jenkinsServer
+            interface "8080" as port8080
+            interface "50000" as port50000
+            
+            port8080 -down-> jenkinsServer
+            port50000 -down-> jenkinsServer
+        }
+        
+        ' Comunicación interna (dentro de la red Docker)
+        frontend -down-> backend : **HTTP/WS**\nhttp://backend:3000\nws://backend:3000
+        backend -down-> mongo : **MongoDB**\nmongo:27017
+        jenkins -up-> frontend : **Docker API**\nDocker commands
+        jenkins -up-> backend : **Docker API**\nDocker commands
+    }
+    
+    ' Port mapping al host
+    interface "localhost:5173" as host5173
+    interface "localhost:4173" as host4173
+    interface "localhost:3000" as host3000
+    interface "localhost:3001" as host3001
+    interface "localhost:27017" as host27017
+    interface "localhost:8080" as host8080
+    interface "localhost:50000" as host50000
+    
+    host5173 -down-> port5173 : Port mapping
+    host4173 -down-> port4173 : Port mapping
+    host3000 -down-> port3000 : Port mapping
+    host3001 -down-> port3001 : Port mapping
+    host27017 -down-> port27017 : Port mapping
+    host8080 -down-> port8080 : Port mapping
+    host50000 -down-> port50000 : Port mapping
+}
+
+' Acceso externo
+actor "Usuario Browser" as user
+user -down-> host5173 : http://localhost:5173
+user -down-> host8080 : http://localhost:8080/jenkins
+
+' Volúmenes
+storage "mongo-data" as mongoVol
+storage "jenkins-data" as jenkinsVol
+
+mongo -down-> mongoVol : /data/db
+jenkins -down-> jenkinsVol : /var/jenkins_home
+
+' Leyenda
+legend right
+|= Nombre Contenedor |= IP Interna |= Hostname DNS |
+| frontend | 172.19.0.5 | frontend |
+| backend | 172.19.0.3 | backend |
+| mongo | 172.19.0.2 | mongo |
+| jenkins | 172.19.0.4 | jenkins |
+
+**Comunicación:**
+• Interna: Hostnames DNS (frontend, backend, mongo, jenkins)
+• Externa: localhost + port mapping
+• Red: Bridge (teleprompter-network)
+
+**Resolución DNS:**
+Docker provee DNS interno automático.
+Ejemplo: frontend puede acceder a backend usando
+"http://backend:3000" en lugar de IP.
+endlegend
+
+@enduml

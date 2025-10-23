@@ -1,0 +1,177 @@
+@startuml Flujo de Comunicación - Escenario Completo
+
+title Flujo de Comunicación Multi-Usuario\nProductor Crea Script → Operador Ve en Tiempo Real
+
+skinparam backgroundColor #FAFAFA
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+' Actores y Sistemas
+actor "Productor" as producer #FFD700
+participant "Frontend\n(Producer View)" as frontendP #61DAFB
+participant "API REST\n:3000/api" as api #68A063
+participant "WebSocket\n:3000" as ws #68A063
+participant "MongoDB\n:27017" as db #47A248
+participant "Frontend\n(Operator View)" as frontendO #61DAFB
+actor "Operador" as operator #FFE5B4
+
+== 1. Autenticación del Productor ==
+
+producer -> frontendP: 1. Click "Login" +\nEmail: admin@teleprompter.com
+activate frontendP
+
+frontendP -> api: 2. POST /api/auth/login\n{\n  email: "admin@...",\n  password: "***"\n}
+activate api
+
+api -> db: 3. SELECT user\nFROM users\nWHERE email = ?
+activate db
+db --> api: 4. Usuario encontrado
+deactivate db
+
+api --> frontendP: 5. 200 OK\n{\n  accessToken: "eyJ...",\n  refreshToken: "eyJ...",\n  user: { role: "Producer" }\n}
+deactivate api
+
+frontendP -> frontendP: 6. Guardar tokens en\nlocalStorage
+
+frontendP -> ws: 7. WebSocket Connect\nAuth: Bearer eyJ...
+activate ws
+ws --> frontendP: 8. Connected\nSocket ID: abc123
+deactivate ws
+
+frontendP --> producer: 9. Redirigir a\n/producer
+deactivate frontendP
+
+== 2. Operador Abre Teleprompter (Sin Login) ==
+
+operator -> frontendO: 10. Navegar a\n/operator
+activate frontendO
+
+frontendO -> ws: 11. WebSocket Connect\n(sin auth)
+activate ws
+ws --> frontendO: 12. Connected\nSocket ID: def456
+deactivate ws
+
+frontendO -> api: 13. GET /api/runorders/active
+activate api
+api -> db: 14. SELECT runorder\nWHERE active = true
+activate db
+db --> api: 15. RunOrder actual
+deactivate db
+api --> frontendO: 16. 200 OK\n{ items: [...] }
+deactivate api
+
+frontendO --> operator: 17. Mostrar lista\nde scripts
+deactivate frontendO
+
+== 3. Productor Crea Nuevo Script ==
+
+producer -> frontendP: 18. Click "Nuevo Script" +\nEscribir contenido
+activate frontendP
+
+frontendP -> api: 19. POST /api/scripts\nAuthorization: Bearer eyJ...\n{\n  title: "Noticia Urgente",\n  content: "...",\n  category: "Noticias",\n  status: "Borrador"\n}
+activate api
+
+api -> api: 20. Verificar JWT +\nValidar permisos
+
+api -> db: 21. INSERT INTO scripts\nVALUES (...)
+activate db
+db --> api: 22. Script creado\nID: 507f1f77bcf86cd799439011
+deactivate db
+
+api -> ws: 23. Emit evento a todos\nws.emit('script:created', {\n  scriptId: "507f...",\n  script: {...}\n})
+activate ws
+
+ws --> frontendO: 24. Event: script:created\n{ scriptId, script }
+activate frontendO
+
+frontendO -> frontendO: 25. Actualizar lista\nde scripts en UI
+
+frontendO --> operator: 26. ⚡ Nuevo script\naparece automáticamente
+deactivate frontendO
+
+ws --> frontendP: 27. Event: script:created\n(confirmación)
+deactivate ws
+
+api --> frontendP: 28. 201 Created\n{ _id: "507f...", ... }
+deactivate api
+
+frontendP --> producer: 29. ✅ Script creado\nMostrar en biblioteca
+deactivate frontendP
+
+== 4. Productor Agrega Script al RunOrder ==
+
+producer -> frontendP: 30. Drag & Drop script\nal RunOrder activo
+activate frontendP
+
+frontendP -> api: 31. POST /api/runorders/:id/items\nAuthorization: Bearer eyJ...\n{\n  scriptId: "507f...",\n  position: 3\n}
+activate api
+
+api -> db: 32. UPDATE runorder\nPUSH item
+activate db
+db --> api: 33. RunOrder actualizado
+deactivate db
+
+api -> ws: 34. Emit evento\nws.emit('sync:runorder', {\n  runOrderId: "...",\n  items: [...]\n})
+activate ws
+
+ws --> frontendO: 35. Event: sync:runorder\n{ items: [...] }
+activate frontendO
+
+frontendO -> frontendO: 36. Actualizar\nRunOrder en UI
+
+frontendO --> operator: 37. ⚡ Nuevo script\nen posición 3
+deactivate frontendO
+deactivate ws
+
+api --> frontendP: 38. 200 OK
+deactivate api
+
+frontendP --> producer: 39. ✅ Script agregado\nal RunOrder
+deactivate frontendP
+
+== 5. Operador Usa el Script en Teleprompter ==
+
+operator -> frontendO: 40. Click en script\n+ Click "Play"
+activate frontendO
+
+frontendO -> frontendO: 41. Iniciar scroll\nautomático
+
+frontendO -> ws: 42. Emit estado\nws.emit('sync:teleprompter', {\n  isPlaying: true,\n  position: 0,\n  scriptId: "507f..."\n})
+activate ws
+
+ws --> frontendP: 43. Event: sync:teleprompter\n{ isPlaying, position, scriptId }
+activate frontendP
+
+frontendP -> frontendP: 44. Actualizar indicador\n"EN VIVO" en script
+
+frontendP --> producer: 45. 🔴 Script en uso\npor Operador
+deactivate frontendP
+deactivate ws
+
+operator -> frontendO: 46. Ajustar velocidad\n(slider)
+frontendO -> ws: 47. Emit estado\nws.emit('sync:teleprompter', {\n  speed: 60\n})
+activate ws
+
+ws --> frontendP: 48. Event actualizado
+activate frontendP
+frontendP --> producer: 49. Ver velocidad\nactual: 60 WPM
+deactivate frontendP
+deactivate ws
+deactivate frontendO
+
+== 6. Jenkins CI/CD (Opcional) ==
+
+note over api, db #FFEB3B
+**CI/CD Automático con Jenkins:**
+• git push → GitHub Webhook → Jenkins
+• Jenkins ejecuta pipeline:
+  1. Build frontend
+  2. Build backend
+  3. Run tests
+  4. Docker build
+  5. Docker deploy
+• Contenedores reiniciados automáticamente
+• Zero downtime deployment
+end note
+
+@enduml

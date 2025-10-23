@@ -2,9 +2,71 @@
 
 Sistema de teleprompter estilo Winplus diseñado para entornos de producción de televisión y broadcasting.
 
+## 🏗️ Arquitectura del Sistema
+
+### Arquitectura Multi-Contenedor (Docker)
+
+El sistema utiliza una arquitectura de microservicios con 4 contenedores Docker:
+
+![Arquitectura de Contenedores](docs/Arquitectura%20de%20Contenedores%20-%20Sistema%20de%20Teleprompter.png)
+
+**Componentes principales:**
+- **Frontend** (React + Vite) - Puerto 5173/4173
+- **Backend** (Node.js + Express + Socket.IO) - Puertos 3000/3001
+- **MongoDB** (Base de datos) - Puerto 27017
+- **Jenkins** (CI/CD) - Puerto 8080
+
+### Flujo de Comunicación en Tiempo Real
+
+![Flujo de Comunicación](docs/Flujo%20de%20Comunicación%20-%20Escenario%20Completo.png)
+
+El sistema implementa sincronización en tiempo real mediante WebSocket:
+- **Productor** → Crea/edita scripts
+- **Backend** → Procesa y almacena en MongoDB
+- **Operador** → Recibe actualizaciones instantáneas
+- **Latencia** < 50ms en red local
+
+### Topología de Red Docker
+
+![Topología de Red](docs/Diagrama%20de%20Red%20-%20Docker%20Compose.png)
+
+**Red bridge: `teleprompter-network`**
+- Aislamiento de contenedores
+- Resolución DNS automática
+- Port mapping a localhost
+- Volúmenes persistentes
+
+📚 **Documentación completa:** Ver [docs/README.md](docs/README.md) para detalles técnicos de la arquitectura.
+
+---
+
 ## 🚀 Instalación y Ejecución
 
-### Modo Desarrollo
+### Opción 1: Docker (Recomendado para Producción)
+
+```bash
+# Clonar repositorio
+git clone https://github.com/wilmereleon/STP.git
+cd STP/Sistema\ de\ Teleprompter
+
+# Iniciar todos los servicios
+docker-compose up -d
+
+# Verificar estado
+docker-compose ps
+```
+
+**Acceso a servicios:**
+- 🎨 Frontend: http://localhost:5173
+- 🔧 Backend API: http://localhost:3000
+- 🗄️ MongoDB: mongodb://localhost:27017
+- 🔨 Jenkins: http://localhost:8080/jenkins
+
+**Credenciales por defecto:**
+- MongoDB: `admin` / `admin123`
+- Jenkins: Ver `GUIA-VALIDACION-JENKINS.md`
+
+### Opción 2: Modo Desarrollo Local
 
 ```bash
 # Instalar dependencias
@@ -16,7 +78,7 @@ npm run dev
 
 El servidor se ejecutará en `http://localhost:5173/`
 
-### Modo Producción (Electron)
+### Opción 3: Modo Producción (Electron)
 
 ```bash
 # Construir instalador para Windows
@@ -87,12 +149,35 @@ Consulta `PRUEBAS_FUNCIONALES.md` para ver la lista completa de casos de prueba 
 
 ## 🛠️ Stack Tecnológico
 
+### Frontend
 - **React 18.3.1** - Framework de UI
-- **TypeScript** - Tipado estático
+- **TypeScript 5.x** - Tipado estático
 - **Vite 6.3.5** - Build tool y dev server
 - **Electron 38.2.0** - Empaquetado desktop
-- **Tailwind CSS** - Estilos utilitarios
-- **shadcn/ui** - Componentes de UI
+- **Tailwind CSS 3.x** - Estilos utilitarios
+- **shadcn/ui + Radix UI** - Componentes de UI
+- **Socket.IO Client 4.x** - WebSocket en tiempo real
+- **Axios** - Cliente HTTP
+
+### Backend
+- **Node.js 18** - Runtime
+- **Express 4.21.2** - Framework web
+- **Socket.IO 4.8.1** - WebSocket server
+- **Mongoose 8.8.4** - ODM para MongoDB
+- **JWT** - Autenticación (jsonwebtoken + bcryptjs)
+- **Multer** - Gestión de archivos
+- **Morgan** - Logging de requests
+
+### Base de Datos
+- **MongoDB 7.0** - Base de datos NoSQL
+- 8 Collections optimizadas
+- Índices para búsquedas rápidas
+- Transacciones ACID
+
+### DevOps
+- **Docker & Docker Compose** - Contenedorización
+- **Jenkins LTS** - CI/CD automático
+- **Git** - Control de versiones
 
 ## 📖 Documentación
 
@@ -114,6 +199,16 @@ La documentación completa está organizada en la carpeta `docs/`:
 - **[Instalador](docs/instalacion/INSTALADOR.md)** - Guía de generación del instalador
 - **[Electron Setup](docs/instalacion/ELECTRON_SETUP.md)** - Configuración de Electron
 - **[Checklist Instalador](docs/instalacion/CHECKLIST_INSTALADOR.md)** - Verificación pre-release
+- **[Docker README](README-DOCKER.md)** - Guía completa de Docker
+- **[Guía Jenkins](GUIA-VALIDACION-JENKINS.md)** - Configuración CI/CD
+- **[Solución 404 Jenkins](SOLUCION-ERROR-404-JENKINS.md)** - Troubleshooting
+
+### 🏗️ Arquitectura
+- **[Diagramas PlantUML](docs/)** - Arquitectura visual del sistema
+  - `arquitectura-contenedores.puml` - Vista de componentes
+  - `flujo-comunicacion-completo.puml` - Secuencias de interacción
+  - `topologia-red-docker.puml` - Red Docker
+- **[README Arquitectura](docs/README.md)** - Documentación técnica completa
 
 ### 💻 Desarrollo
 - **[Plan de Refactorización](docs/desarrollo/PLAN_REFACTORIZACION.md)** - Arquitectura y mejoras
@@ -128,6 +223,37 @@ La documentación completa está organizada en la carpeta `docs/`:
 - **[Guidelines](src/guidelines/Guidelines.md)** - Guías de desarrollo
 
 ## 🔧 Configuración Avanzada
+
+### Docker
+
+El sistema incluye configuración Docker completa:
+
+```yaml
+# docker-compose.yml
+services:
+  frontend:   # React + Vite (puerto 5173)
+  backend:    # Express + Socket.IO (puertos 3000-3001)
+  mongo:      # MongoDB 7.0 (puerto 27017)
+  jenkins:    # Jenkins LTS (puerto 8080)
+```
+
+**Comandos útiles:**
+```bash
+# Ver logs en tiempo real
+docker-compose logs -f
+
+# Reiniciar servicios
+docker-compose restart
+
+# Ver estado de contenedores
+docker-compose ps
+
+# Acceder a MongoDB CLI
+docker exec -it teleprompter-mongo mongosh
+
+# Backup de base de datos
+docker exec teleprompter-mongo mongodump --out /backup
+```
 
 ### Electron
 

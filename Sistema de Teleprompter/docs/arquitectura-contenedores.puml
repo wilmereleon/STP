@@ -1,0 +1,169 @@
+@startuml Arquitectura de Contenedores - Sistema de Teleprompter
+
+title Arquitectura de Comunicación Multi-Contenedor\nSistema de Teleprompter v2.0
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam shadowing false
+
+' Definir estilos
+skinparam rectangle {
+    BackgroundColor<<frontend>> #E3F2FD
+    BorderColor<<frontend>> #1976D2
+    BorderThickness<<frontend>> 2
+    FontColor<<frontend>> #000000
+    
+    BackgroundColor<<backend>> #E8F5E9
+    BorderColor<<backend>> #388E3C
+    BorderThickness<<backend>> 2
+    FontColor<<backend>> #000000
+    
+    BackgroundColor<<database>> #FFF9C4
+    BorderColor<<database>> #F57C00
+    BorderThickness<<database>> 2
+    FontColor<<database>> #000000
+    
+    BackgroundColor<<cicd>> #FFEBEE
+    BorderColor<<cicd>> #C62828
+    BorderThickness<<cicd>> 2
+    FontColor<<cicd>> #000000
+}
+
+skinparam package {
+    BackgroundColor #F5F5F5
+    BorderColor #424242
+    BorderThickness 2
+}
+
+' Usuarios externos
+actor "👤 Operador\n(Teleprompter)" as operator
+actor "👤 Productor\n(Gestión Scripts)" as producer
+
+' Contenedores
+package "🌐 Docker Network: teleprompter-network" as network {
+    
+    rectangle "**FRONTEND**\n━━━━━━━━━━━━━━━\n⚛️ React + Vite\n━━━━━━━━━━━━━━━\n\n✓ Operator View\n✓ Producer View\n✓ Login\n\n🔌 Puertos:\n→ 5173 (Dev)\n→ 4173 (Preview)" as frontend <<frontend>>
+    
+    rectangle "**BACKEND**\n━━━━━━━━━━━━━━━\n🟢 Node.js + Express\n━━━━━━━━━━━━━━━\n\n✓ API REST (42 endpoints)\n✓ WebSocket Server\n✓ JWT Auth\n✓ Business Logic\n\n🔌 Puertos:\n→ 3000 (API)\n→ 3001 (WebSocket)" as backend <<backend>>
+    
+    rectangle "**MONGODB**\n━━━━━━━━━━━━━━━\n🍃 MongoDB 7.0\n━━━━━━━━━━━━━━━\n\n✓ 8 Collections\n✓ Índices optimizados\n✓ Transacciones ACID\n\n🔌 Puerto:\n→ 27017\n\n🔐 Credenciales:\nadmin:admin123" as mongo <<database>>
+    
+    rectangle "**JENKINS**\n━━━━━━━━━━━━━━━\n🔨 Jenkins LTS\n━━━━━━━━━━━━━━━\n\n✓ CI/CD Server\n✓ Pipelines automáticos\n✓ Build & Deploy\n✓ Testing\n\n🔌 Puertos:\n→ 8080 (Web)\n→ 50000 (Agent)" as jenkins <<cicd>>
+}
+
+' Volúmenes persistentes
+database "💾 mongo-data\n(Volumen Docker)" as mongoVol
+database "💾 jenkins-data\n(Volumen Docker)" as jenkinsVol
+
+' Comunicación entre usuarios y frontend
+operator -down-> frontend : **📡 HTTP**\nhttp://localhost:5173/operator\n\n• Ver scripts en runorder\n• Controlar teleprompter\n• Ajustar velocidad/tamaño
+producer -down-> frontend : **📡 HTTP**\nhttp://localhost:5173/producer\n\n• Crear/editar scripts\n• Gestionar biblioteca\n• Aprobar contenido
+
+' Comunicación Frontend <-> Backend
+frontend -down-> backend #1976D2 : **🔵 1. HTTP REST API**\nhttp://backend:3000/api\n\n**Endpoints principales:**\n• GET/POST /scripts\n• GET/POST /runorders\n• POST /auth/login\n• GET /config\n\n**Headers:**\nAuthorization: Bearer <JWT>
+
+frontend -down-> backend #388E3C : **🟢 2. WebSocket**\nws://backend:3000\n\n**Events emit:**\n• sync:teleprompter\n• sync:runorder\n\n**Events listen:**\n• script:created\n• script:updated\n• script:deleted\n• sync:teleprompter
+
+' Comunicación Backend <-> MongoDB
+backend -down-> mongo #F57C00 : **🟡 MongoDB Protocol**\nmongodb://admin:admin123@mongo:27017/teleprompter\n\n**Operaciones:**\n• CRUD Scripts\n• CRUD RunOrders\n• CRUD Users\n• Transactions\n\n**Collections:**\nscripts, runorders, users,\nconfigurations, macros,\nsessions, audits, locks
+
+' Comunicación Jenkins
+jenkins -up-> frontend #1976D2 : **🔨 Docker Build**\n\ndocker-compose build frontend\ndocker-compose up -d frontend\n✓ Health check
+
+jenkins -up-> backend #388E3C : **🔨 Docker Build**\n\ndocker-compose build backend\ndocker-compose up -d backend\n✓ Health check
+
+' Volúmenes
+mongo -left-> mongoVol : **💾 Persistencia**\n/data/db
+jenkins -right-> jenkinsVol : **💾 Persistencia**\n/var/jenkins_home
+
+' Notas adicionales
+note right of frontend #FFFDE7
+**📦 Tecnologías Frontend:**
+━━━━━━━━━━━━━━━━━━
+• React 18.3
+• TypeScript 5.x
+• Vite 6.3.5
+• TailwindCSS 3.x
+• Radix UI
+• Socket.IO Client 4.x
+• Axios
+• React Router DOM
+end note
+
+note right of backend #F1F8E9
+**📦 Tecnologías Backend:**
+━━━━━━━━━━━━━━━━━━
+• Node.js 18-alpine
+• Express 4.21.2
+• Socket.IO 4.8.1
+• Mongoose 8.8.4
+• JWT (jsonwebtoken)
+• bcryptjs
+• Multer (uploads)
+• Morgan (logging)
+end note
+
+note right of mongo #FFF3E0
+**📦 MongoDB Collections:**
+━━━━━━━━━━━━━━━━━━
+1. scripts (guiones)
+2. runorders (orden emisión)
+3. users (usuarios)
+4. configurations (config)
+5. macros (atajos)
+6. sessions (JWT refresh)
+7. audits (logs)
+8. locks (concurrencia)
+end note
+
+note left of jenkins #FCE4EC
+**📦 Jenkins Pipelines:**
+━━━━━━━━━━━━━━━━━━
+**1. Frontend Build**
+   • npm ci
+   • npm run lint
+   • npm run build
+   • npm test
+
+**2. Backend Build**
+   • npm ci
+   • npm run lint
+   • npm test
+
+**3. Full Deployment**
+   • docker-compose down
+   • docker-compose build
+   • docker-compose up -d
+   • health checks
+end note
+
+' Leyenda
+legend bottom left
+**📊 TABLA DE COMUNICACIÓN**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+|= 🔌 Tipo |= 📡 Protocolo |= 🚪 Puerto |= 🎯 Uso |
+| HTTP REST API | HTTP/1.1 | 3000 | CRUD Operations |
+| WebSocket | WS | 3000/3001 | Real-time Sync |
+| MongoDB | Wire Protocol | 27017 | Database |
+| Frontend Dev | HTTP/1.1 | 5173 | Development |
+| Frontend Prev | HTTP/1.1 | 4173 | Preview Build |
+| Jenkins Web | HTTP/1.1 | 8080 | CI/CD Interface |
+| Jenkins Agent | TCP | 50000 | Build Agents |
+
+**⚡ SINCRONIZACIÓN EN TIEMPO REAL:**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ **Operador ↔ Productor:** WebSocket bidireccional
+✓ **Multi-usuario:** Cambios se propagan automáticamente
+✓ **Estado compartido:** Teleprompter, RunOrder, Scripts
+✓ **Latencia:** < 50ms en red local
+
+**🔐 SEGURIDAD:**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ JWT Authentication (1h access, 7d refresh)
+✓ MongoDB con usuario/password
+✓ Red Docker aislada (bridge network)
+✓ CORS configurado en backend
+endlegend
+
+@enduml
