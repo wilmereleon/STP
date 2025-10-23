@@ -94,12 +94,38 @@ Consulta `PRUEBAS_FUNCIONALES.md` para ver la lista completa de casos de prueba 
 - **Tailwind CSS** - Estilos utilitarios
 - **shadcn/ui** - Componentes de UI
 
-## 📖 Recursos Adicionales
+## 📖 Documentación
 
-- `PRUEBAS_FUNCIONALES.md` - Casos de prueba detallados (48 pruebas)
-- `test-form.html` - Formulario interactivo de pruebas
-- `INSTALADOR.md` - Guía de generación del instalador
-- `Attributions.md` - Créditos y licencias
+La documentación completa está organizada en la carpeta `docs/`:
+
+### 📁 Guías de Usuario
+- **[Inicio Rápido](docs/guias/INICIO_RAPIDO_FORMULARIO.md)** - Cómo empezar a usar el sistema
+- **[Plantilla Excel](docs/guias/PLANTILLA_EXCEL.md)** - Formato para importar scripts
+- **[Layout WinPlus](docs/guias/LAYOUT_WINPLUS.md)** - Diseño y distribución de la interfaz
+- **[Resumen Ejecutivo](docs/guias/RESUMEN_EJECUTIVO.md)** - Visión general del proyecto
+
+### 🧪 Pruebas y Testing
+- **[Pruebas Funcionales](docs/pruebas/PRUEBAS_FUNCIONALES.md)** - Casos de prueba detallados (68 pruebas)
+- **[Testing Checklist](docs/pruebas/TESTING_CHECKLIST.md)** - Lista de verificación de pruebas
+- **[Instrucciones de Pruebas](docs/pruebas/INSTRUCCIONES_FORMULARIO_PRUEBAS.md)** - Guía del formulario de pruebas
+- **[Formulario Interactivo](test-form.html)** - Herramienta de testing visual
+
+### 🔧 Instalación y Deploy
+- **[Instalador](docs/instalacion/INSTALADOR.md)** - Guía de generación del instalador
+- **[Electron Setup](docs/instalacion/ELECTRON_SETUP.md)** - Configuración de Electron
+- **[Checklist Instalador](docs/instalacion/CHECKLIST_INSTALADOR.md)** - Verificación pre-release
+
+### 💻 Desarrollo
+- **[Plan de Refactorización](docs/desarrollo/PLAN_REFACTORIZACION.md)** - Arquitectura y mejoras
+- **[Guía de Migración V2](docs/desarrollo/GUIA_MIGRACION_V2.md)** - Migración a Store Architecture
+- **[Fase 1 Completada](docs/desarrollo/FASE1_COMPLETADA.md)** - Store Layer implementado
+- **[Fase 1 Progreso](docs/desarrollo/FASE1_PROGRESO.md)** - Historial Fase 1
+- **[Fase 2 Resumen](docs/desarrollo/FASE2_RESUMEN_COMPLETADO.md)** - Service Layer completado
+- **[Fase 2 Progreso](docs/desarrollo/FASE2_PROGRESO.md)** - Historial Fase 2
+
+### 📚 Otros Recursos
+- **[Attributions](src/Attributions.md)** - Créditos y licencias
+- **[Guidelines](src/guidelines/Guidelines.md)** - Guías de desarrollo
 
 ## 🔧 Configuración Avanzada
 
