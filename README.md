@@ -8,7 +8,8 @@ Sistema de teleprompter estilo **Winplus**, diseñado para entornos de producci�
 
 El sistema utiliza una arquitectura de microservicios con **4 contenedores Docker**:
 
-![Arquitectura de Contenedores](docs/Arquitectura%20de%20Contenedores%20-%20Sistema%20de%20Teleprompter.png)
+<img width="580" height="632" alt="image" src="https://github.com/user-attachments/assets/39666507-be55-49db-bba9-06c9600e106d" />
+
 
 **Componentes principales:**
 - **Frontend** (React + Vite) – Puertos 5173/4173  
@@ -18,7 +19,8 @@ El sistema utiliza una arquitectura de microservicios con **4 contenedores Docke
 
 ### Flujo de Comunicación en Tiempo Real
 
-![Flujo de Comunicación](docs/Flujo%20de%20Comunicación%20-%20Escenario%20Completo.png)
+<img width="1029" height="228" alt="image" src="https://github.com/user-attachments/assets/13c87171-876f-48d8-963f-e8a1714e8c56" />
+
 
 El sistema implementa sincronización en tiempo real mediante **WebSocket**:
 - **Productor** → Crea/edita scripts  
@@ -28,7 +30,9 @@ El sistema implementa sincronización en tiempo real mediante **WebSocket**:
 
 ### Topología de Red Docker
 
-![Topología de Red](docs/Diagrama%20de%20Red%20-%20Docker%20Compose.png)
+<img width="415" height="505" alt="image" src="https://github.com/user-attachments/assets/d5eff105-eb0f-44fb-a532-7fa9b54bc573" />
+
+
 
 **Red bridge: `teleprompter-network`**
 - Aislamiento de contenedores  
