@@ -1,7 +1,3 @@
-Aquí tienes la **versión corregida y optimizada** de tu documento `README.md`. He ajustado redacción, consistencia en títulos, ortografía y estilo técnico para que sea más claro, profesional y cohesivo, manteniendo toda la información original:  
-
----
-
 # 📜 Sistema de Teleprompter Profesional
 
 Sistema de teleprompter estilo **Winplus**, diseñado para entornos de producción de televisión y broadcasting.
