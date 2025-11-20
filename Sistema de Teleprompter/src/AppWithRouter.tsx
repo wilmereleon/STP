@@ -24,15 +24,8 @@ export function AppWithRouter() {
         {/* Vista de Operador (teleprompter) */}
         <Route path="/operator" element={<App />} />
         
-        {/* Vista de Productor (gestión de scripts) - Requiere autenticación */}
-        <Route 
-          path="/producer" 
-          element={
-            <ProtectedRoute>
-              <ProducerView />
-            </ProtectedRoute>
-          } 
-        />
+        {/* Vista de Productor (gestión de scripts) - Acceso libre */}
+        <Route path="/producer" element={<ProducerView />} />
         
         {/* Login */}
         <Route path="/login" element={<LoginView />} />

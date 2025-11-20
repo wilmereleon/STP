@@ -64,18 +64,25 @@ export function ProducerView() {
   };
 
   const loadScripts = async () => {
+    console.log('🔄 Cargando scripts...');
     setLoading(true);
     try {
-      const { scripts: loadedScripts } = await apiClient.getScripts({
+      const result = await apiClient.getScripts({
         page: 1,
         limit: 50
       });
-      setScripts(loadedScripts);
-    } catch (error) {
-      console.error('Error al cargar scripts:', error);
+      console.log('✅ Scripts cargados:', result);
+      setScripts(result.scripts);
+      toast({
+        title: 'Scripts cargados',
+        description: `${result.scripts.length} script(s) encontrado(s)`
+      });
+    } catch (error: any) {
+      console.error('❌ Error al cargar scripts:', error);
+      console.error('Error response:', error.response);
       toast({
         title: 'Error',
-        description: 'No se pudieron cargar los scripts',
+        description: error.response?.data?.error || 'No se pudieron cargar los scripts',
         variant: 'destructive'
       });
     } finally {
@@ -115,16 +122,18 @@ export function ProducerView() {
   };
 
   const handleCreateScript = async () => {
+    console.log('➕ Creando nuevo script...');
     try {
       const newScript = await apiClient.createScript({
         title: 'Nuevo Script',
-        content: '',
+        content: 'Escribe aquí tu guion...', // Contenido por defecto
         category: 'Otro',
         status: 'Borrador',
         priority: 'Media',
         duration: 0
       });
 
+      console.log('✅ Script creado:', newScript);
       setScripts([newScript, ...scripts]);
       setSelectedScript(newScript);
 
@@ -132,13 +141,24 @@ export function ProducerView() {
         title: 'Script creado',
         description: 'Nuevo script creado exitosamente'
       });
-    } catch (error) {
-      console.error('Error al crear script:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo crear el script',
-        variant: 'destructive'
-      });
+    } catch (error: any) {
+      console.error('❌ Error al crear script:', error);
+      console.error('Error response:', error.response);
+      
+      // Detectar error de modo invitado
+      if (error.response?.data?.code === 'GUEST_NOT_ALLOWED') {
+        toast({
+          title: 'Inicio de sesión requerido',
+          description: error.response.data.message || 'Los usuarios invitados solo tienen acceso de lectura. Por favor inicia sesión para crear contenido.',
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: error.response?.data?.error || 'No se pudo crear el script',
+          variant: 'destructive'
+        });
+      }
     }
   };
 
@@ -162,13 +182,22 @@ export function ProducerView() {
         title: 'Script actualizado',
         description: 'Los cambios se guardaron correctamente'
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al actualizar script:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo guardar el script',
-        variant: 'destructive'
-      });
+      
+      if (error.response?.data?.code === 'GUEST_NOT_ALLOWED') {
+        toast({
+          title: 'Inicio de sesión requerido',
+          description: error.response.data.message || 'Los usuarios invitados solo tienen acceso de lectura.',
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'No se pudo guardar el script',
+          variant: 'destructive'
+        });
+      }
     }
   };
 
@@ -185,13 +214,22 @@ export function ProducerView() {
         title: 'Script eliminado',
         description: 'El script se eliminó correctamente'
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al eliminar script:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo eliminar el script',
-        variant: 'destructive'
-      });
+      
+      if (error.response?.data?.code === 'GUEST_NOT_ALLOWED') {
+        toast({
+          title: 'Inicio de sesión requerido',
+          description: error.response.data.message || 'Los usuarios invitados solo tienen acceso de lectura.',
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'No se pudo eliminar el script',
+          variant: 'destructive'
+        });
+      }
     }
   };
 
@@ -332,7 +370,7 @@ export function ProducerView() {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium truncate">{script.title}</h3>
                       <p className="text-sm text-muted-foreground truncate">
-                        {script.content.substring(0, 50)}...
+                        {(script as any).contentPreview || script.content?.substring(0, 50) || 'Sin contenido'}
                       </p>
                       <div className="flex gap-2 mt-2">
                         <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">

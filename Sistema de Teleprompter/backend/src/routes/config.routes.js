@@ -6,12 +6,32 @@ const { Configuration, AuditLog } = require('../models');
 /**
  * GET /api/config
  * Obtener configuración del usuario (crea una por defecto si no existe)
+ * En modo invitado, devuelve la configuración por defecto sin guardarla
  */
 router.get('/', async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user ? req.user.userId : null;
     
-    // Buscar o crear configuración
+    // Modo invitado: devolver configuración por defecto
+    if (!userId) {
+      const defaultConfig = {
+        theme: 'dark',
+        fontSize: 32,
+        scrollSpeed: 50,
+        textColor: '#FFFFFF',
+        backgroundColor: '#000000',
+        fontFamily: 'Arial',
+        textAlign: 'center',
+        lineHeight: 1.5,
+        guidelineEnabled: true,
+        guidelinePosition: 50,
+        guidelineColor: '#FF0000',
+        guidelineThickness: 2
+      };
+      return res.json({ config: defaultConfig });
+    }
+    
+    // Usuario autenticado: buscar o crear configuración
     let config = await Configuration.findOne({ userId });
     
     if (!config) {

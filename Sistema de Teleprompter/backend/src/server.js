@@ -20,10 +20,17 @@ const setupRoutes = require('./routes/index');
 const app = express();
 const server = http.createServer(app);
 
+// Configurar orígenes permitidos para CORS
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : ['http://localhost:5173'];
+
+console.log('🌐 Orígenes CORS permitidos:', allowedOrigins);
+
 // Configurar Socket.IO para sincronización en tiempo real
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
   }
@@ -37,7 +44,7 @@ app.use(helmet({
 
 // CORS
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: allowedOrigins,
   credentials: true
 }));
 

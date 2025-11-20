@@ -1,5 +1,5 @@
 const express = require('express');
-const { authenticateToken } = require('../middleware/auth.middleware');
+const { authenticateToken, optionalAuth } = require('../middleware/auth.middleware');
 
 // Importar routers
 const authRoutes = require('./auth.routes');
@@ -16,11 +16,12 @@ const setupRoutes = (app) => {
   // Rutas públicas (sin autenticación)
   app.use('/api/auth', authRoutes);
   
-  // Rutas protegidas (requieren autenticación)
-  app.use('/api/scripts', authenticateToken, scriptRoutes);
-  app.use('/api/runorders', authenticateToken, runorderRoutes);
-  app.use('/api/config', authenticateToken, configRoutes);
-  app.use('/api/macros', authenticateToken, macroRoutes);
+  // Rutas con autenticación opcional (permite modo invitado)
+  // Los usuarios invitados tienen acceso de solo lectura
+  app.use('/api/scripts', optionalAuth, scriptRoutes);
+  app.use('/api/runorders', optionalAuth, runorderRoutes);
+  app.use('/api/config', optionalAuth, configRoutes);
+  app.use('/api/macros', optionalAuth, macroRoutes);
   
   // Health check endpoint
   app.get('/health', (req, res) => {

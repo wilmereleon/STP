@@ -1,0 +1,12 @@
+﻿{
+    "message":  "Login exitoso",
+    "accessToken":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGZhOWExODNmNmFkNDQ0NTFjZTVmNDciLCJlbWFpbCI6ImFkbWluQHRlbGVwcm9tcHRlci5jb20iLCJyb2xlIjoiQWRtaW4iLCJpYXQiOjE3NjM2NjU5MTQsImV4cCI6MTc2MzY2OTUxNH0.rimVhAwrg_H1EJlH1EOao-4YEdCWg5kx_riRYO3ts0Y",
+    "refreshToken":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGZhOWExODNmNmFkNDQ0NTFjZTVmNDciLCJpYXQiOjE3NjM2NjU5MTQsImV4cCI6MTc2NDI3MDcxNH0.ptNV3mpEVLoUlZj33bXin91k46uNqH8mdl-f2KC2i08",
+    "user":  {
+                 "id":  "68fa9a183f6ad44451ce5f47",
+                 "email":  "admin@teleprompter.com",
+                 "name":  "Administrador",
+                 "role":  "Admin",
+                 "createdAt":  "2025-10-23T21:11:52.842Z"
+             }
+}

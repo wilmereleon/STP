@@ -567,7 +567,7 @@ db.users.insertOne({
   _id: adminId,
   name: "Administrador",
   email: "admin@teleprompter.com",
-  password: "$2b$10$YourBcryptHashedPasswordHere", // Cambiar en producción
+  password: "$2a$10$.NUbc8F9fO4r1P85WfZRlO.znz2RsnmIu9s8MP90Rw48oxBc6ey2i", // Hash de 'admin123'
   role: "Admin",
   avatar: null,
   isActive: true,

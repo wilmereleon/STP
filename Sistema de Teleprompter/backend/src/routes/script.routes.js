@@ -4,6 +4,21 @@ const { body, query, param, validationResult } = require('express-validator');
 const { Script, AuditLog } = require('../models');
 
 /**
+ * Middleware para verificar que el usuario NO es invitado
+ * Bloquea operaciones de escritura (POST, PUT, DELETE) para invitados
+ */
+const requireAuth = (req, res, next) => {
+  if (!req.user) {
+    return res.status(403).json({ 
+      error: 'Esta acción requiere iniciar sesión',
+      code: 'GUEST_NOT_ALLOWED',
+      message: 'Los usuarios invitados solo tienen acceso de lectura. Por favor inicia sesión para crear o modificar contenido.'
+    });
+  }
+  next();
+};
+
+/**
  * GET /api/scripts
  * Listar todos los scripts del usuario (con paginación y filtros)
  */
@@ -21,16 +36,16 @@ router.get('/',
         return res.status(400).json({ errors: errors.array() });
       }
       
-      const userId = req.user.userId; // Proviene del middleware de autenticación
+      // Soportar modo invitado (req.user === null)
+      const userId = req.user ? req.user.userId : null;
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
       const skip = (page - 1) * limit;
       
       // Construir query
-      const query = { 
-        userId,
-        deletedAt: null // Solo scripts no eliminados
-      };
+      const query = userId 
+        ? { createdBy: userId, deletedAt: null }  // Usuario autenticado: sus scripts
+        : { deletedAt: null };                    // Invitado: todos los scripts públicos
       
       // Filtro por texto
       if (req.query.search) {
@@ -46,17 +61,22 @@ router.get('/',
       }
       
       // Ejecutar query con paginación
-      const [scripts, total] = await Promise.all([
-        Script.find(query)
-          .select('-content') // No incluir contenido completo en lista
-          .sort({ updatedAt: -1 })
-          .skip(skip)
-          .limit(limit),
-        Script.countDocuments(query)
-      ]);
+      const scripts = await Script.find(query)
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limit);
+      
+      const total = await Script.countDocuments(query);
+      
+      // Crear preview del contenido (primeros 100 caracteres)
+      const scriptsWithPreview = scripts.map(script => ({
+        ...script.toObject(),
+        contentPreview: script.content ? script.content.substring(0, 100) : '',
+        content: undefined // No enviar contenido completo
+      }));
       
       res.json({
-        scripts,
+        scripts: scriptsWithPreview,
         pagination: {
           page,
           limit,
@@ -76,7 +96,12 @@ router.get('/',
  * POST /api/scripts
  * Crear nuevo script
  */
+/**
+ * POST /api/scripts
+ * Crear nuevo script
+ */
 router.post('/',
+  requireAuth,  // Requiere autenticación (bloquea invitados)
   [
     body('title').trim().isLength({ min: 1, max: 255 }).withMessage('Título requerido (1-255 chars)'),
     body('content').optional().isString().withMessage('Content debe ser string'),
@@ -135,15 +160,15 @@ router.get('/:id',
         return res.status(400).json({ errors: errors.array() });
       }
       
-      const userId = req.user.userId;
+      const userId = req.user ? req.user.userId : null;
       const scriptId = req.params.id;
       
-      // Buscar script (verificar ownership)
-      const script = await Script.findOne({ 
-        _id: scriptId, 
-        userId,
-        deletedAt: null 
-      });
+      // Buscar script (verificar ownership si hay usuario autenticado)
+      const query = userId 
+        ? { _id: scriptId, userId, deletedAt: null }
+        : { _id: scriptId, deletedAt: null };
+        
+      const script = await Script.findOne(query);
       
       if (!script) {
         return res.status(404).json({ error: 'Script no encontrado' });
@@ -162,7 +187,12 @@ router.get('/:id',
  * PUT /api/scripts/:id
  * Actualizar script
  */
+/**
+ * PUT /api/scripts/:id
+ * Actualizar script
+ */
 router.put('/:id',
+  requireAuth,  // Requiere autenticación (bloquea invitados)
   [
     param('id').isMongoId().withMessage('ID inválido'),
     body('title').optional().trim().isLength({ min: 1, max: 255 }).withMessage('Título (1-255 chars)'),
@@ -226,6 +256,7 @@ router.put('/:id',
  * Eliminar script (soft delete)
  */
 router.delete('/:id',
+  requireAuth,  // Requiere autenticación (bloquea invitados)
   [
     param('id').isMongoId().withMessage('ID inválido')
   ],
@@ -277,6 +308,7 @@ router.delete('/:id',
  * Duplicar script
  */
 router.post('/:id/duplicate',
+  requireAuth,  // Requiere autenticación (bloquea invitados)
   [
     param('id').isMongoId().withMessage('ID inválido')
   ],

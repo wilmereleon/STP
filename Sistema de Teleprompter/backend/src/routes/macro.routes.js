@@ -6,13 +6,19 @@ const { Macro, AuditLog } = require('../models');
 /**
  * GET /api/macros
  * Listar todos los macros del usuario
+ * En modo invitado, devuelve los macros globales/por defecto
  */
 router.get('/', async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user ? req.user.userId : null;
+    
+    // Determinar query según modo
+    const query = userId 
+      ? { userId }           // Usuario autenticado: sus macros
+      : {};                  // Invitado: todos los macros públicos
     
     // Obtener todos los macros ordenados por categoría y key
-    const macros = await Macro.find({ userId })
+    const macros = await Macro.find(query)
       .sort({ category: 1, key: 1 });
     
     res.json({ 

@@ -20,13 +20,13 @@ router.get('/',
         return res.status(400).json({ errors: errors.array() });
       }
       
-      const userId = req.user.userId;
+      const userId = req.user ? req.user.userId : null;
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
       const skip = (page - 1) * limit;
       
       // Construir query
-      const query = { userId };
+      const query = userId ? { userId } : {};
       
       if (req.query.isActive !== undefined) {
         query.isActive = req.query.isActive === 'true';

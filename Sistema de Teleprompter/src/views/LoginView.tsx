@@ -23,10 +23,13 @@ export function LoginView() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔐 handleLogin called - Email:', email, 'Password:', password ? '***' : 'empty');
     setLoading(true);
 
     try {
+      console.log('📡 Enviando request de login...');
       const { user } = await apiClient.login({ email, password });
+      console.log('✅ Login exitoso, usuario:', user);
       
       toast({
         title: 'Inicio de sesión exitoso',
@@ -34,19 +37,21 @@ export function LoginView() {
       });
 
       // Redirigir según rol
+      console.log('🔀 Redirigiendo según rol:', user.role);
       if (user.role === 'Producer' || user.role === 'Admin') {
         navigate('/producer');
       } else {
         navigate('/operator');
       }
     } catch (error: any) {
-      console.error('Error al iniciar sesión:', error);
+      console.error('❌ Error al iniciar sesión:', error);
       toast({
         title: 'Error de autenticación',
         description: error.response?.data?.error || 'Credenciales inválidas',
         variant: 'destructive'
       });
     } finally {
+      console.log('🏁 handleLogin finished');
       setLoading(false);
     }
   };
@@ -109,17 +114,40 @@ export function LoginView() {
               <p>Usuario demo: admin@teleprompter.com</p>
               <p className="text-xs mt-1">Ver 01-init.js para credenciales</p>
             </div>
-            
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={() => navigate('/operator')}
-            >
-              Continuar como invitado (Operator)
-            </Button>
           </CardFooter>
         </form>
+        
+        {/* Opciones sin autenticación fuera del form */}
+        <CardFooter className="flex flex-col gap-2 border-t pt-4">
+          <p className="text-xs text-center text-muted-foreground mb-2">
+            Continuar sin autenticación:
+          </p>
+          
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              console.log('Navegando a /producer');
+              navigate('/producer');
+            }}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Continuar como Productor
+          </Button>
+          
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full"
+            onClick={() => {
+              console.log('Navegando a /operator');
+              navigate('/operator');
+            }}
+          >
+            Continuar como Operador
+          </Button>
+        </CardFooter>
       </Card>
     </div>
   );

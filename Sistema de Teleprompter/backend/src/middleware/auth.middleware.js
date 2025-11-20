@@ -112,9 +112,35 @@ const requireAdmin = requireRole(['Admin']);
  */
 const requireProducerOrAdmin = requireRole(['Admin', 'Producer']);
 
+/**
+ * Middleware de autenticación opcional
+ * Permite acceso de invitado (guest) si no hay token
+ * Si hay token, lo valida normalmente
+ */
+const optionalAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.replace('Bearer ', '');
+    
+    // Si no hay token, continuar como invitado
+    if (!token) {
+      req.user = null;
+      return next();
+    }
+    
+    // Si hay token, validarlo usando el middleware estándar
+    return authenticateToken(req, res, next);
+    
+  } catch (error) {
+    console.error('Error en optionalAuth:', error);
+    res.status(500).json({ error: 'Error en autenticación opcional' });
+  }
+};
+
 module.exports = {
   authenticateToken,
   requireRole,
   requireAdmin,
-  requireProducerOrAdmin
+  requireProducerOrAdmin,
+  optionalAuth
 };
