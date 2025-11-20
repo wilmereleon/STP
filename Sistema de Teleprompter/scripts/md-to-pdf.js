@@ -1,9 +1,9 @@
 const fs = require('fs');
 const path = require('path');
-const marked = require('marked');
 const puppeteer = require('puppeteer');
 
 (async () => {
+  const { marked } = await import('marked');
   try {
     const mdPath = path.resolve(__dirname, '..', 'test-scripts', 'reports', 'incident_report_2025-11-20.md');
     const outPdf = path.resolve(__dirname, '..', 'test-scripts', 'reports', 'incident_report_2025-11-20.pdf');

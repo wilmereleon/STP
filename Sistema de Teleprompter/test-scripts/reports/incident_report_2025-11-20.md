@@ -88,3 +88,43 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "test-scripts\tc_040_login.p
 **Creado por:** QA Team
 **Contacto:** qa@teleprompter.local
 
+---
+
+**Anexo A — Resultado automatizado: TC-040 (Login válido)**
+
+- **Caso:** TC-040
+- **Método de ejecución:** Script PowerShell automatizado `test-scripts/tc_040_login.ps1`
+- **Comando ejecutado:**
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "test-scripts\tc_040_login.ps1"
+```
+
+- **Fecha / Hora (ejecución):** 2025-11-20 19:11 (aprox.)
+- **Resultado:** PASS
+- **Detalles devueltos:** `accessToken`, `refreshToken` y objeto `user`.
+- **Usuario verificado:** `admin@teleprompter.com` (role: Admin)
+- **Evidencia generada:** `test-scripts/results/tc_040_login_result.json` (archivo JSON con tokens y datos de usuario). Revisa este archivo para la respuesta completa.
+- **Observaciones:** Este test valida conectividad y credenciales del endpoint `/api/auth/login`. Se recomienda ejecutar este test como paso de humo en el pipeline CI antes del despliegue para garantizar disponibilidad básica del servicio.
+ 
+**Extracto de respuesta (tokens parcialmente enmascarados)**
+
+A continuación se incluye un extracto enmascarado de la respuesta guardada en `test-scripts/results/tc_040_login_result.json`. Por seguridad los tokens se muestran parcialmente (prefijo) en lugar del valor completo.
+
+```json
+{
+  "message": "Login exitoso",
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6... [token enmascarado]",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6... [token enmascarado]",
+  "user": {
+    "id": "68fa9a183f6ad44451ce5f47",
+    "email": "admin@teleprompter.com",
+    "name": "Administrador",
+    "role": "Admin",
+    "createdAt": "2025-10-23T21:11:52.842Z"
+  }
+}
+```
+
+Para ver la respuesta completa (incluye tokens) revisa el archivo `test-scripts/results/tc_040_login_result.json` en el repositorio. No se recomienda publicar los tokens completos en sistemas públicos.
+
