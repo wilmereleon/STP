@@ -1,0 +1,38 @@
+# Socket.IO Log - Incidente TC-020 (Latencia en sincronización)
+# Generado: 2025-11-20T19:12:05Z
+# Entorno: Local (docker-compose) - Backend: http://localhost:3000
+# Nota: registro simulado para evidencia en el incidente (latencia observada = 65ms)
+
+2025-11-20T19:10:02.123Z  INFO  [socket.io] server started on /socket.io
+2025-11-20T19:10:05.451Z  INFO  [socket.io] new connection: socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  ip=127.0.0.1
+2025-11-20T19:10:05.452Z  DEBUG [socket.io] handshake complete for socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  auth={ userId: '68fa9a183f6ad44451ce5f47', role: 'Admin' }
+
+-- Sync update cycle start --
+2025-11-20T19:11:00.512Z  DEBUG [socket.io] emit -> socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  event=sync:update  payloadSize=1524 bytes  emitTs=2025-11-20T19:11:00.512Z
+2025-11-20T19:11:00.577Z  DEBUG [socket.io] received ack <- socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  event=sync:update  recvTs=2025-11-20T19:11:00.577Z
+2025-11-20T19:11:00.577Z  WARN  [socket.io] RTT measured for socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  event=sync:update  rttMs=65  thresholdMs=50
+2025-11-20T19:11:00.578Z  INFO  [socket.io] record-metric: { socketId: "kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d", event: "sync:update", rttMs: 65, payloadSize: 1524 }
+
+2025-11-20T19:11:30.123Z  DEBUG [socket.io] emit -> socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  event=sync:update  payloadSize=3420 bytes  emitTs=2025-11-20T19:11:30.123Z
+2025-11-20T19:11:30.191Z  DEBUG [socket.io] received ack <- socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  event=sync:update  recvTs=2025-11-20T19:11:30.191Z
+2025-11-20T19:11:30.191Z  WARN  [socket.io] RTT measured for socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  event=sync:update  rttMs=68  thresholdMs=50
+2025-11-20T19:11:30.191Z  INFO  [socket.io] record-metric: { socketId: "kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d", event: "sync:update", rttMs: 68, payloadSize: 3420 }
+
+-- Network condition note --
+2025-11-20T19:12:00.000Z  INFO  [network] simulating congestion: latency +20ms, packet-loss 0.1%
+
+2025-11-20T19:12:05.007Z  DEBUG [socket.io] emit -> socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  event=sync:update  payloadSize=2048 bytes  emitTs=2025-11-20T19:12:05.007Z
+2025-11-20T19:12:05.073Z  DEBUG [socket.io] received ack <- socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  event=sync:update  recvTs=2025-11-20T19:12:05.073Z
+2025-11-20T19:12:05.073Z  WARN  [socket.io] RTT measured for socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  event=sync:update  rttMs=66  thresholdMs=50
+2025-11-20T19:12:05.073Z  INFO  [socket.io] record-metric: { socketId: "kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d", event: "sync:update", rttMs: 66, payloadSize: 2048 }
+
+2025-11-20T19:12:30.512Z  DEBUG [socket.io] emit -> socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  event=sync:update  payloadSize=1500 bytes  emitTs=2025-11-20T19:12:30.512Z
+2025-11-20T19:12:30.572Z  DEBUG [socket.io] received ack <- socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  event=sync:update  recvTs=2025-11-20T19:12:30.572Z
+2025-11-20T19:12:30.572Z  WARN  [socket.io] RTT measured for socketId=kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d  event=sync:update  rttMs=60  thresholdMs=50
+2025-11-20T19:12:30.572Z  INFO  [socket.io] record-metric: { socketId: "kc9f7b2d-1a2b-4c3d-a9f0-1e2f3a4b5c6d", event: "sync:update", rttMs: 60, payloadSize: 1500 }
+
+-- Summary metrics (period 19:11:00 - 19:13:00) --
+2025-11-20T19:13:01.000Z  INFO  [metrics] socketio.rtt.avg=64.75ms socketio.rtt.p95=68ms socketio.events.sync-update.count=5
+2025-11-20T19:13:01.001Z  WARN  [alert] threshold-exceeded: socketio.rtt.p95 (68ms) > configured.threshold (50ms)
+
+2025-11-20T19:13:10.000Z  INFO  [recommendation] Optimizations suggested: send deltas, enable per-message compression, reduce payload size, add rate-limiting and backpressure, consider Redis adapter for horizontal scaling.
