@@ -1,0 +1,55 @@
+﻿diff --git a/src/App.tsx b/src/App.tsx
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -247,22 +247,32 @@
+-    // Agregar cada script como un item del Run Order
+-    scripts.forEach((script, index) => {
+-      const newItem = {
+-        id: ${Date.now()}-,
+-        title: script.title,
+-        duration: '00:00',
+-        status: 'ready' as const,
+-        text: script.text,
+-        sourceFile: fileName // Opcional: guardar referencia al archivo fuente
+-      };
+-
+-      addItem(newItem);
+-    });
+-
+-    // Activar el primer script cargado
+-    if (scripts.length > 0) {
+-      const firstItemId = ${Date.now()}-0;
+-      setTimeout(() => {
+-        setActiveItem(firstItemId);
+-        setText(scripts[0].text);
+-      }, 100);
+-    }
++    const sessionId = Date.now().toString();
++    let firstItemId: string | null = null;
++
++    // Agregar cada script como un item del Run Order
++    scripts.forEach((script, index) => {
++      const itemId = ${sessionId}-;
++      const newItem = {
++        id: itemId,
++        title: script.title,
++        duration: '00:00',
++        status: 'ready' as const,
++        text: script.text,
++        sourceFile: fileName // Opcional: guardar referencia al archivo fuente
++      };
++
++      addItem(newItem);
++
++      if (index === 0) {
++        firstItemId = itemId;
++      }
++    });
++
++    // Activar el primer script cargado
++    if (firstItemId) {
++      setTimeout(() => {
++        setActiveItem(firstItemId);
++        setText(scripts[0].text);
++      }, 100);
++    }
