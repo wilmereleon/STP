@@ -163,3 +163,9 @@ pm run electron:build:win genera el instalador.
 - Basado en [Teleprompter estilo Winplus – Figma](https://www.figma.com/design/gHWcL5pOEAzOQXOdRes302/Teleprompter-estilo-Winplus).
 - Para bugs o mejoras, completa y exporta el formulario 	est-form.html.
 - Licencia: consulta LICENSE para detalles.
+
+## 🖼️ Interfaz gráfica
+Recreamos el layout Winplus: run order/editor a la izquierda, controles de transporte centrados y la ventana flotante sincronizada en un monitor secundario. La captura destaca la línea guía, badges de estado y los iconos de salto para apuntar al lector.
+
+![Interfaz del teleprompter](Sistema%20de%20Teleprompter/img/pT.png)
+
