@@ -84,12 +84,14 @@ export default function App() {
   // ===== DETECCIÓN DE VENTANA EMERGENTE / POPUP WINDOW DETECTION =====
   /**
    * Si popup=true en URL, renderiza TeleprompterWindow (modo slave)
-   * If popup=true in URL, render TeleprompterWindow (slave mode)
+   * Si mirror=x está presente, activa espejo horizontal automáticamente
    */
-  const isPopupWindow = new URLSearchParams(window.location.search).get('popup') === 'true';
+  const searchParams = new URLSearchParams(window.location.search);
+  const isPopupWindow = searchParams.get('popup') === 'true';
+  const autoMirror = searchParams.get('mirror');
   
   if (isPopupWindow) {
-    return <TeleprompterWindow />;
+    return <TeleprompterWindow autoMirrorX={autoMirror === 'x'} autoMirrorY={autoMirror === 'y'} />;
   }
 
   // ===== STORE INTEGRATION / INTEGRACIÓN CON STORES =====

@@ -32,6 +32,8 @@ interface TeleprompterScreenProps {
   isManualScrolling?: boolean;
   onJumpToPosition?: (position: number) => void;
   guideLinePosition?: number;
+  mirrorX?: boolean;
+  mirrorY?: boolean;
 }
 
 /**
@@ -73,7 +75,9 @@ export function TeleprompterScreen({
   setScrollPosition,
   isManualScrolling = false, // Mantenido por compatibilidad pero no usado / Kept for compatibility but not used
   onJumpToPosition,
-  guideLinePosition = 50
+  guideLinePosition = 50,
+  mirrorX = false,
+  mirrorY = false
 }: TeleprompterScreenProps) {
   // ===== REFERENCIAS / REFERENCES =====
   // Referencia al contenedor principal de scroll / Reference to main scroll container
@@ -115,9 +119,11 @@ export function TeleprompterScreen({
    * Algoritmo / Algorithm:
    * 1. Calcula delta time entre frames para scroll consistente
    * 2. Velocidad base: speed × 14 px/s (optimizado para lectura)
-   * 3. Incrementa posición según velocidad y tiempo transcurrido
+   * 3. Acumula incrementos sub-píxel para mejor fluidez
    * 4. Detecta cuando está a 100px del final
    * 5. Espera 1 segundo y llama onEnd()
+   * 
+   * MEJORA: Acumulador sub-píxel para evitar pérdida de precisión
    * 
    * Se detiene si / Stops if:
    * - isPlaying = false
@@ -127,6 +133,7 @@ export function TeleprompterScreen({
     
     let animationFrame: number | null = null;
     let lastTimestamp: number | null = null;
+    let subPixelAccumulator = 0; // Acumulador para incrementos sub-píxel
 
     /**
      * Función de animación que se llama en cada frame
@@ -139,6 +146,7 @@ export function TeleprompterScreen({
       // **STOP CONDITION: Not playing**
       if (!isPlaying) {
         lastTimestamp = null;
+        subPixelAccumulator = 0; // Reset acumulador
         return;
       }
       
@@ -148,41 +156,38 @@ export function TeleprompterScreen({
       // Calcular tiempo transcurrido desde último frame / Calculate elapsed time since last frame
       const elapsed = timestamp - lastTimestamp;
       
-      // **CÁLCULO DE VELOCIDAD: Más fluido y lento**
-      // **SPEED CALCULATION: Smoother and slower**
+      // **CÁLCULO DE VELOCIDAD CON ACUMULADOR SUB-PÍXEL**
+      // **SPEED CALCULATION WITH SUB-PIXEL ACCUMULATOR**
       const pixelsPerSecond = speed * 14; // 14 es más lento y suave / 14 is slower and smoother
       const increment = (pixelsPerSecond * elapsed) / 1000; // Convertir ms a segundos / Convert ms to seconds
-      const newPos = scrollPositionRef.current + increment; // Usar ref para obtener valor actual
+      
+      // Acumular incremento sub-píxel
+      subPixelAccumulator += increment;
+      
+      // Solo actualizar cuando tenemos >= 0.1px acumulados
+      if (Math.abs(subPixelAccumulator) >= 0.1) {
+        const newPos = scrollPositionRef.current + subPixelAccumulator; // Usar ref para obtener valor actual
+        subPixelAccumulator = 0; // Reset tras aplicar
 
-      // **DETECCIÓN DE FINAL DEL TEXTO / END-OF-TEXT DETECTION**
-      if (containerRef.current) {
-        const container = containerRef.current;
-        const maxScroll = container.scrollHeight - container.clientHeight; // Scroll máximo posible / Maximum possible scroll
-        const endThreshold = maxScroll - 100; // Umbral: 100px antes del final / Threshold: 100px before end
-        
-        // Log de debug para ver valores (solo una vez)
-        if (lastTimestamp === timestamp) {
-          console.log('📐 Scroll metrics:', {
-            scrollHeight: container.scrollHeight,
-            clientHeight: container.clientHeight,
-            maxScroll,
-            endThreshold,
-            currentPos: newPos,
-            reachedEnd: newPos >= endThreshold
-          });
+        // **DETECCIÓN DE FINAL DEL TEXTO / END-OF-TEXT DETECTION**
+        if (containerRef.current) {
+          const container = containerRef.current;
+          const maxScroll = container.scrollHeight - container.clientHeight; // Scroll máximo posible / Maximum possible scroll
+          const endThreshold = maxScroll - 100; // Umbral: 100px antes del final / Threshold: 100px before end
+          
+          // Si llegó al umbral de fin (SOLO si realmente está cerca del final)
+          // If reached end threshold (ONLY if really close to the end)
+          if (newPos >= endThreshold && newPos >= maxScroll - 200) {
+            console.log('🏁 TeleprompterScreen: reached end threshold, calling onEnd() in 1s');
+            setTimeout(() => onEnd(), 1000); // Esperar 1 segundo antes de notificar / Wait 1 second before notifying
+            return;
+          }
         }
-        
-        // Si llegó al umbral de fin (SOLO si realmente está cerca del final)
-        // If reached end threshold (ONLY if really close to the end)
-        if (newPos >= endThreshold && newPos >= maxScroll - 200) {
-          console.log('🏁 TeleprompterScreen: reached end threshold, calling onEnd() in 1s');
-          setTimeout(() => onEnd(), 1000); // Esperar 1 segundo antes de notificar / Wait 1 second before notifying
-          return;
-        }
+
+        // Actualizar posición de scroll / Update scroll position
+        setScrollPosition(newPos);
       }
-
-      // Actualizar posición de scroll / Update scroll position
-      setScrollPosition(newPos);
+      
       lastTimestamp = timestamp;
       
       // Solicitar siguiente frame / Request next frame
@@ -274,36 +279,49 @@ export function TeleprompterScreen({
     }
   }, [scrollPosition]);
 
-  // ===== MANEJADOR: RUEDA DEL MOUSE CON SUAVIDAD / HANDLER: MOUSE WHEEL WITH SMOOTHNESS =====
+  // ===== MANEJADOR: RUEDA DEL MOUSE - SCROLL MANUAL DURANTE EJECUCIÓN / HANDLER: MOUSE WHEEL - MANUAL SCROLL DURING PLAYBACK =====
   /**
-   * Maneja el scroll del mouse añadiendo inercia para suavidad
-   * Handles mouse scroll by adding inertia for smoothness
+   * ✅ NUEVO: Scroll manual funciona SIEMPRE, incluso durante reproducción
+   * ✅ NEW: Manual scroll works ALWAYS, even during playback
    * 
-   * Proceso / Process:
-   * 1. Previene el scroll nativo del navegador
-   * 2. Detecta la dirección del scroll (deltaY)
-   * 3. Añade inercia acumulativa (factor 0.18 para lentitud y fluidez)
-   * 4. Limita la inercia máxima a ±40 para evitar descontrol
-   * 5. El efecto de inercia se anima automáticamente (ver useEffect de inercia)
-   * 
-   * Factor 0.18: Hace el scroll lento y fluido
-   * Límites ±40: Evita scroll demasiado rápido
-   * 
-   * @param {React.WheelEvent<HTMLDivElement>} e - Evento de rueda del mouse / Mouse wheel event
+   * Permite al operador ajustar posición manualmente en cualquier momento
+   * Allows operator to adjust position manually at any time
    */
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    e.preventDefault(); // Prevenir scroll nativo / Prevent native scroll
+    // ✅ Funciona SIEMPRE - sin restricción de isPlaying
+    // ✅ Works ALWAYS - no isPlaying restriction
     
-    const delta = e.deltaY; // Valor de scroll (positivo = abajo, negativo = arriba) / Scroll value (positive = down, negative = up)
+    // Calcular dirección y magnitud del scroll
+    // Calculate scroll direction and magnitude
+    const delta = e.deltaY > 0 ? 1 : -1;
     
-    // Añadir inercia con factor de suavidad / Add inertia with smoothness factor
-    inertiaRef.current += delta * 0.18; // Factor para hacerlo lento y fluido / Factor to make it slow and fluid
+    // Aplicar inercia para scroll manual suave
+    // Apply inertia for smooth manual scrolling
+    inertiaRef.current = delta * 8; // Magnitud de inercia
     
-    // **LIMITAR INERCIA MÁXIMA / LIMIT MAXIMUM INERTIA**
-    // Evita que el scroll se vuelva incontrolable / Prevents scroll from becoming uncontrollable
-    if (inertiaRef.current > 40) inertiaRef.current = 40;   // Límite superior / Upper limit
-    if (inertiaRef.current < -40) inertiaRef.current = -40; // Límite inferior / Lower limit
+    // Actualizar posición inmediatamente
+    // Update position immediately
+    const newPos = scrollPosition + (delta * 50); // Scroll de 50px por tick
+    setScrollPosition(newPos);
+    
+    console.log('🖱️ Manual wheel scroll (durante ejecución permitido):', delta > 0 ? '↓' : '↑', 'new pos:', newPos);
   };
+
+  // ===== CALCULAR TRANSFORMACIÓN DE ESPEJO / CALCULATE MIRROR TRANSFORMATION =====
+  const mirrorTransform = [];
+  if (mirrorX) mirrorTransform.push('scaleX(-1)');
+  if (mirrorY) mirrorTransform.push('scaleY(-1)');
+  const transformStyle = mirrorTransform.length > 0 ? mirrorTransform.join(' ') : 'none';
+
+  // ✅ LOGGING EXPLÍCITO PARA DEBUG
+  console.log('═══════════════════════════════════════');
+  console.log('🪞 TeleprompterScreen MIRROR CHECK:');
+  console.log('   mirrorX prop:', mirrorX);
+  console.log('   mirrorY prop:', mirrorY);
+  console.log('   mirrorTransform array:', mirrorTransform);
+  console.log('   transformStyle:', transformStyle);
+  console.log('   DEBERÍA VERSE INVERTIDO:', mirrorX ? 'SÍ ✅' : 'NO ❌');
+  console.log('═══════════════════════════════════════');
 
   return (
     // ===== CONTENEDOR PRINCIPAL CON POSICIÓN RELATIVA / MAIN CONTAINER WITH RELATIVE POSITION =====
@@ -316,16 +334,40 @@ export function TeleprompterScreen({
         className="teleprompter-screen w-full h-full bg-black text-white overflow-y-auto overflow-x-hidden"
         style={{ 
           fontSize: `${fontSize}px`, // Tamaño de fuente dinámico / Dynamic font size
-          scrollBehavior: 'smooth', // Scroll suave nativo / Smooth native scroll
+          scrollBehavior: 'auto', // Cambiado de 'smooth' a 'auto' para mejor control / Changed from 'smooth' to 'auto' for better control
           scrollbarWidth: 'none', // Firefox: ocultar scrollbar / Firefox: hide scrollbar
           msOverflowStyle: 'none' // IE/Edge: ocultar scrollbar / IE/Edge: hide scrollbar
         }}
         onWheel={handleWheel} // Capturar eventos de rueda del mouse / Capture mouse wheel events
       >
-        {/* ===== CONTENIDO DE TEXTO / TEXT CONTENT ===== */}
-        {/* Padding inferior grande (pb-96) para que el texto pueda scrollear hasta el final */}
-        {/* Large bottom padding (pb-96) so text can scroll to the end */}
-        <div className="p-8 pb-96">
+        {/* ===== CONTENIDO DE TEXTO CON ESPEJO / TEXT CONTENT WITH MIRROR ===== */}
+        {/* ✅ IMPORTANTE: El transform se aplica al DIV INTERNO para invertir el texto */}
+        {/* ✅ IMPORTANT: Transform is applied to INNER DIV to flip the text */}
+        <div 
+          className="p-8 pb-96"
+          style={{ 
+            transform: transformStyle, // ✅ ✅ ✅ Aplicar espejo AQUÍ / Apply mirror HERE
+            transformOrigin: 'center center', // Centrar transformación / Center transformation
+            backgroundColor: mirrorX ? 'rgba(0, 100, 255, 0.05)' : 'transparent' // DEBUG: fondo azul si mirror activo
+          }}
+        >
+          {/* ✅ DEBUG VISUAL */}
+          {mirrorX && (
+            <div style={{ 
+              position: 'fixed', 
+              top: '20px', 
+              left: '20px', 
+              background: 'red', 
+              color: 'white', 
+              padding: '10px', 
+              zIndex: 9999,
+              fontSize: '20px',
+              fontWeight: 'bold'
+            }}>
+              🪞 MIRROR ACTIVO - TEXTO DEBERÍA ESTAR INVERTIDO
+            </div>
+          )}
+          
           {text ? (
             // **Componente TextWithJumpMarkers: Renderiza texto con marcadores de salto**
             // **TextWithJumpMarkers Component: Renders text with jump markers**

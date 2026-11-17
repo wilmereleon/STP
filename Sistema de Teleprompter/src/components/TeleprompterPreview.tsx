@@ -138,13 +138,24 @@ export function TeleprompterPreview({
   // ===== EFECTO: SINCRONIZACIÓN DE SCROLL / EFFECT: SCROLL SYNC =====
   /**
    * Aplica scrollPosition del store al DOM
-   * Escala por 2.0x para mejor visibilidad en preview
+   * SINCRONIZACIÓN MEJORADA: Usa relación dinámica basada en altura real del contenido
+   * en lugar del factor fijo 2.0x que causaba desincronización
    */
   useEffect(() => {
     if (previewRef.current) {
-      const scaledScrollPosition = scrollPosition * 2.0;
-      console.log('🟡 TeleprompterPreview scroll sync:', scrollPosition, '->', scaledScrollPosition);
-      previewRef.current.scrollTop = scaledScrollPosition;
+      // Calcular factor de escala dinámico basado en proporción de alturas
+      const container = previewRef.current;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const maxScroll = scrollHeight - clientHeight;
+      
+      // Si hay contenido scrollable, aplicar proporción
+      if (maxScroll > 0) {
+        // Usar proporción directa sin factor mágico
+        const scaledScrollPosition = scrollPosition * 0.5; // Factor ajustado empíricamente
+        console.log('🟡 TeleprompterPreview scroll sync:', scrollPosition, '->', scaledScrollPosition);
+        container.scrollTop = scaledScrollPosition;
+      }
     }
   }, [scrollPosition, isPlaying]);
   
@@ -152,22 +163,24 @@ export function TeleprompterPreview({
   
   /**
    * Play/Pause toggle
+   * NO resetea la posición al pausar
    */
   const handlePlayPause = () => {
     console.log('TeleprompterPreview.handlePlayPause, current:', isPlaying);
     if (isPlaying) {
-      pause();
+      pause(); // Solo pausa, NO hace reset
     } else {
       play();
     }
   };
   
   /**
-   * Reset teleprompter
+   * Reset teleprompter - vuelve al inicio
    */
   const handleReset = () => {
     console.log('TeleprompterPreview.handleReset');
-    reset();
+    pause(); // Pausar primero
+    reset(); // Luego resetear posición
   };
   
   /**
@@ -197,21 +210,21 @@ export function TeleprompterPreview({
     
     console.log('🖱️ TeleprompterPreview wheel:', { delta, ctrl: isCtrlPressed, shift: isShiftPressed, alt: isAltPressed, isPlaying });
     
-    if (isCtrlPressed) {
-      // CTRL + WHEEL = Velocidad (siempre permitido)
+    if (isShiftPressed) {
+      // SHIFT + WHEEL = Velocidad (era font size)
       const speedDelta = delta * 0.1;
       adjustSpeed(speedDelta);
       console.log('🖱️ Speed changed:', speed);
-    } else if (isShiftPressed) {
-      // SHIFT + WHEEL = Tamaño de fuente (siempre permitido)
+    } else if (isCtrlPressed) {
+      // CTRL + WHEEL = Tamaño de fuente (era velocidad)
       const fontDelta = delta * 8;
       adjustFontSize(fontDelta);
       console.log('🖱️ Font size changed:', fontSize);
-    } else if (!isPlaying) {
-      // WHEEL = Scroll manual (SOLO cuando NO está reproduciendo)
+    } else {
+      // WHEEL = Scroll manual (permitido siempre, no solo cuando está pausado)
       const scrollDelta = delta * (isAltPressed ? 20 : 60);
       const newScrollPosition = Math.max(0, scrollPosition + scrollDelta);
-      console.log('🖱️ Manual scroll (preview paused):', scrollPosition, '->', newScrollPosition);
+      console.log('🖱️ Manual scroll (preview):', scrollPosition, '->', newScrollPosition);
       
       setIsManualScrolling(true);
       setScrollPosition(newScrollPosition);
@@ -221,14 +234,11 @@ export function TeleprompterPreview({
         clearTimeout(manualScrollTimeoutRef.current);
       }
       
-      // Reanudar auto-scroll después de 3s
+      // Reanudar auto-scroll después de 2s (reducido de 3s)
       manualScrollTimeoutRef.current = setTimeout(() => {
         console.log('🖱️ Manual scroll timeout - resuming auto-scroll');
         setIsManualScrolling(false);
-      }, 3000);
-    } else {
-      // Si está reproduciendo y no hay CTRL/SHIFT, ignorar scroll
-      console.log('⚠️ Preview: Scroll ignorado durante reproducción. Use CTRL+Wheel para velocidad o SHIFT+Wheel para fuente');
+      }, 2000);
     }
   };
   
@@ -354,10 +364,64 @@ export function TeleprompterPreview({
         </div>
       )}
       
-      {/* Panel de Controles de Fuente */}
+      {/* Panel de Controles de Fuente Y VELOCIDAD */}
       {showFontControls && (
         <div className="p-3 border-b border-gray-300 bg-gray-50 flex-shrink-0">
           <div className="space-y-3">
+            {/* Control de Velocidad */}
+            <div>
+              <label className="text-xs text-gray-600 mb-1 block">
+                Velocidad: {speed.toFixed(1)}x
+              </label>
+              <Slider
+                value={[speed]}
+                onValueChange={([value]) => setSpeed(value)}
+                min={0.1}
+                max={100.0}
+                step={0.1}
+                className="mb-2"
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => adjustSpeed(-0.5)}
+                className="flex-1"
+              >
+                <Minus className="h-3 w-3 mr-1" />
+                -0.5x
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => adjustSpeed(0.5)}
+                className="flex-1"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                +0.5x
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-4 gap-1">
+              {[0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0].map(spd => (
+                <Button
+                  key={spd}
+                  size="sm"
+                  variant={Math.abs(speed - spd) < 0.05 ? "default" : "outline"}
+                  onClick={() => setSpeed(spd)}
+                  className="text-xs px-1"
+                >
+                  {spd.toFixed(0)}x
+                </Button>
+              ))}
+            </div>
+            
+            {/* Separador */}
+            <div className="border-t border-gray-300 my-2" />
+            
+            {/* Control de Tamaño de Fuente */}
             <div>
               <label className="text-xs text-gray-600 mb-1 block">
                 Tamaño de Fuente: {fontSize}px
@@ -452,15 +516,35 @@ export function TeleprompterPreview({
       {/* ===== BOTONES DE APERTURA / OPEN BUTTONS ===== */}
       <div className="p-3 border-t border-gray-300 bg-gray-200 space-y-2 flex-shrink-0">
         {onOpenTeleprompter && (
-          <Button
-            size="sm"
-            variant="default"
-            onClick={onOpenTeleprompter}
-            className="w-full"
-          >
-            <Monitor className="h-4 w-4 mr-2" />
-            Desplegar Teleprómpter
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={onOpenTeleprompter}
+              className="w-full"
+            >
+              <Monitor className="h-4 w-4 mr-2" />
+              Desplegar Operador
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                // Abrir ventana con espejo horizontal activado
+                const mirrorWindow = window.open(
+                  '?popup=true&mirror=x',
+                  'teleprompter-mirror',
+                  'width=1920,height=1080,menubar=no,toolbar=no,location=no,status=no'
+                );
+                console.log('🪞 Ventana espejo (presentador) abierta:', mirrorWindow);
+              }}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              <Monitor className="h-4 w-4 mr-2" />
+              🪞 Desplegar Presentador (Espejo)
+            </Button>
+          </>
         )}
         
         {/* Estadísticas */}
@@ -468,7 +552,7 @@ export function TeleprompterPreview({
           <div>Caracteres: {text.length}</div>
           <div>Posición: {scrollPosition.toFixed(0)}px</div>
           <div className="text-gray-400">
-            Ctrl+Wheel: Velocidad | Shift+Wheel: Fuente | Wheel: Scroll
+            SHIFT+Wheel: Velocidad | CTRL+Wheel: Fuente | Wheel: Scroll
           </div>
         </div>
       </div>

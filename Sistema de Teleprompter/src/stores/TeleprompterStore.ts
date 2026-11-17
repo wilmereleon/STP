@@ -44,6 +44,12 @@ export interface TeleprompterState {
   
   /** Estado del modal fullscreen */
   modalOpen: boolean;
+  
+  /** Modo espejo horizontal (para reflejar en vidrio) */
+  mirrorX: boolean;
+  
+  /** Modo espejo vertical */
+  mirrorY: boolean;
 }
 
 /**
@@ -147,7 +153,7 @@ class TeleprompterStore {
   
   /**
    * Establece la velocidad de scroll
-   * @param speed - Velocidad (0.1 - 5.0)
+   * @param speed - Velocidad (0.1 - 100.0) - RANGO ULTRA EXPANDIDO
    */
   setSpeed(speed: number): void {
     const validated = this.validateSpeed(speed);
@@ -167,7 +173,14 @@ class TeleprompterStore {
    */
   adjustSpeed(delta: number): void {
     const newSpeed = this.state.speed + delta;
-    this.setSpeed(newSpeed);
+    const validated = this.validateSpeed(newSpeed);
+    
+    // Permitir cambios siempre para que las flechas funcionen
+    this.setState({ speed: validated });
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`⚡ TeleprompterStore: speed adjusted ${delta > 0 ? '+' : ''}${delta.toFixed(1)} → ${validated.toFixed(1)}x`);
+    }
   }
   
   /**
@@ -202,9 +215,8 @@ class TeleprompterStore {
   setScrollPosition(scrollPosition: number): void {
     const validated = Math.max(0, scrollPosition);
     
-    // Evitar notificaciones excesivas si la diferencia es < 1px
-    if (Math.abs(validated - this.state.scrollPosition) < 1) return;
-    
+    // ZONA MUERTA ELIMINADA: ahora acepta cambios sub-píxel para scroll fluido
+    // Esta era la causa principal del scroll a tirones a baja velocidad
     this.setState({ scrollPosition: validated });
   }
   
@@ -324,6 +336,52 @@ class TeleprompterStore {
   }
   
   // ============================================================================
+  // ACCIONES PÚBLICAS - Modo Espejo
+  // ============================================================================
+  
+  /**
+   * Activa/desactiva espejo horizontal (para vidrio reflectante)
+   * @param enabled - true para activar espejo horizontal
+   */
+  setMirrorX(enabled: boolean): void {
+    if (enabled === this.state.mirrorX) return;
+    
+    this.setState({ mirrorX: enabled });
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🪞 TeleprompterStore: mirrorX = ${enabled ? 'ON' : 'OFF'}`);
+    }
+  }
+  
+  /**
+   * Activa/desactiva espejo vertical
+   * @param enabled - true para activar espejo vertical
+   */
+  setMirrorY(enabled: boolean): void {
+    if (enabled === this.state.mirrorY) return;
+    
+    this.setState({ mirrorY: enabled });
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🪞 TeleprompterStore: mirrorY = ${enabled ? 'ON' : 'OFF'}`);
+    }
+  }
+  
+  /**
+   * Toggle del espejo horizontal
+   */
+  toggleMirrorX(): void {
+    this.setMirrorX(!this.state.mirrorX);
+  }
+  
+  /**
+   * Toggle del espejo vertical
+   */
+  toggleMirrorY(): void {
+    this.setMirrorY(!this.state.mirrorY);
+  }
+  
+  // ============================================================================
   // MÉTODOS PRIVADOS
   // ============================================================================
   
@@ -387,9 +445,10 @@ class TeleprompterStore {
   
   /**
    * Valida y ajusta la velocidad al rango permitido
+   * Rango ultra expandido: 0.1x - 100.0x para lecturas ultra rápidas
    */
   private validateSpeed(speed: number): number {
-    return Math.max(0.1, Math.min(5.0, speed));
+    return Math.max(0.1, Math.min(100.0, speed));
   }
   
   /**
@@ -444,7 +503,9 @@ class TeleprompterStore {
       theme: 'dark',
       timestamp: Date.now(),
       popupWindowOpen: false,
-      modalOpen: false
+      modalOpen: false,
+      mirrorX: false,
+      mirrorY: false
     };
   }
 }

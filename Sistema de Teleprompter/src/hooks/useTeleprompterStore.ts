@@ -88,6 +88,12 @@ export function useTeleprompterStore() {
     /** Estado del modal fullscreen */
     modalOpen: state.modalOpen,
     
+    /** Modo espejo horizontal */
+    mirrorX: state.mirrorX,
+    
+    /** Modo espejo vertical */
+    mirrorY: state.mirrorY,
+    
     // ===== MÉTODOS DE CONTROL =====
     
     /**
@@ -182,7 +188,31 @@ export function useTeleprompterStore() {
      * Abre/cierra modal fullscreen
      * @param open - true para abrir, false para cerrar
      */
-    setModalOpen: (open: boolean) => teleprompterStore.setModalOpen(open)
+    setModalOpen: (open: boolean) => teleprompterStore.setModalOpen(open),
+    
+    // ===== MÉTODOS DE ESPEJO =====
+    
+    /**
+     * Activa/desactiva espejo horizontal
+     * @param enabled - true para activar
+     */
+    setMirrorX: (enabled: boolean) => teleprompterStore.setMirrorX(enabled),
+    
+    /**
+     * Activa/desactiva espejo vertical
+     * @param enabled - true para activar
+     */
+    setMirrorY: (enabled: boolean) => teleprompterStore.setMirrorY(enabled),
+    
+    /**
+     * Toggle espejo horizontal
+     */
+    toggleMirrorX: () => teleprompterStore.toggleMirrorX(),
+    
+    /**
+     * Toggle espejo vertical
+     */
+    toggleMirrorY: () => teleprompterStore.toggleMirrorY()
   };
 }
 

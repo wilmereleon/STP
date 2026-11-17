@@ -235,12 +235,26 @@ class RunOrderStore {
   
   /**
    * Reemplaza toda la lista de items (usado para importar)
+   * MEJORA: Intenta preservar el item activo si existe con el mismo ID
    */
-  setItems(items: RunOrderItem[]): void {
+  setItems(items: RunOrderItem[], preserveActive: boolean = true): void {
+    let newActiveItemId = null;
+    let newActiveIndex = -1;
+    
+    // Si hay un item activo y queremos preservarlo, buscar por ID
+    if (preserveActive && this.state.activeItemId) {
+      const foundIndex = items.findIndex(item => item.id === this.state.activeItemId);
+      if (foundIndex !== -1) {
+        newActiveItemId = this.state.activeItemId;
+        newActiveIndex = foundIndex;
+        console.log(`🔄 RunOrderStore: preserved active item "${items[foundIndex].title}"`);
+      }
+    }
+    
     this.setState({
       items: [...items],
-      activeItemId: null,
-      activeIndex: -1
+      activeItemId: newActiveItemId,
+      activeIndex: newActiveIndex
     });
     
     if (process.env.NODE_ENV === 'development') {

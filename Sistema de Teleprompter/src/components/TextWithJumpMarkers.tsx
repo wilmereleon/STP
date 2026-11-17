@@ -1,4 +1,6 @@
 // ===== IMPORTACIONES / IMPORTS =====
+// Hooks de React / React hooks
+import { useRef, useEffect } from 'react';
 // Iconos de Lucide React / Lucide React icons
 import { Target, Zap } from 'lucide-react';
 // Componente de botón / Button component
@@ -64,6 +66,37 @@ export function TextWithJumpMarkers({
   showJumpIcons = true 
 }: TextWithJumpMarkersProps) {
   
+  // ===== REF PARA CALCULAR POSICIONES REALES / REF TO CALCULATE REAL POSITIONS =====
+  const containerRef = useRef<HTMLDivElement>(null);
+  const lineRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  
+  // ===== FUNCIÓN: MANEJAR SALTO CON POSICIÓN REAL / FUNCTION: HANDLE JUMP WITH REAL POSITION =====
+  /**
+   * Calcula la posición REAL en píxeles usando offsetTop del elemento
+   * Calculates REAL position in pixels using element's offsetTop
+   * 
+   * ✅ NUEVO: Funciona incluso durante reproducción (isPlaying=true)
+   * ✅ NEW: Works even during playback (isPlaying=true)
+   */
+  const handleJumpClick = (lineIndex: number) => {
+    if (!onJumpToPosition) return;
+    
+    const lineElement = lineRefs.current.get(lineIndex);
+    if (lineElement && containerRef.current) {
+      // Obtener posición REAL del elemento relativo al contenedor padre
+      // Get REAL position of element relative to parent container
+      const realPosition = lineElement.offsetTop;
+      
+      console.log(`🎯 Jump to line ${lineIndex}: offsetTop=${realPosition}px (durante reproducción permitido)`);
+      
+      // ✅ Saltar inmediatamente, sin importar si está reproduciendo
+      // ✅ Jump immediately, regardless of playback state
+      onJumpToPosition(realPosition);
+    } else {
+      console.warn(`⚠️ Could not find line element for index ${lineIndex}`);
+    }
+  };
+  
   // ===== FUNCIÓN: RENDERIZAR TEXTO CON MARCADORES / FUNCTION: RENDER TEXT WITH MARKERS =====
   /**
    * Renderiza el texto línea por línea, detectando y añadiendo iconos de salto
@@ -72,12 +105,10 @@ export function TextWithJumpMarkers({
    * Algoritmo / Algorithm:
    * 1. Si showJumpIcons=false u onJumpToPosition no existe → renderizado simple
    * 2. Divide texto en líneas / Split text into lines
-   * 3. Mantiene contador de posición de caracteres / Maintains character position counter
-   * 4. Por cada línea:
-   *    - Calcula posición inicial de la línea
+   * 3. Por cada línea:
    *    - Detecta tipo de marcador (numerado, markdown, mayúsculas, negrita)
+   *    - Asigna ref para capturar offsetTop REAL
    *    - Renderiza con icono apropiado o como línea regular
-   * 5. Incrementa contador (+1 por salto de línea) / Increments counter (+1 for newline)
    * 
    * @returns {JSX.Element[]} Array de elementos div con las líneas / Array of div elements with lines
    */
@@ -94,13 +125,8 @@ export function TextWithJumpMarkers({
 
     // ===== CASO 2: RENDERIZADO CON ICONOS DE SALTO / CASE 2: RENDERING WITH JUMP ICONS =====
     const lines = text.split('\n'); // Dividir en líneas / Split into lines
-    let currentPosition = 0; // Contador de posición de caracteres / Character position counter
 
     return lines.map((line, lineIndex) => {
-      // Guardar posición inicial de esta línea / Save starting position of this line
-      const lineStartPosition = currentPosition;
-      currentPosition += line.length + 1; // +1 por el salto de línea / +1 for newline
-
       // ===== DETECCIÓN TIPO 1: MARCADORES NUMERADOS [1], [2], ... / DETECTION TYPE 1: NUMBERED MARKERS =====
       /**
        * Detecta marcadores con formato: [número]texto
@@ -118,7 +144,13 @@ export function TextWithJumpMarkers({
         const [, fullMarker, markerNumber, restOfLine] = markerMatch;
 
         return (
-          <div key={`marker-${lineIndex}`} className="leading-relaxed mb-4 transition-all duration-200 flex items-start gap-1 group">
+          <div 
+            key={`marker-${lineIndex}`} 
+            ref={(el) => {
+              if (el) lineRefs.current.set(lineIndex, el);
+            }}
+            className="leading-relaxed mb-4 transition-all duration-200 flex items-start gap-1 group"
+          >
             {/* Marcador + Icono Zap amarillo / Marker + Yellow Zap icon */}
             <span className="shrink-0">
               {fullMarker}
@@ -128,7 +160,7 @@ export function TextWithJumpMarkers({
                 className="ml-1 p-0 h-4 w-4 text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10 inline-flex items-center justify-center opacity-60 hover:opacity-100 transition-opacity"
                 onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation(); // Prevenir propagación / Prevent propagation
-                  onJumpToPosition(lineStartPosition); // Saltar a esta posición / Jump to this position
+                  handleJumpClick(lineIndex); // ✅ Usar posición REAL en píxeles
                 }}
                 title={`⚡ Saltar a sección ${markerNumber}`}
                 type="button"
@@ -160,7 +192,14 @@ export function TextWithJumpMarkers({
       
       if (titleMatch && line.trim().length > 0) {
         return (
-          <div key={`title-${lineIndex}`} className="leading-relaxed mb-4 transition-all duration-200 flex items-start gap-1 group" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+          <div 
+            key={`title-${lineIndex}`} 
+            ref={(el) => {
+              if (el) lineRefs.current.set(lineIndex, el);
+            }}
+            className="leading-relaxed mb-4 transition-all duration-200 flex items-start gap-1 group" 
+            style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+          >
             <span className="flex-1 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{line}</span>
             {/* Icono Target azul / Blue Target icon */}
             <Button
@@ -169,7 +208,7 @@ export function TextWithJumpMarkers({
               className="ml-1 p-0 h-4 w-4 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 inline-flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity"
               onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.stopPropagation(); // Prevenir propagación / Prevent propagation
-                onJumpToPosition(lineStartPosition); // Saltar a esta posición / Jump to this position
+                handleJumpClick(lineIndex); // ✅ Usar posición REAL en píxeles
               }}
               title={`🎯 Saltar a: ${line.trim().substring(0, 30)}`} // Título truncado a 30 chars / Title truncated to 30 chars
               type="button"
@@ -184,7 +223,14 @@ export function TextWithJumpMarkers({
       // ===== LÍNEA REGULAR SIN MARCADOR / REGULAR LINE WITHOUT MARKER =====
       // Mantener estructura original / Maintain original structure
       return (
-        <div key={`line-${lineIndex}`} className="leading-relaxed mb-4 transition-all duration-200 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+        <div 
+          key={`line-${lineIndex}`} 
+          ref={(el) => {
+            if (el) lineRefs.current.set(lineIndex, el);
+          }}
+          className="leading-relaxed mb-4 transition-all duration-200 break-words" 
+          style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+        >
           {line.trim() || '\u00A0'} {/* \u00A0 preserva líneas vacías / \u00A0 preserves empty lines */}
         </div>
       );
@@ -195,6 +241,7 @@ export function TextWithJumpMarkers({
   return (
     // Contenedor con clases y estilos personalizables / Container with customizable classes and styles
     <div 
+      ref={containerRef}
       className={`w-full max-w-full ${className}`}
       style={{ 
         wordWrap: 'break-word',

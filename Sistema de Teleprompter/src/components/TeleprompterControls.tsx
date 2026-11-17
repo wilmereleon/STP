@@ -159,7 +159,7 @@ export function TeleprompterControls({
    * Ajusta velocidad
    */
   const handleSpeedChange = (delta: number) => {
-    const newSpeed = Math.max(0.1, Math.min(5.0, speed + delta));
+    const newSpeed = Math.max(0.1, Math.min(100.0, speed + delta));
     console.log('🔴 Speed change:', speed, '→', newSpeed);
     setSpeed(newSpeed);
   };

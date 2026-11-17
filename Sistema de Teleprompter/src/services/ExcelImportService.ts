@@ -309,10 +309,11 @@ export class ExcelImportService {
       throw new Error('Texto/Contenido vacío');
     }
     
-    // ID (opcional, generado si no existe)
+    // ID (opcional, generado de forma estable si no existe)
+    // MEJORA: Usar hash del título para generar IDs estables entre importaciones
     const id = mapping.id !== undefined && row[mapping.id]
       ? row[mapping.id].toString()
-      : `script-${Date.now()}-${rowNumber}`;
+      : `script-${this.hashString(title)}-${rowNumber}`;
     
     // Duration (opcional, "00:00:00" si no existe)
     let duration = '00:00:00';
@@ -393,6 +394,20 @@ export class ExcelImportService {
     }
     
     return '00:00:00';
+  }
+  
+  /**
+   * Genera un hash simple de un string para IDs estables
+   * Simple string hash for stable ID generation
+   */
+  private hashString(str: string): string {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
   }
   
   /**

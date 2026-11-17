@@ -221,6 +221,7 @@ export function RunOrderPanel({
       
       if (result.success && result.items.length > 0) {
         // Actualizar store con los items importados
+        // MEJORA: preserveActive=true intenta mantener el item activo si tiene el mismo ID
         setItems(result.items);
         
         // Mensaje de éxito

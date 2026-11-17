@@ -74,7 +74,18 @@ import { syncService } from '../services/SyncService';
  * <TeleprompterWindow.v2 />
  * ```
  */
-export function TeleprompterWindow() {
+/**
+ * TeleprompterWindow v2 - Ventana esclava sincronizada con Store
+ * 
+ * @param autoMirrorX - Activa espejo horizontal al iniciar
+ * @param autoMirrorY - Activa espejo vertical al iniciar
+ */
+interface TeleprompterWindowProps {
+  autoMirrorX?: boolean;
+  autoMirrorY?: boolean;
+}
+
+export function TeleprompterWindow({ autoMirrorX = false, autoMirrorY = false }: TeleprompterWindowProps = {}) {
   // ===== STORE INTEGRATION / INTEGRACIÓN CON STORE =====
   const {
     text,
@@ -83,6 +94,8 @@ export function TeleprompterWindow() {
     scrollPosition,
     speed,
     guideLinePosition,
+    mirrorX,
+    mirrorY,
     play,
     pause,
     reset,
@@ -91,7 +104,11 @@ export function TeleprompterWindow() {
     setFontSize,
     adjustFontSize,
     setScrollPosition,
-    jumpToMarker
+    jumpToMarker,
+    setMirrorX,
+    setMirrorY,
+    toggleMirrorX,
+    toggleMirrorY
   } = useTeleprompterStore();
   
   const {
@@ -108,6 +125,9 @@ export function TeleprompterWindow() {
   const [isConnected, setIsConnected] = useState(false);
   const teleprompterAreaRef = useRef<HTMLDivElement>(null);
   
+  // Detectar si es ventana popup (presentador o espejo)
+  const isPopup = autoMirrorX || autoMirrorY;
+  
   // ===== EFECTO DEBUG: MONITOREAR isPlaying / DEBUG EFFECT: MONITOR isPlaying =====
   useEffect(() => {
     console.log('🔍 TeleprompterWindow: isPlaying changed to:', isPlaying);
@@ -116,37 +136,41 @@ export function TeleprompterWindow() {
   // ===== EFECTO: INICIALIZAR SYNC SERVICE (SLAVE MODE) / EFFECT: INITIALIZE SYNC SERVICE (SLAVE MODE) =====
   /**
    * Inicializa SyncService en modo 'slave' para recibir actualizaciones del master
-   * Initializes SyncService in 'slave' mode to receive updates from master
-   * 
-   * El slave NO modifica el store directamente, solo recibe estado del master
-   * The slave does NOT modify store directly, only receives state from master
-   * 
-   * Flujo / Flow:
-   * 1. Master (App.tsx) modifica TeleprompterStore
-   * 2. AutoScrollService detecta cambios y notifica a SyncService
-   * 3. SyncService envía SYNC_STATE via postMessage
-   * 4. Este componente (slave) recibe SYNC_STATE
-   * 5. Store se actualiza automáticamente (por el servicio)
-   * 6. Componente re-renderiza con nuevo estado
+   * Activa espejo si se especificó en la URL
    */
   useEffect(() => {
-    console.log('🔵 TeleprompterWindow: initializing SyncService in SLAVE mode');
+    console.log('═══════════════════════════════════════');
+    console.log('🔵 TeleprompterWindow: INIT');
+    console.log('   autoMirrorX:', autoMirrorX);
+    console.log('   autoMirrorY:', autoMirrorY);
+    console.log('   isPopup:', isPopup);
+    console.log('═══════════════════════════════════════');
     
     // Inicializar en modo slave
-    // SyncService automatically registers with master via registerWithMaster()
     syncService.initialize('slave');
+    
+    // Activar espejo si corresponde
+    if (autoMirrorX) {
+      console.log('🪞🪞🪞 Auto-activando espejo horizontal (presentador)');
+      setMirrorX(true);
+      
+      // Verificar después de 500ms
+      setTimeout(() => {
+        const state = teleprompterStore.getState();
+        console.log('🪞 VERIFICACIÓN espejo después de 500ms:');
+        console.log('   state.mirrorX:', state.mirrorX);
+        console.log('   mirrorX local:', mirrorX);
+      }, 500);
+    }
+    if (autoMirrorY) {
+      console.log('🪞 Auto-activando espejo vertical');
+      setMirrorY(true);
+    }
     
     // Marcar como conectado después de inicialización
     setTimeout(() => {
       setIsConnected(true);
       console.log('✅ TeleprompterWindow: connected to master');
-      
-      // ❌ AUTO-START DESHABILITADO - Esperar comando manual del usuario
-      // ❌ AUTO-START DISABLED - Wait for manual user command
-      // if (text && !isPlaying) {
-      //   console.log('▶️ TeleprompterWindow: auto-starting playback');
-      //   play();
-      // }
     }, 500);
     
     // Cleanup: Dispose service on unmount
@@ -154,7 +178,7 @@ export function TeleprompterWindow() {
       console.log('🔴 TeleprompterWindow: disposing SyncService');
       syncService.dispose();
     };
-  }, []);
+  }, [autoMirrorX, autoMirrorY, setMirrorX, setMirrorY]);
   
   // ===== EFECTO: AUTO-START DESHABILITADO / EFFECT: AUTO-START DISABLED =====
   /**
@@ -168,76 +192,21 @@ export function TeleprompterWindow() {
   
   // ===== EFECTO: MOUSE WHEEL CONTROLS / EFFECT: MOUSE WHEEL CONTROLS =====
   /**
-   * Maneja controles con rueda del mouse
-   * Handles mouse wheel controls
+   * ❌ LISTENER DE WHEEL DESHABILITADO EN EL DIV RAÍZ
+   * ❌ WHEEL LISTENER DISABLED ON ROOT DIV
    * 
-   * En modo slave, los cambios se envían al master via SyncService.requestChange()
-   * El master decide si acepta el cambio y lo propaga de vuelta
+   * PROBLEMA: Había dos handlers de wheel compitiendo:
+   * 1. Este listener en el div raíz (enviaba requestChange al master)
+   * 2. El onWheel del TeleprompterScreen (inercia local)
    * 
-   * In slave mode, changes are sent to master via SyncService.requestChange()
-   * Master decides whether to accept change and propagates it back
+   * Esto causaba doble procesamiento del mismo evento y desincronización.
    * 
-   * Comportamiento / Behavior:
-   * - CTRL + WHEEL: Cambiar velocidad / Change speed (±0.1x) y auto-iniciar
-   * - SHIFT + WHEEL: Cambiar tamaño de fuente / Change font size (±8px)
-   * - WHEEL: Scroll manual / Manual scroll (60px) - NO pausa, continúa auto-scroll
-   * - ALT + WHEEL: Scroll fino / Fine scroll (20px) - NO pausa, continúa auto-scroll
+   * SOLUCIÓN: Eliminado este listener. Solo TeleprompterScreen maneja wheel
+   * y usa requestChange para propagar cambios al master.
    */
-  useEffect(() => {
-    const area = teleprompterAreaRef.current;
-    if (!area) return;
-    
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      
-      const isCtrlPressed = e.ctrlKey;
-      const isShiftPressed = e.shiftKey;
-      const isAltPressed = e.altKey;
-      const delta = e.deltaY > 0 ? 1 : -1;
-      
-      if (isCtrlPressed) {
-        // CTRL + WHEEL = Velocidad / Speed
-        const speedDelta = delta * 0.1;
-        const newSpeed = Math.max(0.1, Math.min(5.0, speed + speedDelta));
-        console.log('🖱️ TeleprompterWindow: speed change requested', speed, '→', newSpeed);
-        
-        // Solicitar cambio al master / Request change to master
-        syncService.requestChange('SET_SPEED', newSpeed);
-        
-        // Auto-iniciar reproducción si no está activo / Auto-start if not playing
-        if (!isPlaying) {
-          syncService.requestChange('PLAY');
-        }
-      } else if (isShiftPressed) {
-        // SHIFT + WHEEL = Tamaño fuente / Font size
-        const fontDelta = delta * 8;
-        const newFontSize = Math.max(12, Math.min(500, fontSize + fontDelta));
-        console.log('🖱️ TeleprompterWindow: fontSize change requested', fontSize, '→', newFontSize);
-        
-        // Solicitar cambio al master / Request change to master
-        syncService.requestChange('SET_FONT_SIZE', newFontSize);
-      } else {
-        // WHEEL = Scroll manual / Manual scroll
-        const scrollDelta = delta * (isAltPressed ? 20 : 60);
-        const newScrollPosition = Math.max(0, scrollPosition + scrollDelta);
-        console.log('🖱️ TeleprompterWindow: scroll change requested', scrollPosition, '→', newScrollPosition);
-        
-        // Solicitar cambio al master / Request change to master
-        syncService.requestChange('SET_SCROLL_POSITION', newScrollPosition);
-        
-        // ⚠️ NO PAUSAR - Permitir que auto-scroll continúe
-        // ⚠️ DO NOT PAUSE - Allow auto-scroll to continue
-        // El auto-scroll seguirá desde la nueva posición ajustada manualmente
-        // Auto-scroll will continue from the new manually adjusted position
-      }
-    };
-    
-    area.addEventListener('wheel', handleWheel, { passive: false });
-    
-    return () => {
-      area.removeEventListener('wheel', handleWheel);
-    };
-  }, [speed, fontSize, scrollPosition, isPlaying]);
+  
+  // DISABLED - Wheel handling now only in TeleprompterScreen
+  // This fixes the double-handler bug that caused scroll desync
   
   // ===== MANEJADORES DE TRANSPORTE / TRANSPORT HANDLERS =====
   /**
@@ -248,6 +217,10 @@ export function TeleprompterWindow() {
    * Store will notify SyncService automatically
    */
   
+  /**
+   * Play/Pause - NO resetea al pausar
+   * ✅ CORREGIDO: Solo pausa, NUNCA resetea
+   */
   const handlePlayPause = () => {
     console.log('═══════════════════════════════════════');
     console.log('🎮 TeleprompterWindow: handlePlayPause INICIO');
@@ -259,38 +232,27 @@ export function TeleprompterWindow() {
     console.log('      store.isPlaying:', currentState.isPlaying);
     console.log('      speed:', speed);
     console.log('      scrollPosition:', scrollPosition);
-    console.log('      text length:', text?.length || 0);
     
     if (currentState.isPlaying) {
-      console.log('   🔴 Llamando pause()...');
-      pause();
-      console.log('   ✅ pause() ejecutado');
+      console.log('   🔴 Llamando pause() - SIN reset');
+      pause(); // ✅ SOLO PAUSA - NO HACE RESET
     } else {
       console.log('   🟢 Llamando play()...');
-      play();
-      console.log('   ✅ play() ejecutado');
+      play(); // ✅ CONTINÚA DESDE POSICIÓN ACTUAL
     }
     
-    // Verificar estado inmediatamente después
-    setTimeout(() => {
-      const storeState = teleprompterStore.getState();
-      console.log('   📊 Estado DEL STORE después de 50ms:');
-      console.log('      store.isPlaying:', storeState.isPlaying);
-      console.log('      store.speed:', storeState.speed);
-      console.log('      store.scrollPosition:', storeState.scrollPosition);
-      console.log('═══════════════════════════════════════');
-    }, 50);
+    console.log('═══════════════════════════════════════');
   };
   
   const handleReset = () => {
     console.log('⏮️ TeleprompterWindow: reset to beginning');
-    reset();
+    pause(); // Pausar primero
+    reset(); // Resetear posición
   };
   
   const handleStop = () => {
-    console.log('⏹️ TeleprompterWindow: stop (pause + reset)');
-    pause();
-    reset();
+    console.log('⏹️ TeleprompterWindow: stop (SOLO pause, NO reset)');
+    pause(); // ✅ SOLO PAUSA - NO RESETEA
   };
   
   const handleSpeedChange = (newSpeed: number) => {
@@ -337,55 +299,94 @@ export function TeleprompterWindow() {
   // ===== MANEJADORES DE TECLADO / KEYBOARD HANDLERS =====
   /**
    * Atajos de teclado para control rápido
-   * Keyboard shortcuts for quick control
+   * ✅ SIMPLIFICADO: Llamadas directas a funciones del store
    */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Solo procesar si no está escribiendo en un input / Only process if not typing in input
+      // Solo procesar si no está escribiendo en un input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
       
+      console.log('⌨️ Key pressed:', e.key, 'isPlaying:', isPlaying);
+      
       switch (e.key) {
-        case ' ': // Espacio = Play/Pause / Space = Play/Pause
+        case ' ': // ESPACIO = Play/Pause
           e.preventDefault();
-          handlePlayPause();
+          console.log('🎮 ESPACIO presionado, isPlaying:', isPlaying);
+          if (isPlaying) {
+            console.log('⏸️ Pausando...');
+            pause();
+          } else {
+            console.log('▶️ Reproduciendo...');
+            play();
+          }
           break;
-        case 'r': // R = Reset / R = Reset
+          
+        case 'r':
         case 'R':
           e.preventDefault();
-          handleReset();
+          console.log('⏮️ Reset');
+          pause();
+          reset();
           break;
-        case 'ArrowUp': // Flecha arriba = velocidad - / Arrow up = speed -
+          
+        case 'ArrowUp':
           e.preventDefault();
-          adjustSpeed(-0.1);
-          break;
-        case 'ArrowDown': // Flecha abajo = velocidad + / Arrow down = speed +
-          e.preventDefault();
+          console.log('↑ Velocidad +0.1');
           adjustSpeed(0.1);
           break;
-        case '+': // + = font size + / + = font size +
+          
+        case 'ArrowDown':
+          e.preventDefault();
+          console.log('↓ Velocidad -0.1');
+          adjustSpeed(-0.1);
+          break;
+          
+        case '+':
         case '=':
           e.preventDefault();
           adjustFontSize(8);
           break;
-        case '-': // - = font size - / - = font size -
+          
+        case '-':
         case '_':
           e.preventDefault();
           adjustFontSize(-8);
           break;
-        case 'h': // H = Toggle controls / H = Toggle controls
+          
+        case 'h':
         case 'H':
-          e.preventDefault();
-          setShowControls(prev => !prev);
+          if (!isPopup) {
+            e.preventDefault();
+            setShowControls(prev => !prev);
+          }
           break;
-        case 'PageDown': // PageDown = Next script / PageDown = Next script
+          
+        case 'PageDown':
           e.preventDefault();
-          handleForward();
+          console.log('⏭️ PageDown: Next script');
+          const nextSuccess = nextItem();
+          console.log('   nextItem() returned:', nextSuccess);
           break;
-        case 'PageUp': // PageUp = Previous script / PageUp = Previous script
+          
+        case 'PageUp':
           e.preventDefault();
-          handleBackward();
+          console.log('⏮️ PageUp: Previous script');
+          const prevSuccess = previousItem();
+          console.log('   previousItem() returned:', prevSuccess);
+          break;
+          
+        case 'x':
+        case 'X':
+          e.preventDefault();
+          toggleMirrorX();
+          break;
+          
+        case 'y':
+        case 'Y':
+          e.preventDefault();
+          toggleMirrorY();
           break;
       }
     };
@@ -395,7 +396,7 @@ export function TeleprompterWindow() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isPlaying, speed, fontSize, handlePlayPause, handleReset, adjustSpeed, adjustFontSize, setShowControls, handleForward, handleBackward]);
+  }, [isPlaying, pause, play, reset, adjustSpeed, adjustFontSize, nextItem, previousItem, toggleMirrorX, toggleMirrorY, setShowControls, isPopup]);
   
   // ===== RENDER / RENDERIZADO =====
   
@@ -413,10 +414,12 @@ export function TeleprompterWindow() {
   return (
     <div 
       ref={teleprompterAreaRef}
-      className="h-screen w-screen bg-black text-white overflow-hidden flex flex-col"
+      className={`h-screen w-screen bg-black text-white overflow-hidden flex flex-col ${
+        isPopup && mirrorX ? 'border-8 border-blue-500' : ''
+      }`}
     >
-      {/* ===== PANEL DE INFORMACIÓN Y ATAJOS (ABAJO IZQUIERDA) / INFO AND SHORTCUTS PANEL (BOTTOM LEFT) ===== */}
-      {showControls && (
+      {/* ===== PANEL DE INFORMACIÓN (SOLO EN VENTANA NO-POPUP) / INFO PANEL (ONLY IN NON-POPUP WINDOW) ===== */}
+      {!isPopup && showControls && (
         <div className="absolute bottom-4 left-4 z-50 bg-black/90 backdrop-blur-sm rounded-lg p-4 border border-white/20 text-sm">
           <div className="space-y-2">
             {/* Título */}
@@ -432,8 +435,8 @@ export function TeleprompterWindow() {
               <div>+/- = Tamaño fuente</div>
               <div>H = Mostrar/Ocultar controles</div>
               <div>PageUp/PageDown = Script anterior/siguiente</div>
-              <div>CTRL + WHEEL = Velocidad</div>
-              <div>SHIFT + WHEEL = Tamaño fuente</div>
+              <div>SHIFT + WHEEL = Velocidad</div>
+              <div>CTRL + WHEEL = Tamaño fuente</div>
               <div>WHEEL = Scroll manual</div>
             </div>
             
@@ -461,14 +464,21 @@ export function TeleprompterWindow() {
         </div>
       )}
       
-      {/* Botón flotante para mostrar controles (cuando están ocultos) / Floating button to show controls (when hidden) */}
-      {!showControls && (
+      {/* Botón flotante para mostrar controles (cuando están ocultos, SOLO EN NO-POPUP) */}
+      {!isPopup && !showControls && (
         <button
           onClick={() => setShowControls(true)}
           className="absolute bottom-4 left-4 z-50 text-xs text-white/40 hover:text-white transition-colors px-3 py-1 rounded bg-black/60 hover:bg-black/80"
         >
           Mostrar (H)
         </button>
+      )}
+      
+      {/* ===== INDICADOR DE VENTANA PRESENTADOR / PRESENTER WINDOW INDICATOR ===== */}
+      {isPopup && mirrorX && (
+        <div className="absolute top-4 right-4 z-50 bg-blue-500/90 backdrop-blur-sm rounded-lg px-4 py-2 text-sm font-bold">
+          🪞 PRESENTADOR (Espejo)
+        </div>
       )}
       
       {/* ===== ÁREA DEL TELEPROMPTER / TELEPROMPTER AREA ===== */}
@@ -481,6 +491,8 @@ export function TeleprompterWindow() {
           speed={speed}
           setScrollPosition={setScrollPosition}
           guideLinePosition={guideLinePosition}
+          mirrorX={mirrorX}
+          mirrorY={mirrorY}
           onEnd={() => {
             console.log('📜 TeleprompterWindow: reached end of text');
             pause();
@@ -508,6 +520,16 @@ export function TeleprompterWindow() {
           onJumpToPosition={setScrollPosition}
         />
       </div>
+      
+      {/* ===== BARRA DE CONTROLES (SOLO EN VENTANA NO-POPUP) / CONTROLS BAR (ONLY IN NON-POPUP WINDOW) ===== */}
+      {!isPopup && showControls && (
+        <div className="absolute bottom-4 right-4 z-50">
+          <TeleprompterControls
+            onBackward={handleBackward}
+            onForward={handleForward}
+          />
+        </div>
+      )}
     </div>
   );
 }
