@@ -1,0 +1,89 @@
+@startuml v3-clases
+title Teleprompter v3 - Modelo de dominio y store
+skinparam shadowing false
+hide empty members
+
+class Story {
+  id: string
+  number: string
+  slug: string
+  text: string  <<**b** *i* __u__ ((instr))>>
+  floated: boolean
+}
+
+class RunOrder {
+  name: string
+  stories: Story[]
+}
+
+class Transport {
+  playing: boolean
+  speed: number  <<0.5..20>>
+  pxPerSec: number
+  anchorY: number
+  anchorT: number
+  minY / maxY: number
+  blank: boolean
+  --
+  y(t) = anchorY + pxPerSec·(t − anchorT)
+}
+
+class PrompterSettings {
+  fontFamily, fontSize, lineSpacing
+  marginLeft, marginRight, uppercase
+  textColor, backgroundColor, instructionColor
+  showSluglines, showInstructions
+  aspect: 16:9 | 16:10 | 4:3
+  cue: CueSettings
+  blankMessage, showClock, clock24h
+  wordsPerMinute
+  keys: KeyMap
+}
+
+class CueSettings {
+  visible, style: arrow|block|line
+  color, offset (%)
+  controlsPromptPosition
+}
+
+class Layout {
+  contentHeight, viewHeight, cueY
+  stories: StoryBox[]
+  signature
+}
+
+class StoryBox {
+  id, top, height
+}
+
+class OperatorState <<zustand>> {
+  runOrder, dirty, selectedId, liveId
+  settings, transport, layout
+  followLive, editorLocked, outputs, status
+  --
+  play() pause() togglePlay() stop()
+  setSpeed() nudge() seek()
+  gotoStory() nextStory() prevStory()
+  toggleBlank() runCommand(cmd)
+  addStory() deleteStories() updateStory()
+  moveStory() dropStory() toggleFloat()
+  updateSettings() setFontSize()
+  setLayout(layout)  <<remapea la lectura>>
+  tick(now)  <<fin de Run Order, historia al aire>>
+}
+
+class PrompterDoc {
+  stories: Story[]  <<sin flotadas>>
+  settings
+}
+
+RunOrder "1" *-- "*" Story
+PrompterSettings *-- CueSettings
+Layout *-- "*" StoryBox
+OperatorState --> RunOrder
+OperatorState --> Transport
+OperatorState --> PrompterSettings
+OperatorState --> Layout
+PrompterDoc ..> Story
+PrompterDoc ..> PrompterSettings
+@enduml

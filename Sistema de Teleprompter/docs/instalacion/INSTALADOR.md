@@ -5,7 +5,7 @@
 El instalador NSIS completo ha sido generado en:
 
 ```
-release\Teleprompter Pro-Setup-1.0.0.exe
+release\Teleprompter Pro-Setup-3.0.0.exe
 ```
 
 ---
@@ -13,7 +13,7 @@ release\Teleprompter Pro-Setup-1.0.0.exe
 ## 📋 **Características del Instalador**
 
 ### **Archivo Generado:**
-- **Nombre:** `Teleprompter Pro-Setup-1.0.0.exe`
+- **Nombre:** `Teleprompter Pro-Setup-3.0.0.exe`
 - **Ubicación:** `c:\xampp\htdocs\STP\Sistema de Teleprompter\release\`
 - **Tamaño:** ~200 MB (incluye Electron + Node.js + Dependencias)
 - **Tipo:** Instalador NSIS (Nullsoft Scriptable Install System)
@@ -45,7 +45,7 @@ Puedes compartir el archivo `.exe` de estas formas:
 ### **2. Instalación:**
 
 1. **Ejecuta el instalador:**
-   - Doble clic en `Teleprompter Pro-Setup-1.0.0.exe`
+   - Doble clic en `Teleprompter Pro-Setup-3.0.0.exe`
 
 2. **Advertencia de Windows Defender:**
    - Windows puede mostrar: _"Windows protegió tu PC"_
@@ -103,7 +103,7 @@ $env:CSC_IDENTITY_AUTO_DISCOVERY = "false"
 npm run electron:build:win
 ```
 
-El nuevo instalador estará en: `release\Teleprompter Pro-Setup-1.0.0.exe`
+El nuevo instalador estará en: `release\Teleprompter Pro-Setup-3.0.0.exe`
 
 ---
 
@@ -195,5 +195,5 @@ Si quieres distribuir profesionalmente sin advertencias, necesitas:
 ---
 
 **Fecha de Generación:** Octubre 1, 2025  
-**Versión:** 1.0.0  
+**Versión:** 3.0.0  
 **Herramientas:** Electron 38.2.0, electron-builder 26.0.12, NSIS

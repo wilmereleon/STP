@@ -1,0 +1,54 @@
+@startuml v3-secuencia-play
+title Teleprompter v3 - Play, salto de historia y control desde la salida
+skinparam shadowing false
+autonumber
+
+actor Operador
+participant "Toolbar /\natajo F10" as UI
+participant "useOperatorStore" as S
+participant "PrompterStage\n(vista previa)" as PV
+participant "MasterBridge" as MB
+queue "BroadcastChannel" as BC
+participant "OutputApp +\nPrompterStage" as OUT
+actor Presentador
+
+== Arranque de una salida ==
+OUT -> BC : hello {id, mirror}
+BC -> MB
+MB -> S : registerOutput(id)
+MB -> BC : doc {historias, ajustes}\ntransport
+BC -> OUT : render con el mismo lienzo lógico (1920 px)
+
+== Play ==
+Operador -> UI : Play
+UI -> S : play()
+S -> S : transport = reanchor(playing=true, anchorT=now)
+S --> PV : nuevo transport
+S --> MB : subscribe(transport)
+MB -> BC : transport
+BC -> OUT : transport
+loop cada fotograma (ambas ventanas, sin mensajes)
+  PV -> PV : y = positionAt(transport, Date.now())
+  OUT -> OUT : y = positionAt(transport, Date.now())
+end
+loop cada 50 ms
+  S -> S : tick(now): historia al aire,\nfin del Run Order => pause()
+end
+
+== Historia siguiente ==
+Operador -> UI : AvPág
+UI -> S : nextStory()
+S -> S : storyTarget(layout) => reanchor(anchorY)
+S --> MB
+MB -> BC : transport
+BC -> OUT
+
+== Control desde la ventana de salida ==
+Presentador -> OUT : Espacio / rueda
+OUT -> BC : cmd {togglePlay | nudge}
+BC -> MB
+MB -> S : runCommand(cmd)
+S --> MB : transport
+MB -> BC : transport
+BC -> OUT
+@enduml

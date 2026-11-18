@@ -236,7 +236,7 @@ export function ProducerView() {
   const handleLogout = async () => {
     try {
       await apiClient.logout();
-      window.location.href = '/login';
+      window.location.hash = '#/login';
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }

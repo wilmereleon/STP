@@ -2,7 +2,7 @@
 
 > Teleprompter estilo **Winplus** creado para estudios profesionales, productoras y equipos broadcasting que necesitan scripts sincronizados, monitorización de run orders y control total de la ventana de lectura.
 
-![GitHub release](https://img.shields.io/badge/release-v2.0.0-blue)
+![GitHub release](https://img.shields.io/badge/release-v3.0.0-blue)
 ![Docker](https://img.shields.io/badge/docker-ready-2496ED)
 ![Node.js](https://img.shields.io/badge/node-18-green)
 
@@ -73,7 +73,13 @@ El frontend queda en http://localhost:5173/.
 `ash
 npm run electron:build:win
 `
-El instalador se genera en elease/.
+El instalador se genera en `release/Teleprompter Pro-Setup-3.0.0.exe`. Las ventanas de salida se abren a pantalla completa en el monitor secundario.
+
+### Pruebas automáticas (v3)
+```bash
+npm test                          # pruebas unitarias (vitest)
+npm run build && npm run test:e2e # operador + salida + espejo en Chrome
+```
 
 ## ✅ Pruebas de calidad
 Incluye un formulario HTML interactivo para documentar 68 casos de prueba, registrar observaciones y exportar reportes.
@@ -90,13 +96,14 @@ Pasos rápidos:
 - Barra de progreso y modo impresión.
 - Historial de sesiones anteriores.
 
-## ✨ Características principales
-- Interfaz inspirada en Winplus pensada para broadcast.
-- Ventana flotante dedicada para teleprompter en segundo monitor.
-- Control preciso de velocidad (0.1‑5.0x) y tamaño de fuente (12px‑500px).
-- Run order con drag & drop y macros personalizables.
-- Sincronización Master/Slave con AutoScrollService.
-- Línea guía configurable, atajos, y control por rueda del ratón.
+- Interfaz estilo WinPlus-IP: Active Run Order | Story Editor | Prompter Preview, barra de estado.
+- El Run Order completo se lee de forma continua; Anterior/Siguiente saltan entre historias (AIR / CUE / FLT).
+- Vista previa idéntica a la salida (mismo lienzo lógico de 1920 px escalado).
+- Varias ventanas de salida (normal y espejo) sincronizadas por BroadcastChannel; se controlan también desde la salida.
+- Velocidad 0.5–20 y fuente 24–500 px; marcador de lectura configurable; márgenes, interlineado, blanking y reloj.
+- Atajos configurables (Espacio/F10, ↑/↓, AvPág/RePág, Shift+F9…), rueda del ratón para desplazar, velocidad y fuente.
+- Importación .txt `[1] {SLUGLINE}`, .xlsx y .json; exportación .txt/.json; autoguardado local.
+- Detalle y evaluación: `Sistema de Teleprompter/docs/desarrollo/V3_EVALUACION_Y_ARQUITECTURA.md`.
 - Importación de scripts .txt estructurados y guardado automático.
 
 ## 🎯 Casos de uso

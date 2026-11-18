@@ -1,0 +1,53 @@
+@startuml v3-componentes
+title Teleprompter v3 - Componentes del operador y las salidas
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+package "Electron (main.js)" {
+  [Protocolo app://stp] as proto
+  [setWindowOpenHandler\n(salida en monitor secundario)] as winopen
+}
+
+package "Ventana del operador  (#/operator)" {
+  [OperatorApp] as op
+  [Toolbar] as tb
+  [RunOrderPane] as ro
+  [StoryEditorPane] as ed
+  [PreviewPane] as pv
+  [PrompterStage\n(mide la maquetación)] as stageM
+  [StatusBar] as sb
+  [SettingsDialog / ShortcutsDialog] as dlg
+  database "useOperatorStore\n(zustand + persist)" as store
+  [MasterBridge] as mb
+  [importers / markup / transport\n(funciones puras)] as core
+}
+
+package "Ventanas de salida  (#/output?mirror=h)" {
+  [OutputApp] as out
+  [PrompterStage] as stageS
+}
+
+queue "BroadcastChannel\n'stp-prompter-v3'" as bc
+database "localStorage\n'stp-operator-v3'" as ls
+
+op --> tb
+op --> ro
+op --> ed
+op --> pv
+op --> sb
+op --> dlg
+pv --> stageM
+tb ..> store
+ro ..> store
+ed ..> store
+sb ..> store
+stageM --> store : setLayout(layout)
+store --> core
+store <--> ls
+mb ..> store : subscribe / runCommand
+mb <--> bc : doc, transport\nhello, ping, cmd
+out <--> bc
+out --> stageS
+proto --> op
+winopen --> out
+@enduml
