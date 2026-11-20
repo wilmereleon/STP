@@ -85,7 +85,54 @@ El servidor se ejecutará en `http://localhost:5173/`
 npm run electron:build:win
 ```
 
-El instalador se generará en la carpeta `release/`.
+El instalador se generará en `release/Teleprompter Pro-Setup-3.0.0.exe`.
+
+## ▶️ Cómo ejecutar y probar el teleprompter (v3)
+
+Todos los comandos se ejecutan dentro de la carpeta `Sistema de Teleprompter`.
+La primera vez instale las dependencias con `npm install`.
+
+### Formas de ejecutarlo
+
+| Quiero… | Comando | Resultado |
+|---|---|---|
+| Abrir la app ya empaquetada (sin compilar) | `.\release\win-unpacked\"Teleprompter Pro.exe"` | Versión de escritorio tal como queda instalada |
+| Probar en el navegador mientras desarrollo | `npm run dev` y abrir `http://localhost:5173/#/operator` | Recarga automática al guardar cambios |
+| Probar en Electron con el servidor de desarrollo | `npm run dev` y, en otra terminal, `npm run electron:dev` | Ventana de escritorio + DevTools |
+| Probar en Electron la build final sin crear instalador | `npm run electron:preview` | Compila `dist/` y abre Electron con ella |
+| Generar el instalador | `npm run electron:build:win` | `release/Teleprompter Pro-Setup-3.0.0.exe` y `release/win-unpacked/` |
+
+> `release/win-unpacked/` solo refleja los cambios después de ejecutar `npm run electron:build:win`.
+
+### Prueba manual rápida (5 minutos)
+
+1. Pulse **Abrir** y cargue `../Prompt/prueba.txt` (o cualquier `.txt` con el formato `[1] {SLUGLINE}`).
+   El Run Order muestra 3 historias: ENTRADA, TITULARES y FECHA FÚTBOL 14.
+2. Pulse **▶** (o `Espacio` / `F10`): el texto avanza en la vista previa, el botón se pone
+   rojo y el indicador cambia a **PROMPTING**. La historia que se lee aparece en rojo (**AIR**).
+3. Ajuste la velocidad con `↑` / `↓` o el control **Velocidad**, y la fuente con `+` / `-`.
+4. `AvPág` / `RePág` saltan a la historia siguiente / anterior. Doble clic en una fila salta a esa historia.
+5. Pulse **Salida** (y **Espejo** para el cristal del prompter). Con un segundo monitor se abre
+   a pantalla completa en él; en la salida, `F` o doble clic alterna pantalla completa.
+   La barra de estado indica `Salidas: N`.
+6. Con el foco en la salida, `Espacio` pausa y la rueda del ratón desplaza el texto: el operador se actualiza igual.
+7. `B` (o `Shift+F9`) activa el blanking: la salida queda negra y la vista previa muestra «BLANK».
+8. Edite el texto en el **Story Editor**: el cambio aparece al instante en la vista previa y en las salidas.
+9. Cierre y vuelva a abrir la app: el Run Order y los ajustes se conservan.
+
+La lista completa de atajos está en el botón de teclado de la barra superior y se cambia en **Ajustes → Atajos**.
+
+### Pruebas automáticas
+
+```bash
+npm test                              # 25 pruebas unitarias (vitest)
+npm run build && npm run test:e2e     # 18 comprobaciones en Chrome: operador, salida, espejo
+npm run electron:build:win
+node scripts/e2e-electron.mjs         # app empaquetada: carga app://, Play y salida sincronizada
+```
+
+Las capturas de la prueba E2E se guardan en `test-scripts/results/e2e/`.
+Arquitectura y evaluación de la v3: [docs/desarrollo/V3_EVALUACION_Y_ARQUITECTURA.md](docs/desarrollo/V3_EVALUACION_Y_ARQUITECTURA.md).
 
 ## 🧪 Pruebas de Calidad
 

@@ -75,6 +75,10 @@ npm run electron:build:win
 `
 El instalador se genera en `release/Teleprompter Pro-Setup-3.0.0.exe`. Las ventanas de salida se abren a pantalla completa en el monitor secundario.
 
+Guía paso a paso para ejecutar y probar: [Sistema de Teleprompter/README.md](Sistema%20de%20Teleprompter/README.md#️-cómo-ejecutar-y-probar-el-teleprompter-v3).
+
+Guía paso a paso para ejecutar y probar: [Sistema de Teleprompter/README.md](Sistema%20de%20Teleprompter/README.md#️-cómo-ejecutar-y-probar-el-teleprompter-v3).
+
 ### Pruebas automáticas (v3)
 ```bash
 npm test                          # pruebas unitarias (vitest)
